@@ -23,7 +23,7 @@
 
 #include "DataSink.h"
 #include "DataPacket.h"
-#include "HttpServer.h"
+#include "MediaHttpServer.h"
 
 namespace blitz {
 

@@ -28,7 +28,7 @@
 #include <boost/asio.hpp>
 #include "DataSource.h"
 #include "DataPacket.h"
-#include "MediaUrl.h"
+#include "Url.h"
 #include "MediaHtppClient.h"
 
 using boost::asio::ip::tcp;
@@ -51,7 +51,8 @@ public:
     void start();
 
 private:
-    blitz::MediaUrl m_murl;
+    void restart();
+    blitz::Url m_murl;
     blitz::http::MediaHTTPClient m_client;
 };
 

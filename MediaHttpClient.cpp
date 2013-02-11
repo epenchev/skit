@@ -31,11 +31,8 @@ namespace http {
 
 void MediaHTTPClient::readContent()
 {
-    //log::emit< Trace>() << "MediaHTTPClient::readContent()" << log::endl;
-
     if (m_sock.is_open())
     {
-        //log::emit< Trace>() << "MediaHTTPClient::readContent() m_sock.is_open() == true " << log::endl;
         if (m_source)
         {
             m_packet = new DataPacket();
@@ -51,31 +48,37 @@ void MediaHTTPClient::handleReadContent(const boost::system::error_code& error, 
 {
     if (!error && bytes_transferred)
     {
-        //log::emit< Trace>() << "MediaHTTPClient::handleReadContent()" << log::endl;
-
-        if (bytes_transferred <= (std::size_t)DataPacket::max_size) {
+        if (bytes_transferred <= (std::size_t)DataPacket::max_size)
+        {
             m_packet->size(bytes_transferred);
         }
         else
         {
-            // not possible but ...
             m_packet->size(DataPacket::max_size);
             log::emit< Warning>() << "MediaHTTPClient::handleReadContent() bytes_transferred: "
-                                    << log::dec << bytes_transferred << log::endl;
+                                    << log::dec << bytes_transferred << "  DataPacket::max_size: "
+                                        << log::dec << (std::size_t)(DataPacket::max_size) << log::endl;
         }
         m_source->addData(m_packet);
         readContent();
     }
-    else
+    else if (error)
     {
+
+        //if (boost::asio::error::eof == error)
+       // {
+        	//log::emit< Warning>() << "MediaHTTPClient::handleReadContent() "
+        	                     // << error.message().c_str() << "  disconnecting ... " << log::endl;
+
+        	//throw HTTPClientException(error.message().c_str(), Network_Read_Timeout_Err_Code);
+       // }
+
         log::emit< Error>() << "MediaHTTPClient::handleReadContent()  "
-                                            << error.message().c_str() << log::endl;
+                                << error.message().c_str() << log::endl;
+        readContent();
+
+        //throw HTTPClientException(error.message().c_str(), Network_Read_Timeout_Err_Code);
     }
-    /*
-    else if (error != boost::asio::error::eof)
-    {
-        throw std::runtime_error(error.message());
-    }*/
 }
 
 } // http

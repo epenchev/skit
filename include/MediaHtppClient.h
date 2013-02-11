@@ -24,6 +24,8 @@
 #include "HttpClient.h"
 #include "DataSource.h"
 
+#define Network_Read_Timeout_Err_Code 598
+
 namespace blitz {
 namespace http {
 

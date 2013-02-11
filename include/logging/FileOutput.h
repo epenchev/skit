@@ -62,7 +62,7 @@ namespace logging {
              *        via a command line parameter.
              */
             FileOutput() : os(&fb) {
-                fb.open ("test.txt", std::ios::out);
+                fb.open ("blitz.log", std::ios::out);
             }
 
             /*! \brief The destructor closes the file and therewith

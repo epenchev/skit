@@ -20,10 +20,12 @@
 
 #include <cstring>
 #include <string>
-#include <iostream>
 #include "HttpSource.h"
 #include "DataPacket.h"
 #include <boost/asio.hpp>
+
+#include "logging/logging.h"
+using namespace ::logging;
 
 using boost::asio::ip::tcp;
 
@@ -31,8 +33,12 @@ namespace blitz {
 
 HttpSource::HttpSource(boost::asio::io_service& io_service,
                           const std::string& url) : m_murl(url), m_client(io_service)
+{}
+
+void HttpSource::restart(void)
 {
-    // TODO something
+	log::emit< Warning>() << " HttpSource::restart() restarting connection "<< log::endl;
+	start();
 }
 
 void HttpSource::start(void)
@@ -43,9 +49,15 @@ void HttpSource::start(void)
         m_client.attachDataSource(this);
         m_client.sendReq("GET", m_murl.resource());
     }
+    catch(blitz::http::HTTPClientException& ex)
+    {
+    	log::emit< Warning>() << "HttpSource::start() HTTPClientException: " << ex.what() << " "
+    			                            << log::dec << ex.errorCode() << log::endl<< log::endl;
+    	throw;
+    }
     catch(std::exception& ex)
     {
-        std::cout << "HttpSource() exception in constructor " << ex.what() << std::endl;
+    	log::emit< Trace>() << "HttpSource() exception in constructor " << ex.what() << log::endl;
         throw;
     }
 }

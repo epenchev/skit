@@ -25,44 +25,30 @@
 
 using namespace ::logging;
 
-// logging levels can be disabled at compile time
-//LOGGING_DISABLE_LEVEL(::logging::Error);
-//LOGGING_DISABLE_LEVEL(::logging::Trace);
-//LOGGING_DISABLE_LEVEL(::logging::Warning);
-//LOGGING_DISABLE_LEVEL(::logging::Info);
+//#define LOGGING_DEFINE_EXTENDED_OUTPUT_TYPE
+//LOGGING_DEFINE_OUTPUT( FileLogType )
 
-//LOGGING_DEFINE_OUTPUT( FileLogType );
+const char* media_url = "http://37.157.179.35:8086/bysid/700";
 
 int main(int argc, char* argv[])
 {
-/*
-  log::emit< Error>()   << "Logging an Error " << log::dec << 15 << log::endl;
-  log::emit< Trace>()   << "Logging a Trace"   << log::endl;
-  log::emit< Warning>() << "Logging a Warning" << log::endl;
-  log::emit< Info>()    << "Logging an Info"   << log::endl;
-*/
-  try
-    {
-      if (argc != 2)
-      {
-        std::cout << "Usage: blitz <url>\n";
-        return 1;
-      }
+	log::emit< Info>() << "Starting blitz daemon ..."   << log::endl;
 
-      boost::asio::io_service io_service;
-      blitz::HttpSource source(io_service, argv[1]);
-      blitz::HttpSink sink(io_service, 9999);
-      source.addSink(&sink);
-      source.start();
-      io_service.run();
-    }
+	try
+	{
+		boost::asio::io_service io_service;
+		blitz::HttpSource source(io_service, media_url);
+		blitz::HttpSink sink(io_service, 9999);
+		source.addSink(&sink);
+		source.start();
+		io_service.run();
+	}
     catch (std::exception& e)
     {
-      std::cout << "Exception: " << e.what() << "\n";
+    	std::cout << "Exception: " << e.what() << "\n";
     }
 
-
-  return 0;
+    return 0;
 }
 
 

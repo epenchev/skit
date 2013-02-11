@@ -1,5 +1,5 @@
 /*
- * MediaUrl.cpp
+ * Url.cpp
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -18,7 +18,7 @@
  *      Author: emo
  */
 
-#include "MediaUrl.h"
+#include "Url.h"
 #include <cstring>
 #include <string>
 #include <iostream>
@@ -26,26 +26,22 @@
 
 namespace blitz {
 
-MediaUrl::MediaUrl(const std::string& url)
+Url::Url(const std::string& murl)
 {
-    if (url.empty())
+    if (murl.empty())
     {
-        // TODO log this error !!!
-        std::cout << "empty string MediaUrl::MediaUrl() \n";
-        throw std::invalid_argument("empty string MediaUrl::MediaUrl()");
+        throw std::invalid_argument("empty string Url::Url()");
     }
 
-    readUrl(url);
+    readUrl(murl);
 
-    if ( server_.empty() || service_.empty() || resource_.empty() )
+    if ( m_server.empty() || m_service.empty() || m_resource.empty() )
     {
-        // TODO log this error !!!
-        std::cout << "Failed parsing " << url << " MediaUrl::MediaUrl() \n";
-        throw std::invalid_argument("Failed parsing url MediaUrl::MediaUrl()");
+        throw std::invalid_argument("Failed parsing url Url::Url()");
     }
 }
 
-void MediaUrl::readUrl(const std::string& url)
+void Url::readUrl(const std::string& url)
 {
     if (url.substr(0, 7) != "http://")
         return;
@@ -61,15 +57,15 @@ void MediaUrl::readUrl(const std::string& url)
         if ( colonPosition != std::string::npos && colonPosition > (doubleSlashPos + doubleSlashSize) )
         {
             size_t n = colonPosition - (doubleSlashPos + doubleSlashSize);
-            server_ = url.substr( (doubleSlashPos + doubleSlashSize), n );
+            m_server = url.substr( (doubleSlashPos + doubleSlashSize), n );
 
             size_t slashPosition = url.find_first_of("/", colonPosition + 1);
-            resource_ = url.substr(slashPosition);
+            m_resource = url.substr(slashPosition);
 
             if ( slashPosition != std::string::npos && slashPosition > colonPosition )
             {
                 size_t n = slashPosition - (colonPosition + 1);
-                service_ = url.substr(colonPosition + 1, n);
+                m_service = url.substr(colonPosition + 1, n);
             }
         }
         else // standart web port 80
@@ -78,30 +74,30 @@ void MediaUrl::readUrl(const std::string& url)
 
             if ( slashPosition != std::string::npos )
             {
-                resource_  = url.substr(slashPosition);
+                m_resource  = url.substr(slashPosition);
 
                 size_t n = slashPosition - (doubleSlashPos + doubleSlashSize);
 
-                server_ = url.substr(doubleSlashPos + doubleSlashSize, n);
-                service_ = "http";
+                m_server = url.substr(doubleSlashPos + doubleSlashSize, n);
+                m_service = "http";
             }
         }
     }
 }
 
-std::string MediaUrl::serverName()
+std::string Url::serverName()
 {
-    return server_;
+    return m_server;
 }
 
-std::string MediaUrl::service()
+std::string Url::service()
 {
-    return service_;
+    return m_service;
 }
 
-std::string MediaUrl::resource()
+std::string Url::resource()
 {
-    return resource_;
+    return m_resource;
 }
 
 

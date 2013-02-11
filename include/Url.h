@@ -1,5 +1,5 @@
 /*
- * MediaUrl.h
+ * Url.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -18,21 +18,21 @@
  *      Author: emo
  */
 
-#ifndef MEDIAURL_H_
-#define MEDIAURL_H_
+#ifndef URL_H_
+#define URL_H_
 
 #include <string>
 
 namespace blitz {
 
 /**
-* Media URL container.
+* URL container.
 * Supports HTTP for now, can be extended to support RTSP, RTP, UDP ...
 */
-class MediaUrl
+class Url
 {
 public:
-    MediaUrl(const std::string& url);
+    Url(const std::string& url);
 
     std::string serverName();
     std::string resource();
@@ -44,11 +44,11 @@ private:
     */
     void readUrl(const std::string& url);
 
-    std::string server_; /**< server name. */
-    std::string service_; /**< network port numeric or string service ("http") */
-    std::string resource_; /**< resource to be fetched */
+    std::string m_server;   /**< server name. */
+    std::string m_service;  /**< network port numeric or string service ("http") */
+    std::string m_resource; /**< resource to be fetched */
 };
 
-#endif /* MEDIAURL_H_ */
+#endif /* URL_H_ */
 
 } // blitz

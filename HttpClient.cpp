@@ -47,7 +47,7 @@ void HTTPClient::connect(const std::string& server, const std::string& service)
         }
         catch(boost::system::system_error& e)
         {
-            std::string errmsg = "HTTPClient::connect() error ";// + e.what();
+            std::string errmsg = "HTTPClient::connect() error ";
             errmsg += e.what();
             throw std::runtime_error(errmsg);
         }
@@ -64,17 +64,10 @@ void HTTPClient::disconnect(void)
 {
     if (m_sock.is_open())
     {
-        boost::system::error_code error;
-        m_sock.close(error);
-
-        if (error)
-        {
-            std::string errmsg = "HTTPClient::connect() error " + error.message();
-            throw std::runtime_error(errmsg);
-        }
+        boost::system::error_code err;
+        m_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, err);
+        m_sock.close(err);
     }
-    else
-        throw std::runtime_error("HTTPClient::close() socket not connected");
 }
 
 void HTTPClient::sendReq(std::string req, const std::string& resource)
@@ -95,7 +88,8 @@ void HTTPClient::sendReq(std::string req, const std::string& resource)
                                    boost::asio::placeholders::error,
                                      boost::asio::placeholders::bytes_transferred));
     }
-    else {
+    else
+    {
         throw std::logic_error("HTTPClient::sendReq() socket not connected");
     }
 }
@@ -165,20 +159,23 @@ void HTTPClient::handleReadHeader(const boost::system::error_code& error, std::s
             response_stream >> http_return_code;
             std::getline(response_stream, status_message);
         }
-        catch(std::exception& e) {
+        catch(std::exception& e)
+        {
             throw std::runtime_error("HTTP Client invalid response from server");
         }
 
-        if (http_version.substr(0, 5) != "HTTP/") {
+        if (http_version.substr(0, 5) != "HTTP/")
+        {
             throw std::runtime_error("HTTP Client Invalid header");
         }
 
-        if (http_return_code != 200) {
+        if (http_return_code != 200)
+        {
             throw HTTPClientException(status_message.c_str(), http_return_code);
         }
 
         //start reading the data, virtual function
-        this->readContent();
+        readContent();
     }
     else
     {

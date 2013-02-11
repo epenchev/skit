@@ -1,5 +1,5 @@
 /*
- * HTTPServer.h
+ * MediaHttpServer.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -18,8 +18,8 @@
  *      Author: emo
  */
 
-#ifndef HTTPSERVER_H_
-#define HTTPSERVER_H_
+#ifndef MEDIA_HTTPSERVER_H_
+#define MEDIA_HTTPSERVER_H_
 
 #include <set>
 #include <boost/bind.hpp>
@@ -97,4 +97,4 @@ protected:
 
 } // blitz
 
-#endif /* HTTPSERVER_H_ */
+#endif /* MEDIA_HTTPSERVER_H_ */

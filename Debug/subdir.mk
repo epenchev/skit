@@ -8,46 +8,46 @@ CPP_SRCS += \
 ../DataPacket.cpp \
 ../DataSource.cpp \
 ../HttpClient.cpp \
-../HttpServer.cpp \
 ../HttpSink.cpp \
 ../HttpSource.cpp \
 ../MediaHttpClient.cpp \
-../MediaUrl.cpp \
+../MediaHttpServer.cpp \
 ../Observer.cpp \
-../TcpServer.cpp 
+../TcpServer.cpp \
+../Url.cpp 
 
 OBJS += \
 ./Blitz.o \
 ./DataPacket.o \
 ./DataSource.o \
 ./HttpClient.o \
-./HttpServer.o \
 ./HttpSink.o \
 ./HttpSource.o \
 ./MediaHttpClient.o \
-./MediaUrl.o \
+./MediaHttpServer.o \
 ./Observer.o \
-./TcpServer.o 
+./TcpServer.o \
+./Url.o 
 
 CPP_DEPS += \
 ./Blitz.d \
 ./DataPacket.d \
 ./DataSource.d \
 ./HttpClient.d \
-./HttpServer.d \
 ./HttpSink.d \
 ./HttpSource.d \
 ./MediaHttpClient.d \
-./MediaUrl.d \
+./MediaHttpServer.d \
 ./Observer.d \
-./TcpServer.d 
+./TcpServer.d \
+./Url.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
 %.o: ../%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/usr/local/boost/include -I../include -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	g++ -I/usr/local/boost/include -I../include -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

@@ -1,5 +1,5 @@
 /*
- * HTTPServer.cpp
+ * MediaHttpServer.cpp
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -24,7 +24,7 @@ TODO make timeout on async_write operations as well
 TODO create HTTP header parser class
 */
 
-#include "HttpServer.h"
+#include "MediaHttpServer.h"
 #include "DataPacket.h"
 #include <cstring>
 
@@ -279,6 +279,10 @@ void MediaHTTPServer::sendPacket(DataPacket* packet)
                 m_conn_pool.erase(conn);
                 log::emit< Trace>() << "MediaHTTPServer::sendPacket() removing closed connection" << log::endl;
                 delete conn;
+                if (m_conn_pool.empty())
+                {
+                	return;
+                }
             }
         }
     }
