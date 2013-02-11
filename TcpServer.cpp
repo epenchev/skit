@@ -52,12 +52,10 @@ void TCPConnection::close(void)
 
 TCPServer::TCPServer(boost::asio::io_service& io_service, const boost::asio::ip::tcp::endpoint& endpoint)
           : m_tcp_acceptor(io_service, tcp::endpoint(endpoint)),
-            m_endpoint(endpoint),
             m_is_listening(false) {}
 
 TCPServer::TCPServer(boost::asio::io_service& io_service, const unsigned int tcp_port)
           : m_tcp_acceptor(io_service, tcp::endpoint(tcp::v4(), tcp_port)),
-            //m_endpoint(boost::asio::ip::tcp::v4(), tcp_port),
             m_is_listening(false) {}
 
 
@@ -67,31 +65,20 @@ void TCPServer::start(void)
     {
         log::emit< Trace>() << "TCPServer::start() " << log::endl;
 
-        /*
         try
         {
-
-            m_tcp_acceptor.open(m_endpoint.protocol());
-
             // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
-            //m_tcp_acceptor.set_option(tcp::acceptor::reuse_address(true));
+            m_tcp_acceptor.set_option(tcp::acceptor::reuse_address(true));
 
-            m_tcp_acceptor.bind(m_endpoint);
-            if (0 == m_endpoint.port())
-            {
-                // update the endpoint to reflect the port chosen by bind
-                m_endpoint = m_tcp_acceptor.local_endpoint();
-            }
             m_tcp_acceptor.listen();
             log::emit< Info>() << "Listening on port: "
-                                  << log::dec << m_endpoint.port() << log::endl;
+                                  << log::dec << getPort() << log::endl;
         }
         catch (std::exception& e)
         {
-            log::emit< Error>() << "Unable to bind to port:" << log::dec << m_endpoint.port() << "\n" << e.what() << log::endl;
+            log::emit< Error>() << "Unable to bind to port:" << log::dec <<  getPort() << "\n" << e.what() << log::endl;
             throw;
         }
-        */
         m_is_listening = true;
 
         handleStartServer();
@@ -104,7 +91,7 @@ void TCPServer::stop(void)
 {
     if (m_is_listening)
     {
-        log::emit< Info>() << "Shutting down server on port " << log::dec << m_endpoint.port() << log::endl;
+        log::emit< Info>() << "Shutting down server on port " << log::dec << getPort() << log::endl;
 
         m_is_listening = false;
 
@@ -115,7 +102,8 @@ void TCPServer::stop(void)
         std::set<TCPConnection*>::iterator conn_itr = m_conn_pool.begin();
         for ( ; conn_itr != m_conn_pool.end(); ++conn_itr )
         {
-            log::emit< Info>() << "TCPServer::stop() closing connection on port " << log::dec << m_endpoint.port() << log::endl;
+            log::emit< Info>() << "TCPServer::stop() closing connection on port "
+                                    << log::dec << (*conn_itr)->getRemotePort() << log::endl;
             (*conn_itr)->close();
             m_conn_pool.erase(conn_itr);
         }

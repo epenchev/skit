@@ -73,12 +73,12 @@ public:
    /**
     * returns tcp port number that the server listens for connections on
     */
-   inline unsigned int getPort(void) const { return m_endpoint.port(); }
+   inline unsigned int getPort(void) const { return m_tcp_acceptor.local_endpoint().port(); }
 
    /**
     * returns IP address that the server listens for connections on
     */
-   inline boost::asio::ip::address getAddress(void) const { return m_endpoint.address(); }
+   inline boost::asio::ip::address getAddress(void) const { return m_tcp_acceptor.local_endpoint().address(); }
 
    virtual ~TCPServer() { if (m_is_listening) stop(); }
 protected:
@@ -96,7 +96,6 @@ private:
     void handleAccept(TCPConnection* new_connection, const boost::system::error_code& error);
 
     tcp::acceptor m_tcp_acceptor;
-    boost::asio::ip::tcp::endpoint m_endpoint; /**< tcp endpoint used to listen for new connections */
     bool m_is_listening;                      /**< set to true when the server is listening for new connections */
 };
 
