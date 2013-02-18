@@ -38,13 +38,17 @@ public:
     MediaHTTPClient(boost::asio::io_service& io_service) : HTTPClient(io_service) {}
     virtual ~MediaHTTPClient() {}
 
-    void attachDataSource(DataSource* source) { m_source = source; }
+    // from Subject
+    virtual void attach(Observer* ob);
 protected:
+    // from HTTPClient
     virtual void readContent();
 private:
     DataSource* m_source;
     DataPacket* m_packet;
     void handleReadContent(const boost::system::error_code& error, std::size_t bytes_transferred);
+    void handleDeadline(const boost::system::error_code& error);
+    const static unsigned receive_time = 300; /**< max seconds to wait for data */
 };
 
 } // http

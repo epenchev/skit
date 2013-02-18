@@ -29,6 +29,8 @@
 #include "Observer.h"
 #include <boost/shared_ptr.hpp>
 
+using boost::asio::deadline_timer;
+
 namespace blitz {
 
 typedef boost::shared_ptr<DataPacket> PacketPtr;
@@ -52,7 +54,6 @@ public:
     virtual void close(void);
 
     void addData(PacketPtr ptr);
-    //void addData(DataPacket* packet);
     inline std::string getResouceId() const { return m_resource_id; }
 
     inline bool getApproved() const { return m_connection_approved; }
@@ -62,6 +63,7 @@ private:
     void handleReadHeader(const boost::system::error_code& error);
     void handleWriteContent(const boost::system::error_code& error);
     void handleWriteHeader(const boost::system::error_code& error);
+    void handleDeadline(const boost::system::error_code& error);
 
     bool m_connection_is_busy;
     bool m_connection_approved;
@@ -69,6 +71,11 @@ private:
     boost::asio::streambuf m_response;
     MediaHTTPConnectionState state;
     std::list<PacketPtr> m_packets;
+    deadline_timer m_io_control_timer;
+
+    const static unsigned receive_headers_time = 300; /**< max seconds to wait for HTTP response headers */
+    const static unsigned send_data_time = 60;  /**< max seconds to wait for any async_send operation before terminating connection */
+    const static unsigned max_packets_in_queue = 2048;
 };
 
 /**
@@ -93,6 +100,12 @@ protected:
     virtual TCPConnection* createTCPConnection(boost::asio::io_service& io_service);
     // from observer
     virtual void update(Subject* changed_subject);
+
+private:
+    deadline_timer m_activity_timer;
+    void handleDeadline(const boost::system::error_code& error);
+    const static unsigned no_data_timeout = 300; /**< max seconds to wait for data,
+                                                  if no data is present in given the timeout all connections are closed */
 };
 
 } // blitz

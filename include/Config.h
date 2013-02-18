@@ -1,5 +1,6 @@
 /*
- * Observer.cpp
+ * Config.h
+ *
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,45 +15,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 27, 2013
+ *  Created on: Feb 17, 2013
  *      Author: emo
  */
 
-#include "Observer.h"
-#include "Log.h"
+#ifndef CONFIG_H_
+#define CONFIG_H_
+
+#include <string>
+#include <set>
 
 namespace blitz {
 
-void Subject::attach(Observer* ob)
+class Config
 {
-    try
-    {
-        m_observers.push_back(ob);
-    }
-    catch (std::bad_alloc& ex)
-    {
-        BLITZ_LOG_ERROR("exception std::bad_alloc from list");
-        throw;
-    };
-}
+public:
+	Config() : m_modules_count(0)
+	{}
+	void readConfig(const std::string &filename);
+	void printConfig(void);
+private:
+	int m_modules_count;
+	std::string m_logfile;
+	std::string m_pidfile;
+	std::set<std::string> m_module_names;
+	//void insertName(std::string name) { m_module_names.insert(name); }
 
-void Subject::detach(Observer* ob)
-{
-    BLITZ_LOG_INFO("Removing observer");
-    m_observers.remove(ob);
-}
-
-void Subject::notify()
-{
-    if (!m_observers.empty())
-    {
-        for (std::list<Observer*>::iterator it = m_observers.begin(); it != m_observers.end(); ++it)
-        {
-            BLITZ_LOG_INFO("Notify observer");
-            Observer* ob = *it;
-            ob->update(this);
-        }
-    }
-}
+};
 
 } // blitz
+
+#endif /* CONFIG_H_ */

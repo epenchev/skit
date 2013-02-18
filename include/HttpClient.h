@@ -29,6 +29,7 @@
 #include "DataSource.h"
 
 using boost::asio::ip::tcp;
+using boost::asio::deadline_timer;
 
 namespace blitz {
 namespace http {
@@ -46,6 +47,8 @@ private:
     unsigned m_error_code;
 };
 
+enum HTTPClientState { STATE_CONNECT, STATE_DISCONNECT, STATE_DATARECV };
+
 /**
 * HTTP Client.
 * Easy to use HTTP protocol handler for client connections.
@@ -55,7 +58,7 @@ private:
 class HTTPClient : private boost::noncopyable , public Subject
 {
 public:
-    HTTPClient(boost::asio::io_service& io_service) : m_sock(io_service) {}
+    HTTPClient(boost::asio::io_service& io_service);
     virtual ~HTTPClient() {}
 
     /**
@@ -68,7 +71,6 @@ public:
 
     /**
     * Closes current connection.
-    * @throws exception in case of error.
     */
     void disconnect();
 
@@ -78,6 +80,11 @@ public:
     * @param resource: name of resource.
     */
     void sendReq(const std::string req, const std::string& resource);
+
+    /**
+    * Returns the current state of the HTTPClient concerning observers
+    */
+    inline HTTPClientState getState(void) const { return state; }
 
     boost::asio::streambuf& getContent();
 
@@ -89,12 +96,16 @@ protected:
      std::string m_server_name;   /**< Server name used to form HTTP request as of HTTP 1.1 */
      std::string m_header;       /**< Storage for the HTTP headers returned from server  */
      boost::asio::streambuf m_response;
+     HTTPClientState state;
+     deadline_timer m_io_control_timer;
 
 private:
      // callbacks for the boost socket operations
      void handleWriteHeader(const boost::system::error_code& error, std::size_t bytes_transferred);
      void handleReadHeader(const boost::system::error_code& error, std::size_t bytes_transferred);
      void handleReadContent(const boost::system::error_code& error, std::size_t bytes_transferred);
+     void handleResolve(const boost::system::error_code& err, tcp::resolver::iterator endpoint_iterator);
+     void handleConnect(const boost::system::error_code& err);
 };
 
 } // http

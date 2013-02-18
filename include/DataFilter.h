@@ -25,6 +25,10 @@
 
 namespace blitz {
 
+/**
+* Class representing data filter component in typical pipeline.
+* This is used to do some operation on the data before send out from a sink.
+*/
 class DataFilter : public DataSource, public DataSink
 {
 public:
@@ -41,7 +45,5 @@ protected:
 };
 
 }// blitz
-
-
 
 #endif /* DATAFILTER_H_ */

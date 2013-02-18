@@ -20,11 +20,9 @@
 
 #include "MediaHtppClient.h"
 #include "DataPacket.h"
+#include "Log.h"
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-
-#include "logging/logging.h"
-using namespace ::logging;
 
 namespace blitz {
 namespace http {
@@ -36,16 +34,43 @@ void MediaHTTPClient::readContent()
         if (m_source)
         {
             m_packet = new DataPacket();
+
+            m_io_control_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPClient::receive_time));
+
             m_sock.async_read_some(boost::asio::buffer(m_packet->data(), DataPacket::max_size),
                                     boost::bind(&MediaHTTPClient::handleReadContent, this,
                                       boost::asio::placeholders::error,
                                         boost::asio::placeholders::bytes_transferred));
+
+            m_io_control_timer.async_wait(boost::bind(&MediaHTTPClient::handleDeadline, this,
+                                            boost::asio::placeholders::error));
         }
+        else
+        {
+            BLITZ_LOG_WARNING("Data source not attached !!!");
+        }
+    }
+    else
+    {
+        BLITZ_LOG_WARNING("Socket is not open !!!");
+    }
+}
+
+void MediaHTTPClient::handleDeadline(const boost::system::error_code& error)
+{
+    if (!error)
+    {
+        BLITZ_LOG_WARNING("Timeout receiving data !!!");
+        m_io_control_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPClient::receive_time));
+        m_io_control_timer.async_wait(boost::bind(&MediaHTTPClient::handleDeadline, this,
+                                                    boost::asio::placeholders::error));
     }
 }
 
 void MediaHTTPClient::handleReadContent(const boost::system::error_code& error, std::size_t bytes_transferred)
 {
+    m_io_control_timer.cancel();
+
     if (!error && bytes_transferred)
     {
         if (bytes_transferred <= (std::size_t)DataPacket::max_size)
@@ -55,31 +80,39 @@ void MediaHTTPClient::handleReadContent(const boost::system::error_code& error, 
         else
         {
             m_packet->size(DataPacket::max_size);
-            log::emit< Warning>() << "MediaHTTPClient::handleReadContent() bytes_transferred: "
-                                    << log::dec << bytes_transferred << "  DataPacket::max_size: "
-                                        << log::dec << (std::size_t)(DataPacket::max_size) << log::endl;
+            BLITZ_LOG_WARNING("bytes_transferred: %li,  DataPacket::max_size: %d",
+                                                       bytes_transferred, (DataPacket::max_size));
+
         }
         m_source->addData(m_packet);
         readContent();
     }
     else if (error)
     {
-
-        //if (boost::asio::error::eof == error)
-       // {
-        	//log::emit< Warning>() << "MediaHTTPClient::handleReadContent() "
-        	                     // << error.message().c_str() << "  disconnecting ... " << log::endl;
-
-        	//throw HTTPClientException(error.message().c_str(), Network_Read_Timeout_Err_Code);
-       // }
-
-        log::emit< Error>() << "MediaHTTPClient::handleReadContent()  "
-                                << error.message().c_str() << log::endl;
-        readContent();
-
-        //throw HTTPClientException(error.message().c_str(), Network_Read_Timeout_Err_Code);
+        BLITZ_LOG_ERROR("disconnecting...  got error: %s", error.message().c_str());
+        delete m_packet;
+        disconnect();
     }
 }
+
+void MediaHTTPClient::attach(Observer* ob)
+{
+    Subject::attach(ob);
+
+    // our Observer is actually DataSource
+    DataSource* source = NULL;
+    try
+    {
+        source = dynamic_cast<DataSource*>(ob);
+        m_source = source;
+    }
+    catch(std::exception& e)
+    {
+        BLITZ_LOG_ERROR("bad cast exception: %s", e.what());
+        return;
+    }
+}
+
 
 } // http
 } // blitz

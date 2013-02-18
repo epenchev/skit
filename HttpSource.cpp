@@ -21,44 +21,73 @@
 #include <cstring>
 #include <string>
 #include "HttpSource.h"
+#include "HttpClient.h"
 #include "DataPacket.h"
+#include "Log.h"
 #include <boost/asio.hpp>
-
-#include "logging/logging.h"
-using namespace ::logging;
+#include <boost/bind.hpp>
 
 using boost::asio::ip::tcp;
 
 namespace blitz {
 
-HttpSource::HttpSource(boost::asio::io_service& io_service,
-                          const std::string& url) : m_murl(url), m_client(io_service)
+HttpSource::HttpSource(boost::asio::io_service& io_service, const std::string& url)
+: m_murl(url), m_timer(io_service), m_client(io_service)
 {}
-
-void HttpSource::restart(void)
-{
-	log::emit< Warning>() << " HttpSource::restart() restarting connection "<< log::endl;
-	start();
-}
 
 void HttpSource::start(void)
 {
     try
     {
+        m_client.attach(this);
         m_client.connect(m_murl.serverName(), m_murl.service());
-        m_client.attachDataSource(this);
-        m_client.sendReq("GET", m_murl.resource());
-    }
-    catch(blitz::http::HTTPClientException& ex)
-    {
-    	log::emit< Warning>() << "HttpSource::start() HTTPClientException: " << ex.what() << " "
-    			                            << log::dec << ex.errorCode() << log::endl<< log::endl;
-    	throw;
     }
     catch(std::exception& ex)
     {
-    	log::emit< Trace>() << "HttpSource() exception in constructor " << ex.what() << log::endl;
-        throw;
+        BLITZ_LOG_WARNING("exception received %s", ex.what());
+    }
+}
+
+void HttpSource::handleReconnect(const boost::system::error_code& error)
+{
+	if (!error)
+	{
+		try
+		{
+			m_client.connect(m_murl.serverName(), m_murl.service());
+		}
+		catch(std::exception& ex)
+		{
+			BLITZ_LOG_WARNING("exception received %s", ex.what());
+		}
+	}
+}
+
+void HttpSource::update(Subject* changed_subject)
+{
+    BLITZ_LOG_WARNING("We are notified from subject");
+
+    blitz::http::HTTPClientState client_state = m_client.getState();
+
+    if (blitz::http::STATE_CONNECT == client_state)
+    {
+        BLITZ_LOG_INFO("Client connected sending HTTP request");
+        try
+        {
+            m_client.sendReq("GET", m_murl.resource());
+        }
+        catch(std::exception& ex)
+        {
+            BLITZ_LOG_WARNING("exception from HTTPClient::sendReq() %s", ex.what());
+        }
+    }
+    else if (blitz::http::STATE_DISCONNECT == client_state)
+    {
+        BLITZ_LOG_ERROR("Client disconnected, trying to reconnect");
+
+        m_timer.expires_from_now(boost::posix_time::seconds(60));
+        m_timer.async_wait(boost::bind(&HttpSource::handleReconnect, this,
+                                         boost::asio::placeholders::error));
     }
 }
 

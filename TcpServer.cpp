@@ -19,11 +19,9 @@
  */
 
 #include "TcpServer.h"
+#include "Log.h"
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include "logging/logging.h"
-
-using namespace ::logging;
 
 namespace blitz {
 
@@ -42,10 +40,12 @@ void TCPConnection::close(void)
         boost::system::error_code err;
         m_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, err);
         if (err)
-            log::emit< Error>() << "Error TCPConnection::close() in shutdown() " << err.message().c_str() << log::endl;
+            BLITZ_LOG_ERROR("Error is %s", err.message().c_str());
+
         m_sock.close(err);
         if (err)
-            log::emit< Error>() << "Error TCPConnection::close() in close() " << err.message().c_str() << log::endl;
+            BLITZ_LOG_ERROR("Error is %s", err.message().c_str());
+
         m_connected = false;
     }
 }
@@ -63,7 +63,7 @@ void TCPServer::start(void)
 {
     if (!m_is_listening)
     {
-        log::emit< Trace>() << "TCPServer::start() " << log::endl;
+        BLITZ_LOG_INFO("Starting server");
 
         try
         {
@@ -71,16 +71,16 @@ void TCPServer::start(void)
             m_tcp_acceptor.set_option(tcp::acceptor::reuse_address(true));
 
             m_tcp_acceptor.listen();
-            log::emit< Info>() << "Listening on port: "
-                                  << log::dec << getPort() << log::endl;
+            BLITZ_LOG_INFO("Listening on port: %d", getPort());;
         }
         catch (std::exception& e)
         {
-            log::emit< Error>() << "Unable to bind to port:" << log::dec <<  getPort() << "\n" << e.what() << log::endl;
+            BLITZ_LOG_ERROR("Unable to bind to port: %d exception: %s", getPort(), e.what());
             throw;
         }
         m_is_listening = true;
 
+        // virtual handler of the successor
         handleStartServer();
 
         accept();
@@ -91,7 +91,7 @@ void TCPServer::stop(void)
 {
     if (m_is_listening)
     {
-        log::emit< Info>() << "Shutting down server on port " << log::dec << getPort() << log::endl;
+        BLITZ_LOG_INFO("Shutting down server on port %d", getPort());
 
         m_is_listening = false;
 
@@ -102,8 +102,7 @@ void TCPServer::stop(void)
         std::set<TCPConnection*>::iterator conn_itr = m_conn_pool.begin();
         for ( ; conn_itr != m_conn_pool.end(); ++conn_itr )
         {
-            log::emit< Info>() << "TCPServer::stop() closing connection on port "
-                                    << log::dec << (*conn_itr)->getRemotePort() << log::endl;
+            BLITZ_LOG_INFO("Closing connection on port: %d", (*conn_itr)->getRemotePort());
             (*conn_itr)->close();
             m_conn_pool.erase(conn_itr);
         }
@@ -136,7 +135,7 @@ void TCPServer::handleAccept(TCPConnection* new_connection,
     }
     else
     {
-        log::emit< Error>() << "Error TCPServer::handleAccept() " << error.message().c_str() << log::endl;
+        BLITZ_LOG_ERROR("Error is %s", error.message().c_str());
         throw std::runtime_error(error.message());
     }
 

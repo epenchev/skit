@@ -1,0 +1,26 @@
+<system>
+    <logfile>blitz.log</logfile>
+    <pidfile>blitz.pid</pidfile>
+</system>
+<modules>
+    <module>
+        <name>http_pipeline</name>
+        <source>http://37.157.179.35:8086/bysid/700</source>
+        <sink>9991</sink>
+    </module>
+    <module>
+        <name>http_pipeline</name>
+        <source>http://37.157.179.35:8086/bysid/1805</source>
+        <sink>9992</sink>
+    </module>
+    <module>
+        <name>http_pipeline</name>
+        <source>http://37.157.179.35:8086/bysid/35</source>
+        <sink>9993</sink>
+    </module>
+    <module>
+        <name>http_pipeline</name>
+        <source>http://37.157.179.35:8087/bysid/128</source>
+        <sink>9993</sink>
+    </module>
+</modules>        

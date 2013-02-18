@@ -20,10 +20,8 @@
 
 #include "DataSource.h"
 #include <stdexcept>
+#include "Log.h"
 #include <iostream>
-#include "logging/logging.h"
-
-using namespace ::logging;
 
 namespace blitz {
 
@@ -55,7 +53,7 @@ void DataSource::addSink(blitz::DataSink* sink)
     }
     catch (std::bad_alloc& ex)
     {
-        log::emit< Error>() << "DataSource::addSink() exception std::bad_alloc from list" << log::endl;
+        BLITZ_LOG_ERROR("exception std::bad_alloc from list");
         throw;
     };
 }

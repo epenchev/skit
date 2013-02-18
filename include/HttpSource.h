@@ -30,15 +30,17 @@
 #include "DataPacket.h"
 #include "Url.h"
 #include "MediaHtppClient.h"
+#include "Observer.h"
 
 using boost::asio::ip::tcp;
+using boost::asio::deadline_timer;
 
 namespace blitz {
 
 /**
 * Derived from DataSource class, reads data from HTTP source (media URL).
 */
-class HttpSource : public DataSource
+class HttpSource : public DataSource, public Observer
 {
 public:
     /**
@@ -50,10 +52,14 @@ public:
     virtual ~HttpSource() {}
     void start();
 
+    // from observer
+    virtual void update(Subject* changed_subject);
+
 private:
-    void restart();
     blitz::Url m_murl;
+    deadline_timer m_timer;
     blitz::http::MediaHTTPClient m_client;
+    void handleReconnect(const boost::system::error_code& error);
 };
 
 } // blitz

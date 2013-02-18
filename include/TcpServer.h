@@ -96,7 +96,7 @@ private:
     void handleAccept(TCPConnection* new_connection, const boost::system::error_code& error);
 
     tcp::acceptor m_tcp_acceptor;
-    bool m_is_listening;                      /**< set to true when the server is listening for new connections */
+    bool m_is_listening;      /**< set to true when the server is listening for new connections */
 };
 
 } // blitz
