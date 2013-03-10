@@ -50,6 +50,12 @@ public:
     * @throws exception in case of NULL pointer or other error.
     */
     virtual void addSink(blitz::DataSink* sink);
+
+
+    /**
+    * Start reading data from input location
+    */
+    virtual void start(void) {}
 protected:
     std::list<DataSink*> m_sink_list; /**< storage container for the sinks. */
 };

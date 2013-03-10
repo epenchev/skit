@@ -37,7 +37,7 @@ void MediaHTTPClient::readContent()
 
             m_io_control_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPClient::receive_time));
 
-            m_sock.async_read_some(boost::asio::buffer(m_packet->data(), DataPacket::max_size),
+            boost::asio::async_read(m_sock, boost::asio::buffer(m_packet->data(), DataPacket::max_size),
                                     boost::bind(&MediaHTTPClient::handleReadContent, this,
                                       boost::asio::placeholders::error,
                                         boost::asio::placeholders::bytes_transferred));
@@ -80,7 +80,7 @@ void MediaHTTPClient::handleReadContent(const boost::system::error_code& error, 
         else
         {
             m_packet->size(DataPacket::max_size);
-            BLITZ_LOG_WARNING("bytes_transferred: %li,  DataPacket::max_size: %d",
+            BLITZ_LOG_WARNING("bytes_transferred: %d,  DataPacket::max_size: %d",
                                                        bytes_transferred, (DataPacket::max_size));
 
         }

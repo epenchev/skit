@@ -48,7 +48,7 @@ void Subject::notify()
     {
         for (std::list<Observer*>::iterator it = m_observers.begin(); it != m_observers.end(); ++it)
         {
-            BLITZ_LOG_INFO("Notify observer");
+            //BLITZ_LOG_INFO("Notify observer");
             Observer* ob = *it;
             ob->update(this);
         }

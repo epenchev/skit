@@ -1,5 +1,5 @@
 /*
- * DataPacket.h
+ * HttpConnSink.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,38 +14,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 2, 2013
+ *  Created on: Feb 25, 2013
  *      Author: emo
  */
 
-#ifndef DATAPACKET_H_
-#define DATAPACKET_H_
+#ifndef HTTPCONNSINK_H_
+#define HTTPCONNSINK_H_
 
-#include <cstddef>
-#include <iostream>
+#include <boost/asio.hpp>
+#include "DataSink.h"
+#include "DataPacket.h"
+#include "MediaHttpServer.h"
 
 namespace blitz {
 
-/**
-* Class representing data container passed between pipeline components.
-*/
-class DataPacket
+class HTTPConnSink : public DataSink, public MediaHTTPConnection
 {
 public:
-    DataPacket();
-    ~DataPacket() {}
+    HTTPConnSink(boost::asio::io_service& io_service);
+    virtual ~HTTPConnSink() {}
 
-    int size(void) const;
-    void size(int bytes);
-    void* data(void);
-    void  clear(void);
-
-    static const int max_size = 1024;
-protected:
-    char m_data[max_size];
-    std::size_t m_used_bytes;
+    // from DataSink
+    virtual void write(DataPacket *p);
+    inline bool isReady() { return m_ready; }
+private:
+    void handleWriteContent(const boost::system::error_code& error);
+    bool m_ready;
 };
 
 } // blitz
 
-#endif /* DATAPACKET_H_ */
+#endif /* HTTPCONNSINK_H_ */

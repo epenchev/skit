@@ -19,6 +19,7 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
+#include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
 #include "DataPacket.h"
 #include "HttpSource.h"
@@ -26,6 +27,8 @@
 #include "Log.h"
 #include "Daemon.h"
 #include "Config.h"
+#include "IOServicePool.h"
+#include "VODMediaServer.h"
 
 int main(int argc, char* argv[])
 {
@@ -33,24 +36,27 @@ int main(int argc, char* argv[])
 
     try
     {
-    	const char* media_url = "http://127.0.0.1:8080/";
-    	boost::asio::io_service io_service;
-    	blitz::Config c;
+        blitz::Config conf;
+        conf.readConfig("conf.xml");
 
-    	c.readConfig("../conf.xml");
-    	c.printConfig();
+        blitz::IOServicePool thread_pool(conf.getNumThreads());
+        std::cout << "Threads: " << conf.getNumThreads() << std::endl;
+        blitz::Daemon::daemonize(conf.getPidfile().c_str(), conf.getLogfile().c_str());
 
+        //blitz::VODMediaServer vod_server(io_service, 9999);
+        //vod_server.start();
 
-    	/*
-    	blitz::Daemon::daemonize("blitz.lock", "blitz.log");
+        for (unsigned i = 0; i < conf.getNumPipeline(); i++)
+        {
+            boost::asio::io_service& io_service = thread_pool.getIOService();
+            blitz::DataSource* source = new blitz::HttpSource(io_service, conf.getPipelineSourceURL(i));
+            blitz::DataSink* sink = new blitz::HttpSink(io_service, conf.getPipelineSinkPort(i));
+            std::cout << conf.getPipelineSourceURL(i) << std::endl;
+            source->addSink(sink);
+            source->start();
+        }
 
-        blitz::HttpSource source(io_service, media_url);
-        blitz::HttpSink sink(io_service, 9999);
-        source.addSink(&sink);
-        source.start();
-
-        io_service.run();
-        */
+        thread_pool.run();
     }
     catch (std::exception& e)
     {

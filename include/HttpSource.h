@@ -50,10 +50,12 @@ public:
     */
     HttpSource(boost::asio::io_service& io_service, const std::string& url);
     virtual ~HttpSource() {}
-    void start();
 
     // from observer
     virtual void update(Subject* changed_subject);
+
+    // from DataSource
+    virtual void start();
 
 private:
     blitz::Url m_murl;

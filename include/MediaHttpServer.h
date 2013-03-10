@@ -22,6 +22,7 @@
 #define MEDIA_HTTPSERVER_H_
 
 #include <set>
+#include <vector>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include "DataPacket.h"
@@ -47,7 +48,7 @@ class MediaHTTPConnection
 {
 public:
     MediaHTTPConnection(boost::asio::io_service& io_service);
-    virtual ~MediaHTTPConnection() { std::cout << "Delete MediaHTTPConnection \n"; }
+    virtual ~MediaHTTPConnection();
 
     inline MediaHTTPConnectionState getState() const { return state; }
     virtual void start(void);
@@ -63,7 +64,8 @@ private:
     void handleReadHeader(const boost::system::error_code& error);
     void handleWriteContent(const boost::system::error_code& error);
     void handleWriteHeader(const boost::system::error_code& error);
-    void handleDeadline(const boost::system::error_code& error);
+    void handleTimeoutReceive(const boost::system::error_code& error);
+    void handleTimeoutSend(const boost::system::error_code& error);
 
     bool m_connection_is_busy;
     bool m_connection_approved;
@@ -73,9 +75,9 @@ private:
     std::list<PacketPtr> m_packets;
     deadline_timer m_io_control_timer;
 
-    const static unsigned receive_headers_time = 300; /**< max seconds to wait for HTTP response headers */
-    const static unsigned send_data_time = 60;  /**< max seconds to wait for any async_send operation before terminating connection */
-    const static unsigned max_packets_in_queue = 2048;
+    const static unsigned receive_timeout = 60; /**< max seconds to wait for data */
+    const static unsigned send_timeout = 30;  /**< max seconds to wait for any async_send to complete */
+    const static unsigned max_queue_size = 1024;
 };
 
 /**
@@ -104,8 +106,10 @@ protected:
 private:
     deadline_timer m_activity_timer;
     void handleDeadline(const boost::system::error_code& error);
-    const static unsigned no_data_timeout = 300; /**< max seconds to wait for data,
+    const static unsigned no_data_timeout = 600; /**< max seconds to wait for data,
                                                   if no data is present in given the timeout all connections are closed */
+    void clearConnections(void);
+    std::vector<MediaHTTPConnection*> m_orphane_connections;
 };
 
 } // blitz

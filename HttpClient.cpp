@@ -200,6 +200,8 @@ void HTTPClient::handleReadHeader(const boost::system::error_code& error, std::s
             // Copy headers for future use
             m_header = boost::asio::buffer_cast<const char *>(m_response.data());
 
+            BLITZ_LOG_INFO("HTTP Header: \n %s \n", m_header.c_str());
+
             // Check that response is OK.
             std::istream response_stream(&m_response);
 
@@ -210,28 +212,31 @@ void HTTPClient::handleReadHeader(const boost::system::error_code& error, std::s
         }
         catch(std::exception& e)
         {
-        	BLITZ_LOG_ERROR("HTTP Client invalid response from server");
-        	disconnect();
+            BLITZ_LOG_ERROR("HTTP Client invalid response from server exception is %s", e.what());
+            disconnect();
         }
 
         if (http_version.substr(0, 5) != "HTTP/")
         {
-        	BLITZ_LOG_ERROR("No HTTP field in header");
-        	disconnect();
+            BLITZ_LOG_ERROR("No HTTP field in header");
+            disconnect();
         }
 
         if (http_return_code != 200)
         {
-        	BLITZ_LOG_ERROR("Error from server: %s, HTTP error code:%d ", status_message.c_str(), http_return_code);
-        	disconnect();
+            BLITZ_LOG_ERROR("Error from server: %s, HTTP error code:%d ", status_message.c_str(), http_return_code);
+            disconnect();
         }
+
+        // release/clear the response buffer for future use
+        m_response.consume(bytes_transferred);
 
         //start reading the data, virtual function
         readContent();
     }
     else
     {
-    	BLITZ_LOG_ERROR("Error reading HTTP response, %s", error.message().c_str());
+        BLITZ_LOG_ERROR("Error reading HTTP response, %s", error.message().c_str());
         disconnect();
     }
 }

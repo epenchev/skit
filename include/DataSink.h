@@ -30,13 +30,13 @@ namespace blitz {
 class DataSink
 {
 public:
-    DataSink() { packet_ = (blitz::DataPacket*) 0; }
+    DataSink() { m_packet = (blitz::DataPacket*) 0; }
     virtual ~DataSink() { }
-    virtual void write(blitz::DataPacket* p) { /*this->packet_ = p;*/ }
-    virtual blitz::DataPacket* getPacket() { return /*this->packet_;*/ NULL; }
+    virtual void write(blitz::DataPacket* p) { m_packet = p; }
+    virtual blitz::DataPacket* getPacket() { return m_packet; }
 
 protected:
-    blitz::DataPacket* packet_;
+    blitz::DataPacket* m_packet;
 };
 
 } // blitz

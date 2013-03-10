@@ -31,6 +31,10 @@ void TCPConnection::start(void)
     {
         m_connected = true;
     }
+    else
+    {
+        BLITZ_LOG_ERROR("socket is closed");
+    }
 }
 
 void TCPConnection::close(void)
@@ -39,13 +43,7 @@ void TCPConnection::close(void)
     {
         boost::system::error_code err;
         m_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, err);
-        if (err)
-            BLITZ_LOG_ERROR("Error is %s", err.message().c_str());
-
         m_sock.close(err);
-        if (err)
-            BLITZ_LOG_ERROR("Error is %s", err.message().c_str());
-
         m_connected = false;
     }
 }

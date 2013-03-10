@@ -19,28 +19,51 @@
  *      Author: emo
  */
 
+// TODO read class names from configuration file
+
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
 #include <string>
-#include <set>
+#include <vector>
 
 namespace blitz {
+
+struct HttpPipelineConfig
+{
+    unsigned short id;
+    std::string name;
+    std::string source_url;
+    std::string source_ip;
+    std::string sink_ip;
+    unsigned short sink_port;
+    unsigned short sink_sessions;
+};
 
 class Config
 {
 public:
-	Config() : m_modules_count(0)
-	{}
-	void readConfig(const std::string &filename);
-	void printConfig(void);
-private:
-	int m_modules_count;
-	std::string m_logfile;
-	std::string m_pidfile;
-	std::set<std::string> m_module_names;
-	//void insertName(std::string name) { m_module_names.insert(name); }
+    Config() {}
+    void readConfig(const std::string &filename);
 
+    std::string& getLogfile(void) { return m_logfile; }
+    std::string& getPidfile(void) { return m_pidfile; }
+    unsigned short getNumThreads(void)  { return m_threads; }
+    unsigned getNumPipeline(void) { return m_pipeline_configs.size(); }
+
+    // pipeline specific configuration API information
+    unsigned short getPipelineID(unsigned id);
+    unsigned short getPipelineSinkPort(unsigned id);
+    unsigned short getPipelineSinkMaxSesssions(unsigned id);
+    std::string& getPipelineName(unsigned id);
+    std::string& getPipelineSourceURL(unsigned id);
+    std::string& getPipelineSinkIP(unsigned id);
+
+private:
+    std::string m_logfile;
+    std::string m_pidfile;
+    unsigned short m_threads;
+    std::vector<HttpPipelineConfig> m_pipeline_configs;
 };
 
 } // blitz

@@ -1,5 +1,5 @@
 /*
- * DataPacket.h
+ * VODMediaServer.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,38 +14,38 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 2, 2013
+ *  Created on: Feb 28, 2013
  *      Author: emo
  */
 
-#ifndef DATAPACKET_H_
-#define DATAPACKET_H_
+#ifndef VODMEDIASERVER_H_
+#define VODMEDIASERVER_H_
 
-#include <cstddef>
-#include <iostream>
+#include <boost/asio.hpp>
+#include "MediaHttpServer.h"
+#include "DataSource.h"
+#include "FsSource.h"
+#include <map>
 
 namespace blitz {
 
-/**
-* Class representing data container passed between pipeline components.
-*/
-class DataPacket
+class VODMediaServer : public MediaHTTPServer
 {
 public:
-    DataPacket();
-    ~DataPacket() {}
+    VODMediaServer(boost::asio::io_service& io_service, const unsigned int tcp_port);
+    virtual ~VODMediaServer() {}
 
-    int size(void) const;
-    void size(int bytes);
-    void* data(void);
-    void  clear(void);
+    // from MediaHTTPServer
+    virtual TCPConnection* createTCPConnection(boost::asio::io_service& io_service);
 
-    static const int max_size = 1024;
-protected:
-    char m_data[max_size];
-    std::size_t m_used_bytes;
+    // from MediaHTTPServer
+    virtual void update(Subject* changed_subject);
+private:
+    std::map<std::string, blitz::DataSource*> m_sources;
+    std::map<std::string, std::string> m_filenames;
+    FsSource* m_source;
 };
 
 } // blitz
 
-#endif /* DATAPACKET_H_ */
+#endif /* VODMEDIASERVER_H_ */

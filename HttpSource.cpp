@@ -50,17 +50,17 @@ void HttpSource::start(void)
 
 void HttpSource::handleReconnect(const boost::system::error_code& error)
 {
-	if (!error)
-	{
-		try
-		{
-			m_client.connect(m_murl.serverName(), m_murl.service());
-		}
-		catch(std::exception& ex)
-		{
-			BLITZ_LOG_WARNING("exception received %s", ex.what());
-		}
-	}
+    if (!error)
+    {
+        try
+        {
+            m_client.connect(m_murl.serverName(), m_murl.service());
+        }
+        catch(std::exception& ex)
+        {
+            BLITZ_LOG_WARNING("exception received %s", ex.what());
+        }
+    }
 }
 
 void HttpSource::update(Subject* changed_subject)
@@ -85,7 +85,7 @@ void HttpSource::update(Subject* changed_subject)
     {
         BLITZ_LOG_ERROR("Client disconnected, trying to reconnect");
 
-        m_timer.expires_from_now(boost::posix_time::seconds(60));
+        m_timer.expires_from_now(boost::posix_time::seconds(10));
         m_timer.async_wait(boost::bind(&HttpSource::handleReconnect, this,
                                          boost::asio::placeholders::error));
     }

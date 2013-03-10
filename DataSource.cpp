@@ -28,7 +28,9 @@ namespace blitz {
 void DataSource::addData(blitz::DataPacket* packet)
 {
     if (!packet)
+    {
         throw std::invalid_argument("NULL pointer for DataPacket from DataSource::addData()");
+    }
 
     if (!m_sink_list.empty())
     {
@@ -39,7 +41,9 @@ void DataSource::addData(blitz::DataPacket* packet)
         }
     }
     else
+    {
         throw std::logic_error("DataSource::addData() no sink in list");
+    }
 }
 
 void DataSource::addSink(blitz::DataSink* sink)
