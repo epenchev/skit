@@ -40,7 +40,7 @@ public:
     void* data(void);
     void  clear(void);
 
-    static const int max_size = 1024;
+    static const int max_size = 1400;
 protected:
     char m_data[max_size];
     std::size_t m_used_bytes;

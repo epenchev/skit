@@ -76,11 +76,16 @@ public:
    inline unsigned int getPort(void) const { return m_tcp_acceptor.local_endpoint().port(); }
 
    /**
-    * returns IP address that the server listens for connections on
+    * returns IP address that the server listens for connections
     */
    inline boost::asio::ip::address getAddress(void) const { return m_tcp_acceptor.local_endpoint().address(); }
 
+   inline unsigned getConnectionCount(void) { return m_conn_pool.size(); }
+
    virtual ~TCPServer() { if (m_is_listening) stop(); }
+
+   inline boost::asio::ip::address getServerIP(void) const
+   { return m_tcp_acceptor.local_endpoint().address(); }
 protected:
    TCPServer(boost::asio::io_service& io_service, const boost::asio::ip::tcp::endpoint& endpoint);
 

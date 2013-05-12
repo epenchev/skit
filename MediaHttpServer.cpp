@@ -18,16 +18,12 @@
  *      Author: emo
  */
 
-/*
-TODO make timeout for expire async_read_until in case no "\r\n\r\n" is send
-TODO make timeout on async_write operations as well
-TODO create HTTP header parser class
-*/
-
 #include "MediaHttpServer.h"
 #include "DataPacket.h"
 #include "Log.h"
+#include "HTTPParser.h"
 #include <cstring>
+#include <boost/lexical_cast.hpp>
 
 namespace blitz {
 
@@ -42,12 +38,6 @@ MediaHTTPConnection::MediaHTTPConnection(boost::asio::io_service& io_service)
 MediaHTTPConnection::~MediaHTTPConnection()
 {
     BLITZ_LOG_INFO("Delete MediaHTTPConnection");
-
-    // clear packet queue
-    if (!m_packets.empty())
-    {
-        m_packets.clear();
-    }
 }
 
 void MediaHTTPConnection::start(void)
@@ -70,35 +60,69 @@ void MediaHTTPConnection::start(void)
                                       boost::bind(&MediaHTTPConnection::handleReadHeader, this,
                                          boost::asio::placeholders::error));
 
-        m_io_control_timer.async_wait(boost::bind(&MediaHTTPConnection::handleTimeoutReceive, this,
+        m_io_control_timer.async_wait(boost::bind(&MediaHTTPConnection::handleTimeoutOnSocket, this,
                                         boost::asio::placeholders::error));
     }
 }
 
-void MediaHTTPConnection::handleTimeoutReceive(const boost::system::error_code& error)
+void MediaHTTPConnection::setApproved(bool status)
 {
-    if (!error)
+    bool send_headers = false;
+    HTTPResponse http_response;
+
+    // connection is approved send HTTP headers
+    if (true == status)
     {
-        BLITZ_LOG_WARNING("Timeout receiving data closing HTTP session");
-        close();
+        if (!m_connection_approved)
+        {
+            // 200 OK
+            send_headers = true;
+            m_connection_approved = status;
+            http_response.stream();
+        }
+    }
+    else
+    {
+        if (!m_connection_approved && isConnected())
+        {
+            // Access denied
+            send_headers = true;
+            http_response.data(404);
+            m_resource_id.clear(); // clear resource_id so no DB lookup is performed
+        }
+        m_connection_approved = status;
+    }
+
+    if (send_headers && isConnected())
+    {
+        boost::asio::async_write(socket(),boost::asio::buffer(http_response.getHeaders().c_str(), http_response.getHeaders().size()),
+                                    boost::bind(&MediaHTTPConnection::handleWriteHeader, this,
+                                   boost::asio::placeholders::error));
+        // Set a deadline for sending HTTP headers.
+        m_io_control_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPConnection::send_timeout));
+
+        m_io_control_timer.async_wait(boost::bind(&MediaHTTPConnection::handleTimeoutOnSocket, this,
+                                        boost::asio::placeholders::error));
     }
 }
 
-void MediaHTTPConnection::handleTimeoutSend(const boost::system::error_code& error)
+void MediaHTTPConnection::handleTimeoutOnSocket(const boost::system::error_code& error)
 {
     if (!error)
     {
-        BLITZ_LOG_WARNING("Timeout sending data over connection closing ...");
+        BLITZ_LOG_WARNING("Timeout on socket I/O closing ..");
         close();
     }
 }
-
 
 void MediaHTTPConnection::close(void)
 {
     TCPConnection::close();
 
     state = STATE_CLOSED;
+
+    // clear packet queue
+    m_packets.clear();
 
     // notify our observers about closing;
     notify();
@@ -110,53 +134,35 @@ void MediaHTTPConnection::handleReadHeader(const boost::system::error_code& erro
 
     if (!error)
     {
-        std::istream request_stream(&m_response);
+        HTTPParser parser;
+        std::string response; // HTTP response headers
 
-        std::string request;
-        std::getline(request_stream, request);
-
-        if (request.substr(0, 3) == "GET")
+        if (parser.isValid(m_response, HTTPReq))
         {
-            size_t slash_pos = request.find_first_of("/");
-
-            if (slash_pos != std::string::npos)
+            HTTPRequest& req = parser.getRequest();
+            std::string req_type = req.getRequestType();
+            if ("GET" == req_type)
             {
-                size_t version_pos = request.find("HTTP/1.");
+                m_resource_id = req.getRequestedRes();
 
-                if (version_pos != std::string::npos && version_pos > slash_pos)
-                {
-                    m_resource_id = request.substr(slash_pos + 1, (version_pos-2) - slash_pos);
-                    BLITZ_LOG_INFO("resource requested: %s", m_resource_id.c_str());
-                }
+                state = STATE_REQ_RECEIVED;
+
+               // notify our observers about new request
+               notify();
+            }
+            else
+            {
+                BLITZ_LOG_WARNING("not a GET request: %s", req_type.c_str());
+                close();
+                return;
             }
         }
         else
         {
-            BLITZ_LOG_WARNING("not a GET request: %s", request.c_str());
+            BLITZ_LOG_WARNING("Not a valid HTTP request");
+            close();
             return;
         }
-
-        request.erase();
-        std::getline(request_stream, request);
-
-        if (!(request.substr(0, 5) == "Host:"))
-        {
-            BLITZ_LOG_WARNING("No (Host:) in header present: %s",request.c_str());
-            return;
-        }
-
-        BLITZ_LOG_INFO("Host line: %s", request.c_str());
-
-        // create HTTP response headers
-        std::string response = "HTTP/1.0 200 OK\r\n";
-        response = response  + "Server: blitz-stream \r\n";
-        response = response +  "Content-type: mpeg/video \r\n\r\n";
-
-        // send the HTTP headers for response
-        boost::asio::async_write(socket(),
-                                 boost::asio::buffer(response.c_str(), response.size()),
-                                    boost::bind(&MediaHTTPConnection::handleWriteHeader, this,
-                                       boost::asio::placeholders::error));
     }
     else // error
     {
@@ -169,16 +175,14 @@ void MediaHTTPConnection::handleWriteHeader(const boost::system::error_code& err
 {
     m_io_control_timer.cancel();
 
-    if (!error)
-    {
-        state = STATE_REQ_RECEIVED;
-
-        // notify our observers about new request
-        notify();
-    }
-    else
+    if (error)
     {
         BLITZ_LOG_ERROR("error: %s", error.message().c_str());
+        close();
+    }
+
+    if (!m_connection_approved)
+    {
         close();
     }
 }
@@ -189,8 +193,25 @@ void MediaHTTPConnection::handleWriteContent(const boost::system::error_code& er
 
     if (!error)
     {
-        m_connection_is_busy = false;
-        m_packets.pop_front();
+        // flush the rest of the queue
+        if (!m_packets.empty())
+        {
+            m_io_control_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPConnection::send_timeout));
+
+            PacketPtr packet_ptr = m_packets.front();
+            m_packets.pop_front();
+
+            boost::asio::async_write(socket(), boost::asio::buffer(packet_ptr->data(), packet_ptr->size()),
+                                     boost::bind(&MediaHTTPConnection::handleWriteContent, this,
+                                        boost::asio::placeholders::error));
+
+            m_io_control_timer.async_wait(boost::bind(&MediaHTTPConnection::handleTimeoutOnSocket, this,
+                                                    boost::asio::placeholders::error));
+        }
+        else
+        {
+            m_connection_is_busy = false;
+        }
     }
     else if (boost::asio::error::operation_aborted == error)
     {
@@ -205,13 +226,16 @@ void MediaHTTPConnection::handleWriteContent(const boost::system::error_code& er
 
 void MediaHTTPConnection::addData(PacketPtr ptr)
 {
-    // add packet to queue
-    m_packets.push_back(ptr);
+    // Disable buffer fill
+    if (m_packets.size() < 20)
+        m_packets.push_back(ptr);
 
     if (!m_connection_is_busy)
     {
         m_connection_is_busy = true;
+
         PacketPtr packet_ptr = m_packets.front();
+        m_packets.pop_front();
 
         m_io_control_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPConnection::send_timeout));
 
@@ -219,19 +243,19 @@ void MediaHTTPConnection::addData(PacketPtr ptr)
                                  boost::bind(&MediaHTTPConnection::handleWriteContent, this,
                                     boost::asio::placeholders::error));
 
-        m_io_control_timer.async_wait(boost::bind(&MediaHTTPConnection::handleTimeoutSend, this,
+        m_io_control_timer.async_wait(boost::bind(&MediaHTTPConnection::handleTimeoutOnSocket, this,
                                         boost::asio::placeholders::error));
     }
-    else if (m_packets.size() >= MediaHTTPConnection::max_queue_size)
+
+    if ((DataPacket::max_size * m_packets.size()) >= MediaHTTPConnection::max_queue_size)
     {
-        BLITZ_LOG_WARNING("packet queue size %d, remove packet", m_packets.size());
-        m_packets.pop_back();
+        BLITZ_LOG_WARNING("queue has reached max size: %d", DataPacket::max_size * m_packets.size());
     }
 }
 
 
-MediaHTTPServer::MediaHTTPServer(boost::asio::io_service& io_service, const unsigned int tcp_port)
-: TCPServer(io_service, tcp_port), m_activity_timer(io_service)
+MediaHTTPServer::MediaHTTPServer(boost::asio::io_service& io_service, const unsigned int tcp_port, MediaSessionDB& db)
+: TCPServer(io_service, tcp_port), m_activity_timer(io_service), m_dbase(db)
 {}
 
 /*
@@ -248,6 +272,8 @@ TCPConnection* MediaHTTPServer::createTCPConnection(boost::asio::io_service& io_
 
     return connection;
 }
+
+#define SERVICE_ACTIVCE
 
 void MediaHTTPServer::update(Subject* changed_subject)
 {
@@ -267,15 +293,33 @@ void MediaHTTPServer::update(Subject* changed_subject)
         MediaHTTPConnectionState conn_state = conn->getState();
         if (STATE_OPEN == conn_state)
         {
-            // TODO attach ACL module here in the future
-            // TODO set timer for connection.
             BLITZ_LOG_INFO("got connection from: %s from port: %d",
                             conn->getRemoteIP().to_string().c_str(), conn->getRemotePort());
         }
         else if (STATE_CLOSED == conn_state)
         {
-            // TODO inform DB for connection close.
+#if defined SERVICE_ACTIVCE
+            // inform DB for connection close.
+            if (!conn->getResouceId().empty())
+            {
+                blitz::record_id rec_id;
+                MediaSessionDB::Record rec;
+                std::stringstream hex_converter;
+
+                hex_converter << std::hex << conn->getResouceId();
+                hex_converter >> rec_id;
+
+                if (m_dbase.SelectRecord(rec_id, rec))
+                {
+                    rec.ip_address = "";
+                    rec.livetime_sec = 0;
+                    m_dbase.UpdateRecord(rec);
+                }
+            }
+#endif
+            // TODO must not conn->setApproved() this in this state
             conn->setApproved(false);
+
             BLITZ_LOG_INFO("got closing connection, connection pool count: %d", m_conn_pool.size() - 1);
 
             // remove connection from pool
@@ -287,15 +331,50 @@ void MediaHTTPServer::update(Subject* changed_subject)
         }
         else if (STATE_REQ_RECEIVED)
         {
-            // TODO check requested resource against a database
-            // make connection approved if resource is OK in DB
-            // else detach observer and close() connection.
             BLITZ_LOG_INFO("resource is: %s", conn->getResouceId().c_str());
+#if defined SERVICE_ACTIVCE
+            if (!conn->getResouceId().empty())
+            {
+                blitz::record_id rec_id;
+                MediaSessionDB::Record rec;
+                std::stringstream hex_converter;
+
+                hex_converter << std::hex << conn->getResouceId();
+                hex_converter >> rec_id;
+
+                if (m_dbase.SelectRecord(rec_id, rec))
+                {
+                    BLITZ_LOG_INFO("Session id: %s is present in DB", conn->getResouceId().c_str());
+                    if (!rec.ip_address.empty())
+                    {
+                        BLITZ_LOG_WARNING("Session id: %s is already connected", conn->getResouceId().c_str());
+                        conn->setApproved(false);
+                    }
+                    else
+                    {
+                        rec.ip_address = conn->getRemoteIP().to_string();
+                        m_dbase.UpdateRecord(rec);
+                        conn->setApproved(true);
+                    }
+                }
+                else
+                {
+                    BLITZ_LOG_WARNING("No such id: %s is present in DB !!!", conn->getResouceId().c_str());
+                    conn->setApproved(false);
+                }
+            }
+            else
+            {
+                BLITZ_LOG_WARNING("No resource ID present");
+                conn->setApproved(false);
+            }
+#else
             if (!conn->getApproved())
             {
                 BLITZ_LOG_INFO("connection is not approved setting status to approved");
-                conn->setApproved();
+                conn->setApproved(true);
             }
+#endif
 
         }
     }
@@ -317,18 +396,11 @@ void MediaHTTPServer::clearConnections(void)
 
 void MediaHTTPServer::sendPacket(DataPacket* packet)
 {
-    m_activity_timer.cancel();
+    //m_activity_timer.cancel();
 
     if (packet)
     {
         PacketPtr packet_ptr(packet);
-
-        /*
-        if (m_conn_pool.empty())
-        {
-            return;
-        }
-        */
 
         for (std::set<TCPConnection*>::iterator it = m_conn_pool.begin(); it != m_conn_pool.end(); ++it)
         {
@@ -363,9 +435,11 @@ void MediaHTTPServer::sendPacket(DataPacket* packet)
     // remove orphaned connections
     clearConnections();
 
+    /*
     m_activity_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPServer::no_data_timeout));
     m_activity_timer.async_wait(boost::bind(&MediaHTTPServer::handleDeadline, this,
                                     boost::asio::placeholders::error));
+    */
 }
 
 void MediaHTTPServer::handleDeadline(const boost::system::error_code& error)
@@ -385,9 +459,57 @@ void MediaHTTPServer::handleDeadline(const boost::system::error_code& error)
             TCPConnection* conn = *it;
             // will inform observer in this case us.
             conn->close();
-            delete conn;
+            //delete conn; REMOVE
         }
         m_conn_pool.clear();
+
+        // remove orphaned connections
+        clearConnections();
+    }
+}
+
+std::string MediaHTTPServer::getConnectedPeers()
+{
+    std::string peers;
+    peers.clear();
+
+    for (std::set<TCPConnection*>::iterator it = m_conn_pool.begin(); it != m_conn_pool.end(); ++it)
+    {
+        TCPConnection* connection = *it;
+        peers += connection->getRemoteIP().to_string() + "\n";
+    }
+    return peers;
+}
+
+
+void MediaHTTPServer::closeSession(blitz::record_id rec_id)
+{
+    for (std::set<TCPConnection*>::iterator it = m_conn_pool.begin(); it != m_conn_pool.end(); ++it)
+    {
+        MediaHTTPConnection* http_conn = NULL;
+        TCPConnection* connection = *it;
+
+        try
+        {
+            blitz::record_id session_id;
+            std::stringstream hex_converter;
+
+            http_conn = dynamic_cast<MediaHTTPConnection*>(connection);
+
+            hex_converter << std::hex << http_conn->getResouceId();
+            hex_converter >> session_id;
+
+            if (session_id == rec_id)
+            {
+                http_conn->close();
+                break;
+            }
+        }
+        catch(std::exception& e)
+        {
+            BLITZ_LOG_ERROR("bad cast exception: %s", e.what());
+            return;
+        }
     }
 }
 

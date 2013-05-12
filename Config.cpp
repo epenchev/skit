@@ -68,6 +68,7 @@ void Config::readConfig(const std::string &filename)
         m_logfile = getData<std::string>(pt, "blitz.logfile");
         m_pidfile = getData<std::string>(pt, "blitz.pidfile");
         m_threads = getData<unsigned int>(pt, "blitz.threads");
+        m_webservice_port = getData<unsigned int>(pt, "blitz.webservice_port");
 
         for (ptree::iterator iter = pt.get_child("blitz").begin(); iter != pt.get_child("blitz").end(); iter++)
         {
@@ -79,7 +80,6 @@ void Config::readConfig(const std::string &filename)
                 {
                     HttpPipelineConfig conf;
 
-                    conf.id = getDataIter<unsigned int>(iter, "<xmlattr>.id");
                     conf.id = getDataIter<unsigned int>(iter, "<xmlattr>.id");
                     conf.name = getDataIter<std::string>(iter, "<xmlattr>.name");
 
@@ -93,6 +93,19 @@ void Config::readConfig(const std::string &filename)
 
                     m_pipeline_configs.push_back(conf);
                 }
+            }
+            if (iter->first == "vod_service")
+            {
+                std::string service_state = getDataIter<std::string>(iter, "<xmlattr>.state");
+                if (0 == service_state.compare("enable"))
+                {
+                    m_vod_config.state = true;
+                    m_vod_config.service_ip = getDataIter<std::string>(iter, "ip");
+                    m_vod_config.service_port = getDataIter<unsigned short>(iter, "port");
+                    m_vod_config.filepath = getDataIter<std::string>(iter, "filepath");
+                }
+                else
+                    m_vod_config.state = false;
             }
         }
     }

@@ -200,7 +200,9 @@ void HTTPClient::handleReadHeader(const boost::system::error_code& error, std::s
             // Copy headers for future use
             m_header = boost::asio::buffer_cast<const char *>(m_response.data());
 
+            /* Dump headers when needed
             BLITZ_LOG_INFO("HTTP Header: \n %s \n", m_header.c_str());
+            */
 
             // Check that response is OK.
             std::istream response_stream(&m_response);
@@ -247,6 +249,7 @@ void HTTPClient::handleReadContent(const boost::system::error_code& error, std::
     {
         if (bytes_transferred)
         {
+            state = STATE_DATARECV;
             notify();
             readContent();
         }

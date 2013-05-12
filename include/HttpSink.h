@@ -1,5 +1,5 @@
 /*
- * HttpSink.hpp
+ * HttpSink.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -21,20 +21,44 @@
 #ifndef HTTPSINK_H_
 #define HTTPSINK_H_
 
+#include <string>
+#include <boost/asio.hpp>
 #include "DataSink.h"
 #include "DataPacket.h"
 #include "MediaHttpServer.h"
+#include "ControlChannel.h"
+#include "MediaSessionDB.h"
+
+using boost::asio::deadline_timer;
 
 namespace blitz {
 
-class HttpSink : public DataSink
+enum HTTPSinkCommands { CreateSeesionID = 1, GetConnectionCount, GetConnectedPeers };
+
+class HttpSink : public DataSink, public Controler
 {
 public:
-    HttpSink(boost::asio::io_service& io_service, short port);
+    HttpSink(boost::asio::io_service& io_service, short port, std::string& ip_address, std::string& name, unsigned short conf_id);
     virtual ~HttpSink() {}
     virtual void write(DataPacket *p);
+
+    // from Controler
+    virtual bool execCommand(Command& cmd, std::string& response_out);
+    virtual void setChannel(ControlChannel* channel) { this->channel = channel; }
+    virtual void closeChannel(ControlChannel* channel) { this->channel = (blitz::ControlChannel*) 0;}
+
 private:
+    void sessionloop(const boost::system::error_code& error);
+    const static unsigned int session_loop_timeout = 1; // seconds
+
+    deadline_timer m_session_timer;
+    blitz::MediaSessionDB m_dbase;
     MediaHTTPServer server;
+    ControlChannel* channel;
+    std::string m_name;
+    unsigned short m_id;
+    unsigned short m_port;
+    std::string m_ip_address;
 };
 
 } // blitz

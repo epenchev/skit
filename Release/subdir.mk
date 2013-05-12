@@ -9,18 +9,20 @@ CPP_SRCS += \
 ../Daemon.cpp \
 ../DataPacket.cpp \
 ../DataSource.cpp \
-../FsSource.cpp \
+../FileReader.cpp \
+../HTTPParser.cpp \
 ../HttpClient.cpp \
-../HttpConnSink.cpp \
 ../HttpSink.cpp \
 ../HttpSource.cpp \
 ../IOServicePool.cpp \
 ../MediaHttpClient.cpp \
 ../MediaHttpServer.cpp \
+../MediaSessionDB.cpp \
 ../Observer.cpp \
 ../TcpServer.cpp \
 ../Url.cpp \
-../VODMediaServer.cpp 
+../VODService.cpp \
+../WebService.cpp 
 
 OBJS += \
 ./Blitz.o \
@@ -28,18 +30,20 @@ OBJS += \
 ./Daemon.o \
 ./DataPacket.o \
 ./DataSource.o \
-./FsSource.o \
+./FileReader.o \
+./HTTPParser.o \
 ./HttpClient.o \
-./HttpConnSink.o \
 ./HttpSink.o \
 ./HttpSource.o \
 ./IOServicePool.o \
 ./MediaHttpClient.o \
 ./MediaHttpServer.o \
+./MediaSessionDB.o \
 ./Observer.o \
 ./TcpServer.o \
 ./Url.o \
-./VODMediaServer.o 
+./VODService.o \
+./WebService.o 
 
 CPP_DEPS += \
 ./Blitz.d \
@@ -47,18 +51,20 @@ CPP_DEPS += \
 ./Daemon.d \
 ./DataPacket.d \
 ./DataSource.d \
-./FsSource.d \
+./FileReader.d \
+./HTTPParser.d \
 ./HttpClient.d \
-./HttpConnSink.d \
 ./HttpSink.d \
 ./HttpSource.d \
 ./IOServicePool.d \
 ./MediaHttpClient.d \
 ./MediaHttpServer.d \
+./MediaSessionDB.d \
 ./Observer.d \
 ./TcpServer.d \
 ./Url.d \
-./VODMediaServer.d 
+./VODService.d \
+./WebService.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

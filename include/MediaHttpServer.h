@@ -28,7 +28,9 @@
 #include "DataPacket.h"
 #include "TcpServer.h"
 #include "Observer.h"
+#include "MediaSessionDB.h"
 #include <boost/shared_ptr.hpp>
+#include <climits>
 
 using boost::asio::deadline_timer;
 
@@ -55,17 +57,17 @@ public:
     virtual void close(void);
 
     void addData(PacketPtr ptr);
+    void sendResponse(const char* response_headers);
     inline std::string getResouceId() const { return m_resource_id; }
 
     inline bool getApproved() const { return m_connection_approved; }
-    inline void setApproved(bool status = true) { m_connection_approved = status; }
+    void setApproved(bool status);
 
 private:
     void handleReadHeader(const boost::system::error_code& error);
     void handleWriteContent(const boost::system::error_code& error);
     void handleWriteHeader(const boost::system::error_code& error);
-    void handleTimeoutReceive(const boost::system::error_code& error);
-    void handleTimeoutSend(const boost::system::error_code& error);
+    void handleTimeoutOnSocket(const boost::system::error_code& error);
 
     bool m_connection_is_busy;
     bool m_connection_approved;
@@ -76,8 +78,8 @@ private:
     deadline_timer m_io_control_timer;
 
     const static unsigned receive_timeout = 60; /**< max seconds to wait for data */
-    const static unsigned send_timeout = 30;  /**< max seconds to wait for any async_send to complete */
-    const static unsigned max_queue_size = 1024;
+    const static unsigned send_timeout = 5;  /**< max seconds to wait for any async_send to complete */
+    const static unsigned int max_queue_size = 33554432; // 32 MB, 1 minute buffer
 };
 
 /**
@@ -90,10 +92,14 @@ class MediaHTTPServer
     : public TCPServer , public Observer
 {
 public:
-    MediaHTTPServer(boost::asio::io_service& io_service, const unsigned int tcp_port);
+    MediaHTTPServer(boost::asio::io_service& io_service, const unsigned int tcp_port, MediaSessionDB& db);
 
     virtual ~MediaHTTPServer() {};
     void sendPacket(DataPacket* packet);
+
+    std::string getConnectedPeers(void);
+
+    void closeSession(blitz::record_id rec_id);
 
 protected:
     // from TCPServer
@@ -106,10 +112,12 @@ protected:
 private:
     deadline_timer m_activity_timer;
     void handleDeadline(const boost::system::error_code& error);
-    const static unsigned no_data_timeout = 600; /**< max seconds to wait for data,
+    const static unsigned no_data_timeout = 10; /**< 600; max seconds to wait for data,
                                                   if no data is present in given the timeout all connections are closed */
     void clearConnections(void);
     std::vector<MediaHTTPConnection*> m_orphane_connections;
+
+    MediaSessionDB& m_dbase;
 };
 
 } // blitz

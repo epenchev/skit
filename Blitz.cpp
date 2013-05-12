@@ -28,33 +28,68 @@
 #include "Daemon.h"
 #include "Config.h"
 #include "IOServicePool.h"
-#include "VODMediaServer.h"
+#include "VODService.h"
+#include "ControlChannel.h"
+#include "WebService.h"
 
 int main(int argc, char* argv[])
 {
+    std::string config_filename;
+    std::vector<std::string> args(argv, argv+argc);
+
+    if (args.size() == 3)
+    {
+        if (args[1] == "-c")
+        {
+            config_filename = args[2];
+        }
+        else
+        {
+            printf("Usage: %s -c conf.xml \n", argv[0]);
+            return 1;
+        }
+    }
+    else
+    {
+        printf("Usage: %s -c conf.xml \n", argv[0]);
+        return 1;
+    }
+
     BLITZ_LOG_INFO("Starting blitz daemon");
 
     try
     {
         blitz::Config conf;
-        conf.readConfig("conf.xml");
+        conf.readConfig(config_filename);
 
         blitz::IOServicePool thread_pool(conf.getNumThreads());
-        std::cout << "Threads: " << conf.getNumThreads() << std::endl;
-        blitz::Daemon::daemonize(conf.getPidfile().c_str(), conf.getLogfile().c_str());
 
-        //blitz::VODMediaServer vod_server(io_service, 9999);
-        //vod_server.start();
+        //blitz::Daemon::daemonize(conf.getPidfile().c_str(), conf.getLogfile().c_str());
+
+        blitz::WebService web_service(thread_pool.getIOService(), conf.getWebServicePort());
 
         for (unsigned i = 0; i < conf.getNumPipeline(); i++)
         {
             boost::asio::io_service& io_service = thread_pool.getIOService();
             blitz::DataSource* source = new blitz::HttpSource(io_service, conf.getPipelineSourceURL(i));
-            blitz::DataSink* sink = new blitz::HttpSink(io_service, conf.getPipelineSinkPort(i));
-            std::cout << conf.getPipelineSourceURL(i) << std::endl;
+            blitz::DataSink* sink = new blitz::HttpSink(io_service, conf.getPipelineSinkPort(i), conf.getPipelineSinkIP(i),
+                                                        conf.getPipelineName(i), conf.getPipelineID(i));
             source->addSink(sink);
             source->start();
+            blitz::Controler* controler = dynamic_cast<blitz::Controler*>(sink);
+            web_service.registerControler(controler);
         }
+
+        if (conf.isVodServiceEnable())
+        {
+            boost::asio::io_service& io_service = thread_pool.getIOService();
+            blitz::VODService* vservice = new blitz::VODService(io_service, conf.getVodServicePort(), conf.getVodServiceIP(), conf.getVodServiceFilePath());
+            blitz::Controler* vservice_controler = dynamic_cast<blitz::Controler*>(vservice);
+            web_service.registerControler(vservice_controler);
+            vservice->start();
+        }
+
+        web_service.start();
 
         thread_pool.run();
     }

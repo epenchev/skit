@@ -40,6 +40,14 @@ struct HttpPipelineConfig
     unsigned short sink_sessions;
 };
 
+struct VODServiceConfig
+{
+    bool state;
+    std::string service_ip;
+    unsigned short service_port;
+    std::string filepath;
+};
+
 class Config
 {
 public:
@@ -59,11 +67,20 @@ public:
     std::string& getPipelineSourceURL(unsigned id);
     std::string& getPipelineSinkIP(unsigned id);
 
+    unsigned short getWebServicePort() { return m_webservice_port; }
+
+    bool isVodServiceEnable() { return m_vod_config.state; }
+    unsigned short getVodServicePort() { return m_vod_config.service_port; }
+    std::string& getVodServiceIP() { return m_vod_config.service_ip; }
+    std::string& getVodServiceFilePath() { return m_vod_config.filepath; }
+
 private:
     std::string m_logfile;
     std::string m_pidfile;
     unsigned short m_threads;
+    unsigned short m_webservice_port;
     std::vector<HttpPipelineConfig> m_pipeline_configs;
+    VODServiceConfig m_vod_config;
 };
 
 } // blitz
