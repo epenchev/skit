@@ -48,6 +48,56 @@ void TCPConnection::close(void)
     }
 }
 
+std::string TCPConnection::getRemoteIP(void)
+{
+    std::string ip_address;
+    ip_address.clear();
+
+    if (m_sock.is_open())
+    {
+        boost::system::error_code err_code;
+        boost::asio::ip::tcp::endpoint endpoint = m_sock.remote_endpoint(err_code);
+        if (err_code)
+        {
+            BLITZ_LOG_ERROR("remote_endpoint() returned error: %s",
+                                               err_code.message().c_str());
+        }
+        else
+        {
+            ip_address = endpoint.address().to_string(err_code);
+            if (err_code)
+            {
+                BLITZ_LOG_ERROR("remote_endpoint().address().to_string() returned error: %s",
+                                                                  err_code.message().c_str());
+                ip_address.clear();
+            }
+        }
+    }
+
+    return ip_address;
+}
+
+unsigned short TCPConnection::getRemotePort(void)
+{
+    unsigned short net_port = 0;
+
+    if (m_sock.is_open())
+    {
+        boost::system::error_code err_code;
+        boost::asio::ip::tcp::endpoint endpoint = m_sock.remote_endpoint(err_code);
+        if (err_code)
+        {
+            BLITZ_LOG_ERROR("remote_endpoint() returned error: %s",
+                                               err_code.message().c_str());
+        }
+        else
+        {
+            net_port = endpoint.port();
+        }
+    }
+    return net_port;
+}
+
 TCPServer::TCPServer(boost::asio::io_service& io_service, const boost::asio::ip::tcp::endpoint& endpoint)
           : m_tcp_acceptor(io_service, tcp::endpoint(endpoint)),
             m_is_listening(false) {}

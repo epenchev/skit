@@ -49,14 +49,12 @@ public:
     /**
      * returns the client's IP address
      */
-    inline boost::asio::ip::address getRemoteIP(void) const
-    { return m_sock.remote_endpoint().address(); }
+    std::string getRemoteIP(void);
 
     /**
      * returns the client's port number
      */
-    inline unsigned short getRemotePort(void)
-    { return m_sock.remote_endpoint().port(); }
+    unsigned short getRemotePort(void);
 
 private:
     tcp::socket m_sock;

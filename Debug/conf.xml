@@ -4,8 +4,8 @@
     <webservice_port>2222</webservice_port>
     <threads>1</threads>
 
-    <pipeline type="http" id="1" name="BTV">
-        <source>http://84.40.124.233:8001/</source>
+    <pipeline type="http" id="1" name="CN">
+        <source>http://84.40.124.230:6080/bysid/113</source>
         <sink>
 	        <ip>127.0.0.1</ip>
 	        <port>8001</port>

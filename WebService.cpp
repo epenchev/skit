@@ -34,7 +34,7 @@ void WebSession::start(void)
     if (isConnected() && socket().is_open())
     {
         BLITZ_LOG_INFO("Web service connected from: %s, from port:%d",
-                                          getRemoteIP().to_string().c_str(), getRemotePort());
+                                          getRemoteIP().c_str(), getRemotePort());
 
         boost::asio::async_read_until(socket(), m_response, "\r\n\r\n",
                                       boost::bind(&WebSession::handleReadCommand, this,

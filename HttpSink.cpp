@@ -183,6 +183,7 @@ void HttpSink::sessionloop(const boost::system::error_code& error)
         MediaSessionDB::Record rec_out;
 
         if (!m_dbase.SelectRecord(rec_id, rec_out)) {
+            BLITZ_LOG_INFO("False Selecting session %lu", rec_id);
             break;
         }
 
@@ -190,13 +191,13 @@ void HttpSink::sessionloop(const boost::system::error_code& error)
         {
             if (!rec_out.ip_address.empty()) // session is connected close it
             {
-                BLITZ_LOG_INFO("Closing session");
+                BLITZ_LOG_INFO("Closing session %lu", rec_id);
                 server.closeSession(rec_id);
-                BLITZ_LOG_INFO("Session closed");
+                BLITZ_LOG_INFO("Session closed %lu", rec_id);
             }
-            BLITZ_LOG_INFO("Deleting session from DB");
+            BLITZ_LOG_INFO("Deleting session from DB %lu", rec_id);
             m_dbase.DeleteRecord(rec_id);
-            BLITZ_LOG_INFO("Session deleted from DB");
+            BLITZ_LOG_INFO("Session deleted from DB %lu", rec_id);
         }
         else
         {

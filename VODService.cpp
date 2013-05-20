@@ -93,7 +93,7 @@ void VODService::update(Subject* changed_subject)
                     {
                         session->openFile(it->second);
                         session->sendHeaders(VOD_STATE_OK);
-                        rec.ip_address = session->getRemoteIP().to_string();
+                        rec.ip_address = session->getRemoteIP().c_str();
                         m_dbase.UpdateRecord(rec);
                     }
                     else
@@ -286,6 +286,10 @@ void VODSession::handleReadHeader(const boost::system::error_code& error)
         // notify our observers about new request
         notify();
     }
+    else if (boost::asio::error::operation_aborted == error)
+    {
+        BLITZ_LOG_WARNING("Timeout sending data to connection");
+    }
     else // error
     {
         BLITZ_LOG_ERROR("MediaHTTPConnection::handleReadHeader %s", error.message().c_str());
@@ -295,7 +299,7 @@ void VODSession::handleReadHeader(const boost::system::error_code& error)
 
 void VODSession::handleWriteContent(const boost::system::error_code& error)
 {
-    //m_io_control_timer.cancel();
+    //m_io_control_timer.cancel(); Don't need this, user can pause player
 
     if (!error)
     {
@@ -365,7 +369,7 @@ void VODSession::start(void)
     {
         m_state = VOD_STATE_OPEN;
 
-        BLITZ_LOG_INFO("got connection from: %s, from port:%d", getRemoteIP().to_string().c_str(), getRemotePort());
+        BLITZ_LOG_INFO("got connection from: %s, from port:%d", getRemoteIP().c_str(), getRemotePort());
 
         // Set a deadline for receiving HTTP headers.
         m_io_control_timer.expires_from_now(boost::posix_time::seconds(VODSession::receive_timeout));

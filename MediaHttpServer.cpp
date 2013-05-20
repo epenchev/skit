@@ -48,10 +48,12 @@ void MediaHTTPConnection::start(void)
     if (isConnected() && socket().is_open())
     {
         state = STATE_OPEN;
-        // notify our observers about new connection;
+        /*
+        notify our observers about new connection;
         notify();
+        */
 
-        BLITZ_LOG_INFO("got connection from: %s, from port:%d", getRemoteIP().to_string().c_str(), getRemotePort());
+        BLITZ_LOG_INFO("got connection from: %s, from port:%d", getRemoteIP().c_str(), getRemotePort());
 
         // Set a deadline for receiving HTTP headers.
         m_io_control_timer.expires_from_now(boost::posix_time::seconds(MediaHTTPConnection::receive_timeout));
@@ -164,7 +166,7 @@ void MediaHTTPConnection::handleReadHeader(const boost::system::error_code& erro
             return;
         }
     }
-    else // error
+    else if (boost::asio::error::operation_aborted != error) // error on socket, skip abort from timeout
     {
         BLITZ_LOG_ERROR("MediaHTTPConnection::handleReadHeader %s", error.message().c_str());
         close();
@@ -175,13 +177,12 @@ void MediaHTTPConnection::handleWriteHeader(const boost::system::error_code& err
 {
     m_io_control_timer.cancel();
 
-    if (error)
+    if (error && boost::asio::error::operation_aborted != error)
     {
         BLITZ_LOG_ERROR("error: %s", error.message().c_str());
         close();
     }
-
-    if (!m_connection_approved)
+    else if (!m_connection_approved)
     {
         close();
     }
@@ -291,12 +292,8 @@ void MediaHTTPServer::update(Subject* changed_subject)
         }
 
         MediaHTTPConnectionState conn_state = conn->getState();
-        if (STATE_OPEN == conn_state)
-        {
-            BLITZ_LOG_INFO("got connection from: %s from port: %d",
-                            conn->getRemoteIP().to_string().c_str(), conn->getRemotePort());
-        }
-        else if (STATE_CLOSED == conn_state)
+
+        if (STATE_CLOSED == conn_state)
         {
 #if defined SERVICE_ACTIVCE
             // inform DB for connection close.
@@ -352,7 +349,7 @@ void MediaHTTPServer::update(Subject* changed_subject)
                     }
                     else
                     {
-                        rec.ip_address = conn->getRemoteIP().to_string();
+                        rec.ip_address = conn->getRemoteIP().c_str();
                         m_dbase.UpdateRecord(rec);
                         conn->setApproved(true);
                     }
@@ -476,7 +473,8 @@ std::string MediaHTTPServer::getConnectedPeers()
     for (std::set<TCPConnection*>::iterator it = m_conn_pool.begin(); it != m_conn_pool.end(); ++it)
     {
         TCPConnection* connection = *it;
-        peers += connection->getRemoteIP().to_string() + "\n";
+        peers += connection->getRemoteIP().c_str();
+        peers += "\n";
     }
     return peers;
 }

@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
 
         blitz::IOServicePool thread_pool(conf.getNumThreads());
 
-        //blitz::Daemon::daemonize(conf.getPidfile().c_str(), conf.getLogfile().c_str());
+        blitz::Daemon::daemonize(conf.getPidfile().c_str(), conf.getLogfile().c_str());
 
         blitz::WebService web_service(thread_pool.getIOService(), conf.getWebServicePort());
 
