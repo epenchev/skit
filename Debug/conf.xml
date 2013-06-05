@@ -1,0 +1,22 @@
+<blitz>
+    <logfile>blitz.log</logfile>
+    <pidfile>blitz.pid</pidfile>
+    <webservice_port>2222</webservice_port>
+    <threads>1</threads>
+
+    <pipeline type="http" id="1" name="CN">
+        <source>http://84.40.124.230:6080/bysid/113</source>
+        <sink>
+	        <ip>127.0.0.1</ip>
+	        <port>8001</port>
+	        <sessions>100</sessions>
+	</sink>
+    </pipeline>
+    
+    <vod_service state="enable">
+        <ip>127.0.0.1</ip>
+        <port>9999</port>
+        <filepath>/home/emo/Downloads/</filepath>
+    </vod_service>
+
+</blitz>

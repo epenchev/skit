@@ -1,5 +1,5 @@
 /*
- * Observer.cpp
+ * Url.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,45 +14,41 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 27, 2013
+ *  Created on: Jan 13, 2013
  *      Author: emo
  */
 
-#include "Observer.h"
-#include "Log.h"
+#ifndef URL_H_
+#define URL_H_
+
+#include <string>
 
 namespace blitz {
 
-void Subject::attach(Observer* ob)
+/**
+* URL container.
+* Supports HTTP for now, can be extended to support RTSP, RTP, UDP ...
+*/
+class Url
 {
-    try
-    {
-        m_observers.push_back(ob);
-    }
-    catch (std::bad_alloc& ex)
-    {
-        BLITZ_LOG_ERROR("exception std::bad_alloc from list");
-        throw;
-    };
-}
+public:
+    Url(const std::string& url);
 
-void Subject::detach(Observer* ob)
-{
-    BLITZ_LOG_INFO("Removing observer");
-    m_observers.remove(ob);
-}
+    std::string serverName();
+    std::string resource();
+    std::string service();
+private:
+    /**
+    * Reads HTTP URL and extracts parameters from it.
+    * @param url: URL string
+    */
+    void readUrl(const std::string& url);
 
-void Subject::notify()
-{
-    if (!m_observers.empty())
-    {
-        for (std::list<Observer*>::iterator it = m_observers.begin(); it != m_observers.end(); ++it)
-        {
-            //BLITZ_LOG_INFO("Notify observer");
-            Observer* ob = *it;
-            ob->update(this);
-        }
-    }
-}
+    std::string m_server;   /**< server name. */
+    std::string m_service;  /**< network port numeric or string service ("http") */
+    std::string m_resource; /**< resource to be fetched */
+};
+
+#endif /* URL_H_ */
 
 } // blitz

@@ -20,17 +20,17 @@
 
 #include "DataSource.h"
 #include <stdexcept>
+#include "Log.h"
 #include <iostream>
-#include "logging/logging.h"
-
-using namespace ::logging;
 
 namespace blitz {
 
 void DataSource::addData(blitz::DataPacket* packet)
 {
     if (!packet)
+    {
         throw std::invalid_argument("NULL pointer for DataPacket from DataSource::addData()");
+    }
 
     if (!m_sink_list.empty())
     {
@@ -41,7 +41,9 @@ void DataSource::addData(blitz::DataPacket* packet)
         }
     }
     else
+    {
         throw std::logic_error("DataSource::addData() no sink in list");
+    }
 }
 
 void DataSource::addSink(blitz::DataSink* sink)
@@ -55,7 +57,7 @@ void DataSource::addSink(blitz::DataSink* sink)
     }
     catch (std::bad_alloc& ex)
     {
-        log::emit< Error>() << "DataSource::addSink() exception std::bad_alloc from list" << log::endl;
+        BLITZ_LOG_ERROR("exception std::bad_alloc from list");
         throw;
     };
 }

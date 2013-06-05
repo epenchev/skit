@@ -17,52 +17,90 @@
  *      Author: emo
  */
 
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/thread/thread.hpp>
+#include <boost/bind.hpp>
 #include "DataPacket.h"
 #include "HttpSource.h"
 #include "HttpSink.h"
-#include "logging/logging.h"
-#include <iostream>
-
-using namespace ::logging;
-
-// logging levels can be disabled at compile time
-//LOGGING_DISABLE_LEVEL(::logging::Error);
-//LOGGING_DISABLE_LEVEL(::logging::Trace);
-//LOGGING_DISABLE_LEVEL(::logging::Warning);
-//LOGGING_DISABLE_LEVEL(::logging::Info);
-
-//LOGGING_DEFINE_OUTPUT( FileLogType );
+#include "Log.h"
+#include "Daemon.h"
+#include "Config.h"
+#include "IOServicePool.h"
+#include "VODService.h"
+#include "ControlChannel.h"
+#include "WebService.h"
 
 int main(int argc, char* argv[])
 {
-/*
-  log::emit< Error>()   << "Logging an Error " << log::dec << 15 << log::endl;
-  log::emit< Trace>()   << "Logging a Trace"   << log::endl;
-  log::emit< Warning>() << "Logging a Warning" << log::endl;
-  log::emit< Info>()    << "Logging an Info"   << log::endl;
-*/
-  try
-    {
-      if (argc != 2)
-      {
-        std::cout << "Usage: blitz <url>\n";
-        return 1;
-      }
+    std::string config_filename;
+    std::vector<std::string> args(argv, argv+argc);
 
-      boost::asio::io_service io_service;
-      blitz::HttpSource source(io_service, argv[1]);
-      blitz::HttpSink sink(io_service, 9999);
-      source.addSink(&sink);
-      source.start();
-      io_service.run();
+    if (args.size() == 3)
+    {
+        if (args[1] == "-c")
+        {
+            config_filename = args[2];
+        }
+        else
+        {
+            printf("Usage: %s -c conf.xml \n", argv[0]);
+            return 1;
+        }
+    }
+    else
+    {
+        printf("Usage: %s -c conf.xml \n", argv[0]);
+        return 1;
+    }
+
+    BLITZ_LOG_INFO("Starting blitz daemon");
+
+    try
+    {
+        blitz::Config conf;
+        conf.readConfig(config_filename);
+
+        blitz::IOServicePool thread_pool(conf.getNumThreads());
+
+        blitz::Daemon::daemonize(conf.getPidfile().c_str(), conf.getLogfile().c_str());
+
+        blitz::WebService web_service(thread_pool.getIOService(), conf.getWebServicePort());
+
+        for (unsigned i = 0; i < conf.getNumPipeline(); i++)
+        {
+            boost::asio::io_service& io_service = thread_pool.getIOService();
+            blitz::DataSource* source = new blitz::HttpSource(io_service, conf.getPipelineSourceURL(i));
+            blitz::DataSink* sink = new blitz::HttpSink(io_service, conf.getPipelineSinkPort(i), conf.getPipelineSinkIP(i),
+                                                        conf.getPipelineName(i), conf.getPipelineID(i));
+            source->addSink(sink);
+            source->start();
+            blitz::Controler* controler = dynamic_cast<blitz::Controler*>(sink);
+            web_service.registerControler(controler);
+        }
+
+        if (conf.isVodServiceEnable())
+        {
+            boost::asio::io_service& io_service = thread_pool.getIOService();
+            blitz::VODService* vservice = new blitz::VODService(io_service, conf.getVodServicePort(), conf.getVodServiceIP(), conf.getVodServiceFilePath());
+            blitz::Controler* vservice_controler = dynamic_cast<blitz::Controler*>(vservice);
+            web_service.registerControler(vservice_controler);
+            vservice->start();
+        }
+
+        web_service.start();
+
+        thread_pool.run();
     }
     catch (std::exception& e)
     {
-      std::cout << "Exception: " << e.what() << "\n";
+        // this is in log file
+        BLITZ_LOG_ERROR("Exception: %s", e.what());
+        exit(1);
     }
 
-
-  return 0;
+    return 0;
 }
 
 

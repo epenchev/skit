@@ -1,6 +1,5 @@
 /*
- * Observer.cpp
- *
+ * Daemon.h
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,45 +13,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 27, 2013
+ *  Created on: Feb 16, 2013
  *      Author: emo
  */
 
-#include "Observer.h"
-#include "Log.h"
+#ifndef DAEMON_H_
+#define DAEMON_H_
 
 namespace blitz {
 
-void Subject::attach(Observer* ob)
+class Daemon
 {
-    try
-    {
-        m_observers.push_back(ob);
-    }
-    catch (std::bad_alloc& ex)
-    {
-        BLITZ_LOG_ERROR("exception std::bad_alloc from list");
-        throw;
-    };
-}
-
-void Subject::detach(Observer* ob)
-{
-    BLITZ_LOG_INFO("Removing observer");
-    m_observers.remove(ob);
-}
-
-void Subject::notify()
-{
-    if (!m_observers.empty())
-    {
-        for (std::list<Observer*>::iterator it = m_observers.begin(); it != m_observers.end(); ++it)
-        {
-            //BLITZ_LOG_INFO("Notify observer");
-            Observer* ob = *it;
-            ob->update(this);
-        }
-    }
-}
+public:
+	static void daemonize(const char* lockfile, const char* logfile);
+protected:
+	Daemon() {}
+};
 
 } // blitz
+
+#endif /* DAEMON_H_ */

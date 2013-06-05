@@ -1,6 +1,5 @@
 /*
- * Observer.cpp
- *
+ * DataFilter.h
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,45 +13,37 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 27, 2013
+ * Created on: Jan 7, 2013
  *      Author: emo
  */
 
-#include "Observer.h"
-#include "Log.h"
+#ifndef DATAFILTER_H_
+#define DATAFILTER_H_
+
+#include "DataSource.h"
+#include "DataSink.h"
 
 namespace blitz {
 
-void Subject::attach(Observer* ob)
+/**
+* Class representing data filter component in typical pipeline.
+* This is used to do some operation on the data before send out from a sink.
+*/
+class DataFilter : public DataSource, public DataSink
 {
-    try
-    {
-        m_observers.push_back(ob);
-    }
-    catch (std::bad_alloc& ex)
-    {
-        BLITZ_LOG_ERROR("exception std::bad_alloc from list");
-        throw;
-    };
-}
+public:
+        virtual ~DataFilter() {};
+        DataFilter() : DataSource(), DataSink() {};
 
-void Subject::detach(Observer* ob)
-{
-    BLITZ_LOG_INFO("Removing observer");
-    m_observers.remove(ob);
-}
-
-void Subject::notify()
-{
-    if (!m_observers.empty())
-    {
-        for (std::list<Observer*>::iterator it = m_observers.begin(); it != m_observers.end(); ++it)
+        virtual void write(DataPacket* packet)
         {
-            //BLITZ_LOG_INFO("Notify observer");
-            Observer* ob = *it;
-            ob->update(this);
+            DataSink::write(packet);
+            process();
         }
-    }
-}
+protected:
+        virtual void process() { DataSource::addData(this->packet_); }
+};
 
-} // blitz
+}// blitz
+
+#endif /* DATAFILTER_H_ */

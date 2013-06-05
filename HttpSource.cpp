@@ -20,33 +20,74 @@
 
 #include <cstring>
 #include <string>
-#include <iostream>
 #include "HttpSource.h"
+#include "HttpClient.h"
 #include "DataPacket.h"
+#include "Log.h"
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 
 using boost::asio::ip::tcp;
 
 namespace blitz {
 
-HttpSource::HttpSource(boost::asio::io_service& io_service,
-                          const std::string& url) : m_murl(url), m_client(io_service)
-{
-    // TODO something
-}
+HttpSource::HttpSource(boost::asio::io_service& io_service, const std::string& url)
+: m_murl(url), m_timer(io_service), m_client(io_service)
+{}
 
 void HttpSource::start(void)
 {
     try
     {
+        m_client.attach(this);
         m_client.connect(m_murl.serverName(), m_murl.service());
-        m_client.attachDataSource(this);
-        m_client.sendReq("GET", m_murl.resource());
     }
     catch(std::exception& ex)
     {
-        std::cout << "HttpSource() exception in constructor " << ex.what() << std::endl;
-        throw;
+        BLITZ_LOG_WARNING("exception received %s", ex.what());
+    }
+}
+
+void HttpSource::handleReconnect(const boost::system::error_code& error)
+{
+    if (!error)
+    {
+        try
+        {
+            m_client.connect(m_murl.serverName(), m_murl.service());
+        }
+        catch(std::exception& ex)
+        {
+            BLITZ_LOG_WARNING("exception received %s", ex.what());
+        }
+    }
+}
+
+void HttpSource::update(Subject* changed_subject)
+{
+    BLITZ_LOG_WARNING("We are notified from subject");
+
+    blitz::http::HTTPClientState client_state = m_client.getState();
+
+    if (blitz::http::STATE_CONNECT == client_state)
+    {
+        BLITZ_LOG_INFO("Client connected sending HTTP request");
+        try
+        {
+            m_client.sendReq("GET", m_murl.resource());
+        }
+        catch(std::exception& ex)
+        {
+            BLITZ_LOG_WARNING("exception from HTTPClient::sendReq() %s", ex.what());
+        }
+    }
+    else if (blitz::http::STATE_DISCONNECT == client_state)
+    {
+        BLITZ_LOG_ERROR("Client disconnected, trying to reconnect");
+
+        m_timer.expires_from_now(boost::posix_time::seconds(10));
+        m_timer.async_wait(boost::bind(&HttpSource::handleReconnect, this,
+                                         boost::asio::placeholders::error));
     }
 }
 

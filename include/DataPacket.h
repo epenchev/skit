@@ -1,5 +1,5 @@
 /*
- * Observer.cpp
+ * DataPacket.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,45 +14,38 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 27, 2013
+ *  Created on: Jan 2, 2013
  *      Author: emo
  */
 
-#include "Observer.h"
-#include "Log.h"
+#ifndef DATAPACKET_H_
+#define DATAPACKET_H_
+
+#include <cstddef>
+#include <iostream>
 
 namespace blitz {
 
-void Subject::attach(Observer* ob)
+/**
+* Class representing data container passed between pipeline components.
+*/
+class DataPacket
 {
-    try
-    {
-        m_observers.push_back(ob);
-    }
-    catch (std::bad_alloc& ex)
-    {
-        BLITZ_LOG_ERROR("exception std::bad_alloc from list");
-        throw;
-    };
-}
+public:
+    DataPacket();
+    ~DataPacket() {}
 
-void Subject::detach(Observer* ob)
-{
-    BLITZ_LOG_INFO("Removing observer");
-    m_observers.remove(ob);
-}
+    int size(void) const;
+    void size(int bytes);
+    void* data(void);
+    void  clear(void);
 
-void Subject::notify()
-{
-    if (!m_observers.empty())
-    {
-        for (std::list<Observer*>::iterator it = m_observers.begin(); it != m_observers.end(); ++it)
-        {
-            //BLITZ_LOG_INFO("Notify observer");
-            Observer* ob = *it;
-            ob->update(this);
-        }
-    }
-}
+    static const int max_size = 1400;
+protected:
+    char m_data[max_size];
+    std::size_t m_used_bytes;
+};
 
 } // blitz
+
+#endif /* DATAPACKET_H_ */

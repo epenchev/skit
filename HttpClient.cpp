@@ -24,39 +24,89 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include "HttpClient.h"
-
-#include "logging/logging.h"
-using namespace ::logging;
+#include "Log.h"
 
 using boost::asio::ip::tcp;
 
 namespace blitz {
 namespace http {
 
+HTTPClient::HTTPClient(boost::asio::io_service& io_service)
+: m_sock(io_service), state(STATE_DISCONNECT), m_io_control_timer(io_service)
+{}
+
 void HTTPClient::connect(const std::string& server, const std::string& service)
 {
-    if ( !server.empty() && !service.empty() )
+    if ( server.empty() || service.empty() )
     {
+        throw std::invalid_argument("HTTPClient::connect() invalid parameters");
+    }
+
+    m_server_name = server;
+    BLITZ_LOG_INFO("Connecting to server: %s", server.c_str());
+
+    boost::system::error_code err;
+    boost::asio::ip::address ip_address = boost::asio::ip::address::from_string(server, err);
+
+    if (err)
+    {
+        BLITZ_LOG_INFO("Server name is not IP address");
+
         tcp::resolver resolver(m_sock.get_io_service());
         tcp::resolver::query query(server, service);
 
-        try
-        {
-            tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-            boost::asio::connect(m_sock, endpoint_iterator);
-        }
-        catch(boost::system::system_error& e)
-        {
-            std::string errmsg = "HTTPClient::connect() error ";// + e.what();
-            errmsg += e.what();
-            throw std::runtime_error(errmsg);
-        }
-
-        m_server_name = server;
+        resolver.async_resolve(query, boost::bind(&HTTPClient::handleResolve, this,
+                                  boost::asio::placeholders::error,
+                                         boost::asio::placeholders::iterator));
     }
     else
     {
-        throw std::invalid_argument("HTTPClient::connect() invalid parameters");
+        int service_port = 0;
+
+        if (!service.compare("http"))
+        {
+            service_port = 80;
+        }
+        else
+        {
+            service_port = atoi(service.c_str());
+        }
+
+        boost::asio::ip::tcp::endpoint endpoint(ip_address, (unsigned short)service_port);
+        m_sock.async_connect(endpoint, boost::bind(&HTTPClient::handleConnect, this,
+                                boost::asio::placeholders::error));
+    }
+}
+
+void HTTPClient::handleResolve(const boost::system::error_code& err, tcp::resolver::iterator endpoint_iterator)
+{
+    if (!err)
+    {
+        boost::asio::async_connect(m_sock, endpoint_iterator,
+                                   boost::bind(&HTTPClient::handleConnect, this,
+                                       boost::asio::placeholders::error));
+    }
+    else
+    {
+        BLITZ_LOG_ERROR("Error resolving: %s", err.message().c_str());
+        // notify observer for this error
+        notify();
+    }
+}
+
+void HTTPClient::handleConnect(const boost::system::error_code& err)
+{
+    if (!err)
+    {
+        state = STATE_CONNECT;
+        BLITZ_LOG_INFO("Connection established");
+        notify();
+    }
+    else
+    {
+        BLITZ_LOG_INFO("Error connecting: %s", err.message().c_str());
+        // notify observer for this error
+        notify();
     }
 }
 
@@ -64,17 +114,13 @@ void HTTPClient::disconnect(void)
 {
     if (m_sock.is_open())
     {
-        boost::system::error_code error;
-        m_sock.close(error);
-
-        if (error)
-        {
-            std::string errmsg = "HTTPClient::connect() error " + error.message();
-            throw std::runtime_error(errmsg);
-        }
+        boost::system::error_code err;
+        m_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, err);
+        m_sock.close(err);
+        state = STATE_DISCONNECT;
+        BLITZ_LOG_INFO("Connection terminated");
+        notify();
     }
-    else
-        throw std::runtime_error("HTTPClient::close() socket not connected");
 }
 
 void HTTPClient::sendReq(std::string req, const std::string& resource)
@@ -88,14 +134,14 @@ void HTTPClient::sendReq(std::string req, const std::string& resource)
 
     if (m_sock.is_open())
     {
-        log::emit< Trace>() << "HTTPClient::sendReq()" << log::endl;
-
         boost::asio::async_write(m_sock, request,
                                  boost::bind(&HTTPClient::handleWriteHeader, this,
                                    boost::asio::placeholders::error,
                                      boost::asio::placeholders::bytes_transferred));
+        BLITZ_LOG_INFO("HTTP request send");
     }
-    else {
+    else
+    {
         throw std::logic_error("HTTPClient::sendReq() socket not connected");
     }
 }
@@ -103,7 +149,7 @@ void HTTPClient::sendReq(std::string req, const std::string& resource)
 // override this member to add own behavior
 void HTTPClient::readContent(void)
 {
-    log::emit< Trace>() << "HTTPClient::readContent()" << log::endl;
+    BLITZ_LOG_INFO("executed");
 
     boost::asio::async_read(m_sock, m_response,
                              boost::asio::transfer_at_least(1),
@@ -116,7 +162,7 @@ void HTTPClient::handleWriteHeader(const boost::system::error_code& error, std::
 {
     if (!error)
     {
-        log::emit< Trace>() << "HTTPClient::handleWriteHeader()" << log::endl;
+        BLITZ_LOG_INFO("HTTPClient::handleWriteHeader()");
 
         boost::asio::async_read_until(m_sock, m_response, "\r\n\r\n",
                                       boost::bind(&HTTPClient::handleReadHeader, this,
@@ -125,9 +171,8 @@ void HTTPClient::handleWriteHeader(const boost::system::error_code& error, std::
     }
     else
     {
-        std::string errorMessage = "Error writing HTTP request " + error.message();
-        throw std::runtime_error(errorMessage);
-
+        BLITZ_LOG_ERROR("Error writing HTTP request: %s", error.message().c_str());
+        disconnect();
     }
 }
 
@@ -142,20 +187,22 @@ void HTTPClient::handleReadHeader(const boost::system::error_code& error, std::s
     std::string http_version;
     unsigned http_return_code;
 
-    log::emit< Trace>() << "HTTPClient::handleReadHeader() start !!!" << log::endl;
-
     if (!error)
     {
-        log::emit< Trace>() << "HTTPClient::handleReadHeader()" << log::endl;
         try
         {
             if (!bytes_transferred && !(boost::asio::buffer_size(m_response.data())))
             {
-                throw std::runtime_error("HTTP Client Invalid header");
+                BLITZ_LOG_ERROR("Invalid header");
+                disconnect();
             }
 
             // Copy headers for future use
             m_header = boost::asio::buffer_cast<const char *>(m_response.data());
+
+            /* Dump headers when needed
+            BLITZ_LOG_INFO("HTTP Header: \n %s \n", m_header.c_str());
+            */
 
             // Check that response is OK.
             std::istream response_stream(&m_response);
@@ -165,25 +212,34 @@ void HTTPClient::handleReadHeader(const boost::system::error_code& error, std::s
             response_stream >> http_return_code;
             std::getline(response_stream, status_message);
         }
-        catch(std::exception& e) {
-            throw std::runtime_error("HTTP Client invalid response from server");
+        catch(std::exception& e)
+        {
+            BLITZ_LOG_ERROR("HTTP Client invalid response from server exception is %s", e.what());
+            disconnect();
         }
 
-        if (http_version.substr(0, 5) != "HTTP/") {
-            throw std::runtime_error("HTTP Client Invalid header");
+        if (http_version.substr(0, 5) != "HTTP/")
+        {
+            BLITZ_LOG_ERROR("No HTTP field in header");
+            disconnect();
         }
 
-        if (http_return_code != 200) {
-            throw HTTPClientException(status_message.c_str(), http_return_code);
+        if (http_return_code != 200)
+        {
+            BLITZ_LOG_ERROR("Error from server: %s, HTTP error code:%d ", status_message.c_str(), http_return_code);
+            disconnect();
         }
+
+        // release/clear the response buffer for future use
+        m_response.consume(bytes_transferred);
 
         //start reading the data, virtual function
-        this->readContent();
+        readContent();
     }
     else
     {
-        std::string errormsg = "Error reading HTTP response " + error.message();
-        throw std::runtime_error(errormsg);
+        BLITZ_LOG_ERROR("Error reading HTTP response, %s", error.message().c_str());
+        disconnect();
     }
 }
 
@@ -193,8 +249,9 @@ void HTTPClient::handleReadContent(const boost::system::error_code& error, std::
     {
         if (bytes_transferred)
         {
-            this->notify();
-            this->readContent();
+            state = STATE_DATARECV;
+            notify();
+            readContent();
         }
     }
     else if (error != boost::asio::error::eof)

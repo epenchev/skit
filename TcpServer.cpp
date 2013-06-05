@@ -19,11 +19,9 @@
  */
 
 #include "TcpServer.h"
+#include "Log.h"
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include "logging/logging.h"
-
-using namespace ::logging;
 
 namespace blitz {
 
@@ -33,6 +31,10 @@ void TCPConnection::start(void)
     {
         m_connected = true;
     }
+    else
+    {
+        BLITZ_LOG_ERROR("socket is closed");
+    }
 }
 
 void TCPConnection::close(void)
@@ -41,23 +43,67 @@ void TCPConnection::close(void)
     {
         boost::system::error_code err;
         m_sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, err);
-        if (err)
-            log::emit< Error>() << "Error TCPConnection::close() in shutdown() " << err.message().c_str() << log::endl;
         m_sock.close(err);
-        if (err)
-            log::emit< Error>() << "Error TCPConnection::close() in close() " << err.message().c_str() << log::endl;
         m_connected = false;
     }
 }
 
+std::string TCPConnection::getRemoteIP(void)
+{
+    std::string ip_address;
+    ip_address.clear();
+
+    if (m_sock.is_open())
+    {
+        boost::system::error_code err_code;
+        boost::asio::ip::tcp::endpoint endpoint = m_sock.remote_endpoint(err_code);
+        if (err_code)
+        {
+            BLITZ_LOG_ERROR("remote_endpoint() returned error: %s",
+                                               err_code.message().c_str());
+        }
+        else
+        {
+            ip_address = endpoint.address().to_string(err_code);
+            if (err_code)
+            {
+                BLITZ_LOG_ERROR("remote_endpoint().address().to_string() returned error: %s",
+                                                                  err_code.message().c_str());
+                ip_address.clear();
+            }
+        }
+    }
+
+    return ip_address;
+}
+
+unsigned short TCPConnection::getRemotePort(void)
+{
+    unsigned short net_port = 0;
+
+    if (m_sock.is_open())
+    {
+        boost::system::error_code err_code;
+        boost::asio::ip::tcp::endpoint endpoint = m_sock.remote_endpoint(err_code);
+        if (err_code)
+        {
+            BLITZ_LOG_ERROR("remote_endpoint() returned error: %s",
+                                               err_code.message().c_str());
+        }
+        else
+        {
+            net_port = endpoint.port();
+        }
+    }
+    return net_port;
+}
+
 TCPServer::TCPServer(boost::asio::io_service& io_service, const boost::asio::ip::tcp::endpoint& endpoint)
           : m_tcp_acceptor(io_service, tcp::endpoint(endpoint)),
-            m_endpoint(endpoint),
             m_is_listening(false) {}
 
 TCPServer::TCPServer(boost::asio::io_service& io_service, const unsigned int tcp_port)
           : m_tcp_acceptor(io_service, tcp::endpoint(tcp::v4(), tcp_port)),
-            //m_endpoint(boost::asio::ip::tcp::v4(), tcp_port),
             m_is_listening(false) {}
 
 
@@ -65,35 +111,24 @@ void TCPServer::start(void)
 {
     if (!m_is_listening)
     {
-        log::emit< Trace>() << "TCPServer::start() " << log::endl;
+        BLITZ_LOG_INFO("Starting server");
 
-        /*
         try
         {
-
-            m_tcp_acceptor.open(m_endpoint.protocol());
-
             // Open the acceptor with the option to reuse the address (i.e. SO_REUSEADDR).
-            //m_tcp_acceptor.set_option(tcp::acceptor::reuse_address(true));
+            m_tcp_acceptor.set_option(tcp::acceptor::reuse_address(true));
 
-            m_tcp_acceptor.bind(m_endpoint);
-            if (0 == m_endpoint.port())
-            {
-                // update the endpoint to reflect the port chosen by bind
-                m_endpoint = m_tcp_acceptor.local_endpoint();
-            }
             m_tcp_acceptor.listen();
-            log::emit< Info>() << "Listening on port: "
-                                  << log::dec << m_endpoint.port() << log::endl;
+            BLITZ_LOG_INFO("Listening on port: %d", getPort());;
         }
         catch (std::exception& e)
         {
-            log::emit< Error>() << "Unable to bind to port:" << log::dec << m_endpoint.port() << "\n" << e.what() << log::endl;
+            BLITZ_LOG_ERROR("Unable to bind to port: %d exception: %s", getPort(), e.what());
             throw;
         }
-        */
         m_is_listening = true;
 
+        // virtual handler of the successor
         handleStartServer();
 
         accept();
@@ -104,7 +139,7 @@ void TCPServer::stop(void)
 {
     if (m_is_listening)
     {
-        log::emit< Info>() << "Shutting down server on port " << log::dec << m_endpoint.port() << log::endl;
+        BLITZ_LOG_INFO("Shutting down server on port %d", getPort());
 
         m_is_listening = false;
 
@@ -115,7 +150,7 @@ void TCPServer::stop(void)
         std::set<TCPConnection*>::iterator conn_itr = m_conn_pool.begin();
         for ( ; conn_itr != m_conn_pool.end(); ++conn_itr )
         {
-            log::emit< Info>() << "TCPServer::stop() closing connection on port " << log::dec << m_endpoint.port() << log::endl;
+            BLITZ_LOG_INFO("Closing connection on port: %d", (*conn_itr)->getRemotePort());
             (*conn_itr)->close();
             m_conn_pool.erase(conn_itr);
         }
@@ -148,7 +183,7 @@ void TCPServer::handleAccept(TCPConnection* new_connection,
     }
     else
     {
-        log::emit< Error>() << "Error TCPServer::handleAccept() " << error.message().c_str() << log::endl;
+        BLITZ_LOG_ERROR("Error is %s", error.message().c_str());
         throw std::runtime_error(error.message());
     }
 
