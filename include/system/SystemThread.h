@@ -21,33 +21,20 @@
 #define SYSTEMTHREAD_H_
 
 #include <boost/thread/thread.hpp>
+#include <boost/thread/recursive_mutex.hpp>
+#include <boost/thread/condition_variable.hpp>
+#include <boost/thread/locks.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/system/system_error.hpp>
 #include <exception>
+#include "ErrorCode.h"
 
 typedef boost::thread::id thread_id;
 
 /**
-* Exception error for the SystemThread classes.
+* Class for thread abstraction based on boost implementation.
 */
-
-class ThreadError : public std::exception
-{
-public:
-    ThreadError( const std::string& inMsg ) : mErrMessage(inMsg) {}
-
-    virtual ~ThreadError() throw() {}
-
-    virtual const char* what() const throw() { return mErrMessage.c_str(); }
-private:
-    std::string mErrMessage;
-};
-
-/**
-* Class for platform independent thread abstraction based on boost implementation.
-*/
-
-class SystemThread : private boost::noncopyable
+class SystemThread : boost::noncopyable
 {
 public:
     SystemThread();
@@ -70,13 +57,15 @@ public:
 
     /**
     * Pause current thread of execution for milliseconds inMsec.
+    * @param inMsec - count milliseconds thread will sleep
     */
     static void Sleep(unsigned int inMsec);
 
     /**
-    * Pause current thread of execution for milliseconds inMsec.
+    * Get the ID of the current running thread.
+    * @return thread_id type.
     */
-    static thread_id GetId();
+    static thread_id GetID();
 
     /**
     * Switch current thread of execution.
@@ -88,9 +77,101 @@ public:
     */
     void operator() ();
 
+    ErrorCode& GetLastError() { return mErrCode; }
+
 private:
-    bool mJoined;            /**< true if thread is joined */
-    boost::thread* mpThread; /**< The thread  */
+    ErrorCode       mErrCode;           /**< Error code of last operation */
+    bool            mJoined;            /**< true if thread is joined */
+    boost::thread*  mpThread;           /**< The thread  */
 };
 
+/**
+* Class mutex abstraction based on boost implementation.
+*/
+class SystemMutex : boost::noncopyable
+{
+public:
+    SystemMutex()  {}
+    ~SystemMutex() {}
+
+    /**
+    * Lock a mutex object.
+    * @note Will block if another thread already has acquired the lock.
+    *       Use TryLock() method instead if this is a problem.
+    */
+    void Lock();
+
+    /**
+    * Unlock a mutex object.
+    */
+    void Unlock();
+
+    /**
+    * Try to lock a mutex object.
+    * @return true on successful grab of the lock, false on failure.
+    */
+    bool TryLock();
+
+private:
+    ErrorCode               mErrCode;          /**< Error code of last operation */
+    boost::mutex            mLockableMutex;   /**< The mutex */
+    boost::recursive_mutex  mRecursiveMutex;  /**< The recursive mutex */
+
+    friend class SystemMutexLocker;
+};
+
+/**
+* Class for mutex locker abstraction based on boost implementation.
+*/
+class SystemMutexLocker : boost::noncopyable
+{
+public:
+    SystemMutexLocker(SystemMutex& inMutex);
+    ~SystemMutexLocker() {}
+
+private:
+    boost::unique_lock<boost::mutex> mMutexLock; /**< The actual lock */
+
+    friend class SystemCondVariable;
+};
+
+
+/**
+* Class for condition variable abstraction based on boost implementation.
+*/
+class SystemCondVariable : boost::noncopyable
+{
+
+public:
+    SystemCondVariable() {}
+    ~SystemCondVariable() {}
+
+    /**
+    * If any threads are currently blocked waiting in a call to Wait(),
+    * NotifyOne() unblocks one of those threads.
+    */
+    void NotifyOne();
+
+    /**
+    * If any threads are currently blocked waiting in a call to Wait(),
+    * NotifyAll() unblocks all of those threads.
+    */
+    void NotifyAll();
+
+    /**
+    * Blocks the current thread until NotifyOne() or NotifyAll() is invoked.
+    * @param inMutex - mutex variable for a lock.
+    */
+    void Wait(SystemMutexLocker& inLock);
+
+private:
+    boost::condition_variable mCondVariable;
+};
+
+
 #endif /* SYSTEMTHREAD_H_ */
+
+
+
+
+

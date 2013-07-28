@@ -22,7 +22,8 @@ CPP_SRCS += \
 ../TcpServer.cpp \
 ../Url.cpp \
 ../VODService.cpp \
-../WebService.cpp 
+../WebService.cpp \
+../XMLReader.cpp 
 
 OBJS += \
 ./Blitz.o \
@@ -43,7 +44,8 @@ OBJS += \
 ./TcpServer.o \
 ./Url.o \
 ./VODService.o \
-./WebService.o 
+./WebService.o \
+./XMLReader.o 
 
 CPP_DEPS += \
 ./Blitz.d \
@@ -64,7 +66,8 @@ CPP_DEPS += \
 ./TcpServer.d \
 ./Url.d \
 ./VODService.d \
-./WebService.d 
+./WebService.d \
+./XMLReader.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

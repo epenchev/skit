@@ -1,5 +1,5 @@
 /*
- * ClientSocket.h
+ * SynchronisedQueue.cpp
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,12 +14,42 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jun 17, 2013
+ *  Created on: Jun 20, 2013
  *      Author: emo
  */
 
-#ifndef CLIENTSOCKET_H_
-#define CLIENTSOCKET_H_
+#include "system/SynchronisedQueue.h"
+#include "system/Task.h"
+#include <iostream>
+
+template <typename T>
+void SynchronisedQueue<T>::EnQueue(T data)
+{
+    SystemMutexLocker lock(mMutex);
+    mQueue.push(data);
+    mCondVar.NotifyOne();
+}
+
+template <typename T>
+T SynchronisedQueue<T>::DeQueue()
+{
+    T result;
+    SystemMutexLocker lock(mMutex);
+
+    while (!mQueue.size())
+        mCondVar.Wait(lock);
+
+    result = mQueue.front();
+    mQueue.pop();
+
+    return result;
+}
+
+template class SynchronisedQueue<Task*>;
+/*
+template void SynchronisedQueue::EnQueue<Task*>(Task* data);
+template Task* SynchronisedQueue::DeQueue<Task*>();
+*/
 
 
-#endif /* CLIENTSOCKET_H_ */
+

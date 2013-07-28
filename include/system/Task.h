@@ -24,7 +24,6 @@
 #include <boost/noncopyable.hpp>
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
-#include "SystemThread.h"
 
 /**
 * Almost all operations are asynchronous and executed by a object of type Task.
@@ -37,44 +36,65 @@ public:
     virtual ~Task() {}
 
     /**
-    * Template functions for connecting the task Run()
-    * functor with object reference and member function.
-    * Connect_1 -> member function with 1 parameter.
-    * Connect_2 -> member function with 2 parameters.
-    * Connect_3 -> member function with 3 parameters.
+    * Template functions for connecting the task Run functor
+    * with reference to object or pointer to object and member function.
+    *
+    * @param Operation - class member fucntion to be called.
+    * @param ObjectT*  - pointer to object instance.
+    * @param ObjectT&  - reference to object instance.
+    * @param T1 - various parameter.
+    * @param T2 - various parameter.
+    * @param T3 - various parameter.
     */
+
+    // no arguments
+    template <class Operation, class ObjectT>
+    inline void Connect(Operation op, ObjectT* obj_ptr)
+    {
+        Run = boost::bind(op, obj_ptr);
+    }
+
+    template <class Operation, class ObjectT>
+    inline void Connect(Operation op, ObjectT& obj_ref)
+    {
+        Run = boost::bind(op, obj_ref);
+    }
+
+    // one argument
     template <class Operation, class ObjectT, class T1>
-    inline void Connect_1(Operation op, ObjectT* obj_ptr, T1 param_1)
+    inline void Connect(Operation op, ObjectT* obj_ptr, T1 param_1)
     {
         Run = boost::bind(op, obj_ptr, param_1);
     }
 
     template <class Operation, class ObjectT, class T1>
-    inline void Connect_1(Operation op, ObjectT& obj_ref, T1 param_1)
+    inline void Connect(Operation op, ObjectT& obj_ref, T1 param_1)
     {
         Run = boost::bind(op, obj_ref, param_1);
     }
 
+    // two arguments
     template <class Operation, class ObjectT, class T1, class T2>
-    inline void Connect_2(Operation op, ObjectT* obj_ptr, T1 param_1, T2 param_2)
+    inline void Connect(Operation op, ObjectT* obj_ptr, T1 param_1, T2 param_2)
     {
         Run = boost::bind(op, obj_ptr, param_1, param_2);
     }
 
     template <class Operation, class ObjectT, class T1, class T2>
-    inline void Connect_2(Operation op, ObjectT& obj_ref, T1 param_1, T2 param_2)
+    inline void Connect(Operation op, ObjectT& obj_ref, T1 param_1, T2 param_2)
     {
         Run = boost::bind(op, obj_ref, param_1, param_2);
     }
 
+    // three arguments
     template <class Operation, class ObjectT, class T1, class T2, class T3>
-    inline void Connect_3(Operation op, ObjectT* obj_ptr, T1 param_1, T2 param_2, T3 param_3)
+    inline void Connect(Operation op, ObjectT* obj_ptr, T1 param_1, T2 param_2, T3 param_3)
     {
         Run = boost::bind(op, obj_ptr, param_1, param_2, param_3);
     }
 
     template <class Operation, class ObjectT, class T1, class T2, class T3>
-    inline void Connect_3(Operation op, ObjectT& obj_ref, T1 param_1, T2 param_2, T3 param_3)
+    inline void Connect(Operation op, ObjectT& obj_ref, T1 param_1, T2 param_2, T3 param_3)
     {
         Run = boost::bind(op, obj_ref, param_1, param_2, param_3);
     }

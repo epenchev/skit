@@ -32,7 +32,7 @@ namespace blitz {
 namespace http {
 
 HTTPClient::HTTPClient(boost::asio::io_service& io_service)
-: m_sock(io_service), state(STATE_DISCONNECT), m_io_control_timer(io_service)
+: m_sock(io_service), state(STATE_DISCONNECT), m_io_control_timer(io_service), m_response()
 {}
 
 void HTTPClient::connect(const std::string& server, const std::string& service)
@@ -151,7 +151,7 @@ void HTTPClient::readContent(void)
 {
     BLITZ_LOG_INFO("executed");
 
-    boost::asio::async_read(m_sock, m_response,
+    boost::asio::async_read(m_sock, m_response /*m_response*/,
                              boost::asio::transfer_at_least(1),
                                   boost::bind(&HTTPClient::handleReadContent, this,
                                       boost::asio::placeholders::error,
