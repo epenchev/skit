@@ -19,12 +19,12 @@
  */
 
 #include "HTTP/HTTPUtils.h"
+#include <iostream>
 
 typedef std::size_t offset;
 
 static const char* endHeaders = "\r\n\r\n";
 static const char* endHeaders1 = "\n\n";
-
 
 ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& outMapHeaders )
 {
@@ -106,3 +106,69 @@ ErrorCode HTTPUtils::SplitHeaderLine(const std::string& line, HTTPParam& outPara
 
     return errCode;
 }
+
+std::string HTTPUtils::HTTPRequestToString(const std::string& inUrl, const std::string& method,
+		                                       const std::string& data, HTTPHeadersMap& headers)
+{
+	std::string server;
+	std::string resource;
+	std::string servicePort;
+	std::string resultHTTPReq;
+	const int doubleSlashSize = 2;
+
+	if (!inUrl.empty() && !method.empty())
+	{
+		if (inUrl.substr(0, 7) != "http://")
+	        return "";
+
+	    offset doubleSlashPos = inUrl.find_first_of("//");
+
+	    if (doubleSlashPos != std::string::npos)
+	    {
+	        offset colonPosition = inUrl.find_first_of(":", doubleSlashPos + doubleSlashSize);
+	        // we have port != 80
+	        if ( colonPosition != std::string::npos && colonPosition > (doubleSlashPos + doubleSlashSize) )
+	        {
+	            offset n = colonPosition - (doubleSlashPos + doubleSlashSize);
+	            server = inUrl.substr( (doubleSlashPos + doubleSlashSize), n );
+
+	            offset slashPosition = inUrl.find_first_of("/", colonPosition + 1);
+	            resource = inUrl.substr(slashPosition);
+
+	            if ( slashPosition != std::string::npos && slashPosition > colonPosition )
+	            {
+	                size_t n = slashPosition - (colonPosition + 1);
+	                servicePort = inUrl.substr(colonPosition + 1, n);
+	            }
+	        }
+	        else // standart web port 80
+	        {
+	            offset slashPosition = inUrl.find_first_of("/", doubleSlashPos + doubleSlashSize);
+	            if ( slashPosition != std::string::npos )
+	            {
+	                resource  = inUrl.substr(slashPosition);
+	                size_t n = slashPosition - (doubleSlashPos + doubleSlashSize);
+	                server = inUrl.substr(doubleSlashPos + doubleSlashSize, n);
+	            }
+	        }
+	    }
+	    resultHTTPReq = method + " " + resource + " HTTP/1.1\r\n";
+	    if (headers.find("Host") == headers.end())
+	    {
+	    	resultHTTPReq += "Host: " + server;
+	    	if (!servicePort.empty())
+	    		resultHTTPReq += ":" + servicePort;
+	    	resultHTTPReq += "\r\n";
+	    }
+	    for (HTTPHeadersMap::iterator it=headers.begin(); it!=headers.end(); ++it)
+	    		resultHTTPReq += it->first + ": " + it->second + "\r\n";
+
+	    resultHTTPReq += endHeaders;
+	    if (!data.empty())
+	    		resultHTTPReq += data;
+	}
+
+	return resultHTTPReq;
+}
+
+

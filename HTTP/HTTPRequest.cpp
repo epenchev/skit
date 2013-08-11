@@ -21,12 +21,8 @@
 #include "HTTP/HTTPRequest.h"
 #include <fstream>
 #include <cstdlib>
-//#include "HTTP/HTTPUtils.h"
 
 typedef std::size_t offset;
-
-static const std::string endHeaders = "\r\n\r\n";
-static const std::string endHeaders1 = "\n\n";
 
 static const std::string httpVer1_0 = "HTTP/1.0";
 static const std::string httpVer1_1 = "HTTP/1.1";
@@ -35,14 +31,6 @@ static const char* arrHttpRequestMethod[] =
 { "GET", "HEAD", "POST", "TRACE", "CONNECT",
   "PUT", "OPTIONS", "DELETE", "PATCH", '\0'
 };
-
-static std::size_t LineEndPosition(std::string& str, offset pos = 0)
-{
-    std::size_t endOfLine = std::string::npos;
-    if (!str.empty())
-        endOfLine = str.find_first_of('\n', pos);
-    return endOfLine;
-}
 
 void HTTPRequest::ReadQueryParams()
 {
@@ -141,33 +129,7 @@ void HTTPRequest::ReadQueryString()
     }
 }
 
-/*
-void HTTPRequest::SplitHeaderLine(std::string& line)
-{
-    mErrCode.Clear();
-    if (!line.empty())
-    {
-        offset splitPos = line.find_first_of(':');
-        if (std::string::npos != splitPos)
-        {
-            try
-            {
-                std::string headerName = line.substr(0, splitPos);
-                // miss ':' character and white space
-                std::string headerValue = line.substr(splitPos + 2, line.length());
-                mMapHeaders[headerName] = headerValue;
-                mHeaderNames.insert(headerName);
-            }
-            catch(std::exception& ex)
-            {
-                mErrCode.SetMessage(ex.what());
-            }
-        }
-    }
-}
-*/
-
-HTTPRequest::HTTPRequest() /*: mReqLine(), mHeaderText(), mQueryString(), serverName()*/
+HTTPRequest::HTTPRequest()
 {}
 
 void HTTPRequest::ReadHeaderFromFile(const char* fileName)
@@ -201,59 +163,21 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName)
     HTTPUtils::ReadHeader(header, mMapHeaders);
 }
 
-/*
-void HTTPRequest::ReadHeader(std::string& inHeader)
+void HTTPRequest::Init(const std::string& inHeader)
 {
-    mErrCode.Clear();
-    if (inHeader.empty())
-    {
-        mErrCode.SetMessage("Empty header");
-        return;
-    }
+	ErrorCode err = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
+	if (!err)
+	{
+		offset endLinePos = inHeader.find_first_of('\n');
+		if (endLinePos != std::string::npos || endLinePos < inHeader.length())
+				mReqLine = inHeader.substr(0, endLinePos);
+		else
+			mErrCode.SetMessage("No valid request line found");
+	}
+	else
+		mErrCode = err;
 
-    std::string headerStr = inHeader;
-
-    if (std::string::npos == headerStr.find(endHeaders) &&
-        std::string::npos == headerStr.find(endHeaders1))
-    {
-         mErrCode.SetMessage("Error, end of headers not found");
-        return;
-    }
-
-    offset endLinePos = LineEndPosition(headerStr);
-    if (endLinePos != std::string::npos || endLinePos < headerStr.length())
-    {
-            mReqLine = headerStr.substr(0, endLinePos);
-            ReadQueryString();
-            ReadQueryParams();
-    }
-    else
-    {
-        mErrCode.SetMessage("Error parsing header, no proper formating found");
-        return;
-    }
-
-    while (endLinePos != std::string::npos || endLinePos < headerStr.length())
-    {
-        std::string line;
-        offset currentPos = endLinePos + 1;
-        endLinePos = LineEndPosition(headerStr, currentPos);
-
-        try
-        {
-            line = headerStr.substr(currentPos, (endLinePos - currentPos) );
-            if (line.empty())
-                   break;
-        }
-        catch(std::exception& ex)
-        {
-            mErrCode.SetMessage(ex.what());
-            return;
-        }
-        SplitHeaderLine(line);
-    }
 }
-*/
 
 int HTTPRequest::GetContentLength()
 {
@@ -419,7 +343,30 @@ std::string HTTPRequest::GetRequestURI()
 
 std::string HTTPRequest::GetRemoteHost()
 {
-    return mRemoteHost;
+    return GetHeader("Host");
+}
+
+unsigned short HTTPRequest::GetRemoteServicePort()
+{
+	unsigned short servicePort = 0;
+
+	std::string hostName = GetHeader("Host");
+	if (!hostName.empty())
+	{
+		offset colonPosition = hostName.find_first_of(':');
+		if ( colonPosition != std::string::npos )
+		{
+			try
+			{
+				servicePort = atoi(hostName.substr(colonPosition + 1).c_str());
+			}
+			catch (std::exception& ex)
+			{
+				servicePort = 0;
+			}
+		}
+	}
+	return servicePort;
 }
 
 std::string HTTPRequest::GetRemoteAddr()

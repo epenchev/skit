@@ -43,10 +43,10 @@ public:
     virtual ~HTTPRequest() {}
 
     /**
-    * Read HTTP header input from string and process it.
+    * Create request from HTTP text headers.
     * @param inHeader - string with header.
     */
-    //void ReadHeader(std::string& inHeader);
+    void Init(const std::string& inHeader);
 
     /**
     * Read HTTP header input from file and process it.
@@ -121,6 +121,12 @@ public:
     std::string GetRemoteAddr();
 
     /**
+    * Get the remote service port.
+    * @return unsigned short - port number.
+    */
+    unsigned short GetRemoteServicePort();
+
+    /**
     * Get a HTTP header value such as 'Content-Length'
     * @param name - header name .
     * @return string - header value.
@@ -165,13 +171,10 @@ public:
     ErrorCode& GetLastError() { return mErrCode; }
 
 private:
-    //void SplitHeaderLine(std::string& line);
     void ReadQueryString();
     void ReadQueryParams();
 
     ErrorCode  mErrCode;                 /**< error code of last operation */
-    std::string mServerName;            /**< Name of the server. */
-    std::string mRemoteHost;              /**< Remote host name origin or request. */
     std::string mReqLine;                /**< Request line including method, path, query string and protocol version. */
     std::string mQueryString;           /**< Query string part from the request line after the ? symbol. */
     std::string mHeaderText;             /**< Full header text. */

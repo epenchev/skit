@@ -21,12 +21,9 @@
 #ifndef HTTPRESPONSE_H_
 #define HTTPRESPONSE_H_
 
-#include <map>
 #include <string>
 #include "ErrorCode.h"
 #include "HTTP/HTTPUtils.h"
-
-//typedef std::map<std::string, std::string> HTTPHeadersMap;
 
 /**
 * Abstraction of HTTP response (200 OK, 404 Not found ..) with additional headers.
@@ -38,33 +35,55 @@ public:
     virtual ~HTTPResponse() {}
 
     /**
-    * Read HTTP header input from string and process it.
-    * @param inHeader - string with header text.
+    * Create reponse from HTTP text headers.
+    * @param inHeader - string with header.
     */
-    //void ReadHeader(const std::string& inHeader);
+    void Init(const std::string& inHeader);
 
-    // Returns true if response header contains parameter name
+    /**
+    * Returns true if response header contains parameter name.
+    * @param name - header field name.
+    * @return bool - true if contains false otherwise.
+    */
     bool ContainsHeader(const std::string& name);
 
-    // Get header value
+    /**
+    * Get header value
+    * @param name - header name .
+    * @return string - header value.
+    */
     std::string GetHeader(const std::string& name);
 
-    //Get the current response headers as a map
+    /**
+    * Get the current response headers as a map
+    * @return std::map& - header as map.
+    */
     HTTPHeadersMap& GetHeaders();
 
-    // Remove header value
+    /**
+    * Remove header value.
+    * @param string - name of header.
+    */
     void RemoveHeader(const std::string& name);
 
-    //Set header value
+    /**
+    * Set header value
+    * @param string - name of header.
+    * @param string - value.
+    */
     void SetHeader(const std::string& name, std::string value);
 
-    //Set header value as int
-    void SetIntHeader(const std::string& name, int value);
+    /**
+    * Set the HTTP response code.
+    * @param int - code as number.
+    */
+    void SetResponseCode(unsigned responseCode);
 
-    //Set the HTTP response code
-    void SetResponseCode(int responseCode);
-
-    // Convert an HTTP status code to a string
+    /**
+    * Convert an HTTP status code to a string.
+    * @param int - status code number.
+    * @return string - status message.
+    */
     std::string StatusCodeToStr(int statusCode);
 
     /**

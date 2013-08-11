@@ -32,10 +32,23 @@
 #include "ControlChannel.h"
 #include "WebService.h"
 
+#include "HTTP/HTTPUtils.h"
+
 int main(int argc, char* argv[])
 {
     std::string config_filename;
     std::vector<std::string> args(argv, argv+argc);
+
+    /*
+    HTTPHeadersMap outMap;
+    outMap.insert(std::make_pair("User-Agent:", "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.5) Gecko/20091102 Firefox)"));
+    outMap.insert(std::make_pair("Accept-Language:" , "en-us,en;q=0.5"));
+
+    outMap.insert(std::make_pair("Keep-Alive:", "300"));
+    outMap.insert(std::make_pair("Connection:", "keep-alive"));
+
+    HTTPUtils::HTTPRequestToString("http://abv.bg/stream.flv", "GET", "", outMap);
+	*/
 
     if (args.size() == 3)
     {

@@ -32,20 +32,39 @@ typedef std::pair<std::string, std::string> HTTPParam;
 class HTTPUtils
 {
 public:
+
+	/**
+	* Read HTTP header input from string and process it.
+	* @param inHeader - string with header.
+	* @param outMapHeaders - result map with header names and values.
+	* @return ErrorCode value.
+	*/
     static ErrorCode ReadHeader( const std::string& inHeader, HTTPHeadersMap& outMapHeaders );
 
+    /**
+    * Read line from HTTP header and split name and value.
+    * @param line - string containing line.
+    * @param outParam - HTTPParam resulting pair name->value.
+    * @return ErrorCode value.
+    */
     static ErrorCode SplitHeaderLine(const std::string& line, HTTPParam& outParam);
 
-    // Make a HTTP request and return the result as a byte array
-    /* static std::string HTTPRequestToString(std::string& inUrl, std::string& method,
-                                           std::string& data, std::map& headers);
+    /**
+    * Make HTTP request and return the result as string.
+    * @param inUrl - string containing the URL.
+    * @param method - string with HTTP method (GET, POST..).
+    * @param data - string additional data after the headers can be empty.
+    * @param headers - map with additional headers can be empty.
+    * @return string - string with HTTP headers or empty string on error.
     */
+    static std::string HTTPRequestToString(const std::string& inUrl, const std::string& method,
+                                               const std::string& data, HTTPHeadersMap& headers);
 
-    //Split a query string into a map and URL decode the values
-    /* static std::map SplitQueryStr(std::string queryStr); */
 
-    //Convert an HTTP status code to a string
-    //static std::string StatusCodeToStr(int statusCode);
+    // Make a HTTP reponse and return the result as a string.
+    /*
+    static std::string HTTPResponseToString(std::string& inUrl, std::string& method,
+                                               std::string& data, std::map& headers); */
 
 protected:
     HTTPUtils() {}
