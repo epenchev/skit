@@ -4,35 +4,23 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../system/SynchronisedQueue.cpp \
-../system/SystemLib.cpp \
-../system/SystemThread.cpp \
-../system/SystemTimer.cpp \
-../system/TCPClientSocket.cpp \
-../system/TCPServerSocket.cpp \
-../system/TaskThread.cpp 
+../server/HTTPServer.cpp \
+../server/PluginManager.cpp \
+../server/TCPConnection.cpp 
 
 OBJS += \
-./system/SynchronisedQueue.o \
-./system/SystemLib.o \
-./system/SystemThread.o \
-./system/SystemTimer.o \
-./system/TCPClientSocket.o \
-./system/TCPServerSocket.o \
-./system/TaskThread.o 
+./server/HTTPServer.o \
+./server/PluginManager.o \
+./server/TCPConnection.o 
 
 CPP_DEPS += \
-./system/SynchronisedQueue.d \
-./system/SystemLib.d \
-./system/SystemThread.d \
-./system/SystemTimer.d \
-./system/TCPClientSocket.d \
-./system/TCPServerSocket.d \
-./system/TaskThread.d 
+./server/HTTPServer.d \
+./server/PluginManager.d \
+./server/TCPConnection.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-system/%.o: ../system/%.cpp
+server/%.o: ../server/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ -I/usr/local/boost/include -I../include -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"

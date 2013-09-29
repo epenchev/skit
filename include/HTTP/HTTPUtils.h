@@ -33,12 +33,12 @@ class HTTPUtils
 {
 public:
 
-	/**
-	* Read HTTP header input from string and process it.
-	* @param inHeader - string with header.
-	* @param outMapHeaders - result map with header names and values.
-	* @return ErrorCode value.
-	*/
+    /**
+    * Read HTTP header input from string and process it.
+    * @param inHeader - string with header.
+    * @param outMapHeaders - result map with header names and values.
+    * @return ErrorCode value.
+    */
     static ErrorCode ReadHeader( const std::string& inHeader, HTTPHeadersMap& outMapHeaders );
 
     /**
@@ -62,9 +62,7 @@ public:
 
 
     // Make a HTTP reponse and return the result as a string.
-    /*
-    static std::string HTTPResponseToString(std::string& inUrl, std::string& method,
-                                               std::string& data, std::map& headers); */
+    static std::string HTTPResponseToString(unsigned reponseCode/*, std::string& data, HTTPHeadersMap& headers*/);
 
 protected:
     HTTPUtils() {}

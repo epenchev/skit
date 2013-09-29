@@ -22,6 +22,7 @@
 #define BUFFER_H_
 
 #include <boost/asio/buffer.hpp>
+#include <boost/shared_ptr.hpp>
 
 /**
 * Buffer for raw data.
@@ -68,9 +69,9 @@ public:
 
 private:
     boost::asio::mutable_buffers_1 mBuff;
-    friend class TCPClientSocket;
-    friend class TCPServerSocket;
 };
+
+typedef boost::shared_ptr<Buffer> BufferPtr;
 
 #endif /* BUFFER_H_ */
 

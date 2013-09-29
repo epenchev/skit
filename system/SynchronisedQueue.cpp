@@ -37,7 +37,9 @@ T SynchronisedQueue<T>::DeQueue()
     SystemMutexLocker lock(mMutex);
 
     while (!mQueue.size())
+    {
         mCondVar.Wait(lock);
+    }
 
     result = mQueue.front();
     mQueue.pop();

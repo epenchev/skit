@@ -34,8 +34,12 @@
 
 #include "HTTP/HTTPUtils.h"
 
+#include "server/HTTPServer.h"
+#include "system/TaskThread.h"
+
 int main(int argc, char* argv[])
 {
+#if 0
     std::string config_filename;
     std::vector<std::string> args(argv, argv+argc);
 
@@ -48,7 +52,7 @@ int main(int argc, char* argv[])
     outMap.insert(std::make_pair("Connection:", "keep-alive"));
 
     HTTPUtils::HTTPRequestToString("http://abv.bg/stream.flv", "GET", "", outMap);
-	*/
+    */
 
     if (args.size() == 3)
     {
@@ -112,6 +116,21 @@ int main(int argc, char* argv[])
         BLITZ_LOG_ERROR("Exception: %s", e.what());
         exit(1);
     }
+#endif
+
+    std::cout << " Server starting ... \n";
+
+    HTTPServer server("192.168.97.72", 8000);
+    server.Start();
+
+    TaskThreadPool::AddThread();
+    TaskThreadPool::AddThread();
+    TaskThreadPool::AddThread();
+    TaskThreadPool::AddThread();
+    TaskThreadPool::StartThreads();
+
+    while(1) {}
+
 
     return 0;
 }

@@ -26,30 +26,23 @@ SystemThread::SystemThread()
 
 SystemThread::~SystemThread()
 {
-    if (mpThread)
-        delete mpThread;
+    delete mpThread;
 }
 
 void SystemThread::Start()
 {
-    mErrCode.Clear();
     if (!mpThread)
-        mpThread = new boost::thread(boost::ref(*this));
-    else
     {
-        // Error print goes here
-        mErrCode.SetMessage("thread is already started");
+        mpThread = new boost::thread(boost::ref(*this));
     }
 }
 
 void SystemThread::Join()
 {
-    mErrCode.Clear();
     if (!mpThread)
     {
-        // Error print goes here
-        mErrCode.SetMessage("thread is not started");
-        return;
+        mErrCode.SetValue(EFAULT);
+        throw SystemException(mErrCode);
     }
 
     if (!mJoined && mpThread->joinable())
@@ -62,17 +55,11 @@ void SystemThread::Join()
         catch (const boost::system::system_error& err)
         {
             mJoined = false;
-            // Error print goes here
-            mErrCode.SetMessage(err.what());
-            return;
+            mErrCode.SetValue(err.code().value());
+            throw SystemException(mErrCode);
         };
     }
-    else
-    {
-        // Error print goes here
-        mErrCode.SetMessage("thread is already joined");
-        return;
-    }
+
 }
 
 thread_id SystemThread::GetID()
@@ -108,9 +95,9 @@ void SystemMutex::Lock()
     }
     catch(const boost::thread_resource_error& err)
     {
-        // Error print goes here
-        mErrCode.SetMessage(err.what());
-        return;
+    	// TODO incompatible with 1.49
+        //mErrCode.SetValue(err.code().value());
+        throw SystemException(mErrCode);
     }
 }
 
@@ -121,6 +108,7 @@ void SystemMutex::Unlock()
 
 bool SystemMutex::TryLock()
 {
+    mErrCode.Clear();
     bool returnCode = false;
 
     try
@@ -129,8 +117,9 @@ bool SystemMutex::TryLock()
     }
     catch(const boost::thread_resource_error& err)
     {
-        // Error print goes here
-        mErrCode.SetMessage(err.what());
+        // TODO incompatible with 1.49
+    	//mErrCode.SetValue(err.code().value());
+        throw SystemException(mErrCode);
     }
     return returnCode;
 }

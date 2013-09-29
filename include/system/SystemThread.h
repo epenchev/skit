@@ -112,6 +112,7 @@ public:
     */
     bool TryLock();
 
+    ErrorCode& GetLastError() { return mErrCode; }
 private:
     ErrorCode               mErrCode;          /**< Error code of last operation */
     boost::mutex            mLockableMutex;   /**< The mutex */

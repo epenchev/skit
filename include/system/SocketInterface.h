@@ -61,12 +61,6 @@ public:
     * Remove observer object from Socket.
     */
     virtual void RemoveSocketListener() = 0;
-
-    /**
-    * Get the last error from this socket.
-    * @return SocketError reference.
-    */
-    virtual ErrorCode& GetLastError() = 0;
 };
 
 /**
@@ -77,15 +71,25 @@ class ClientSocket
 public:
     /**
     * Send data from Buffer object.
+    * This operation is not thread safe.
+    * When you call Send() you must wait for this operation to complete before sending more data out.
     * @param inData - reference to data to be sent.
     */
     virtual void Send(Buffer& inData) = 0;
 
     /**
-    * Receive data to Buffer object.
+    * Receive data to Buffer object until all buffer size is full.
+    * This operation is not thread safe.
+    * When you call Receive() you must wait for this operation to complete.
     * @param outData - reference to data.
     */
     virtual void Receive(Buffer& outData) = 0;
+
+    /**
+    * Receive available data from socket.
+    * @param outData - reference to data.
+    */
+    virtual void ReceiveSome(Buffer& outData) = 0;
 
     /**
     * Get the IP address to the connected endpoint.
@@ -113,9 +117,10 @@ public:
 
     /**
     * Add observer object who will be notified about every socket event.
+    * A socket object can have only one observer listening for events.
     * @param inListener - pointer to observer object.
     */
-    virtual void AddSocketListener(ClientSocketObserver* inListener) = 0;
+    virtual void AttachSocketListener(ClientSocketObserver* inListener) = 0;
 
     /**
     * Remove observer object from Socket.
@@ -141,7 +146,7 @@ public:
     * @param inNewSocket - pointer to newly created socket object.
     * @param inErr - error code of the operation.
     */
-    virtual void OnAccept(ClientSocket* inNewSocket, ErrorCode& inErr) = 0;
+    virtual void OnAccept(ClientSocket* inNewSocket) = 0;
 };
 
 /**

@@ -22,6 +22,7 @@
 #define TCPSERVERSOCKET_H_
 
 #include <string>
+#include <exception>
 #include <boost/asio.hpp>
 #include "SocketInterface.h"
 #include "TCPClientSocket.h"
@@ -50,14 +51,22 @@ public:
     /* From ServerSocket */
     void RemoveSocketListener();
 
-    /* From ServerSocket */
-    ErrorCode& GetLastError() { return mErrCode; }
+   /**
+   * Get the last error from this socket.
+   * @return SocketError reference.
+   */
+   ErrorCode& GetError() { return mErrCode; }
 
 private:
+
+    // temp
+    ErrorCode mErrCode;
+
     boost::asio::ip::tcp::acceptor mAcceptor;
+    unsigned short                 mlocalPort;
+    std::string                    mlocalAdress;
     ServerSocketObserver*          mEventListener;  /**< socket observer for events */
-    ErrorCode                      mErrCode;        /**< error code of last socket operation */
-    bool                           isListening;     /**< is socket in listening state */
+    bool                           misListening;     /**< is socket in listening state */
 
     /* boost tcp::acceptor IO handlers */
     void HandleAccept(TCPClientSocket* outSocket, const boost::system::error_code& error);

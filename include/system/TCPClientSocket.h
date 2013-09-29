@@ -39,6 +39,9 @@ public:
     void Receive(Buffer& outData);
 
     /* From ClientSocket */
+    void ReceiveSome(Buffer& outData);
+
+    /* From ClientSocket */
     std::string GetRemotePeerIP();
 
     /* From ClientSocket */
@@ -51,7 +54,7 @@ public:
     void Disconnect();
 
     /* From ClientSocket */
-    void AddSocketListener(ClientSocketObserver* inListener);
+    void AttachSocketListener(ClientSocketObserver* inListener);
 
     /* From ClientSocket */
     void RemoveSocketListener();

@@ -26,6 +26,24 @@ typedef std::size_t offset;
 static const char* endHeaders = "\r\n\r\n";
 static const char* endHeaders1 = "\n\n";
 
+const std::string serverName = "blitz-stream";
+class HttpResponseCodeMap : public std::map<unsigned, std::string>
+{
+public:
+    HttpResponseCodeMap()
+    {
+        insert(std::make_pair(200, "OK"));
+        insert(std::make_pair(206, "Partial Content"));
+        insert(std::make_pair(401, "Unauthorized"));
+        insert(std::make_pair(403, "Forbidden"));
+        insert(std::make_pair(404, "Not Found"));
+        insert(std::make_pair(405, "Method Not Allowed"));
+        insert(std::make_pair(411, "Length Required"));
+        insert(std::make_pair(505, "HTTP Version Not Supported"));
+    }
+} const static responseCodes;
+
+
 ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& outMapHeaders )
 {
     HTTPParam param;
@@ -56,7 +74,9 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
             {
                 line = inHeader.substr(currentPos, (endLinePos - currentPos));
                 if (line.empty())
+                {
                     break;
+                }
             }
             catch(std::exception& ex)
             {
@@ -65,11 +85,15 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
             }
             ErrorCode retCode = HTTPUtils::SplitHeaderLine(line, param);
             if (!retCode) // no need to check result of the insert operation
+            {
                 outMapHeaders.insert(param);
+            }
         }
     }
     else
+    {
         errCode.SetMessage("Error parsing header, no proper formating found");
+    }
 
     return errCode;
 }
@@ -108,67 +132,118 @@ ErrorCode HTTPUtils::SplitHeaderLine(const std::string& line, HTTPParam& outPara
 }
 
 std::string HTTPUtils::HTTPRequestToString(const std::string& inUrl, const std::string& method,
-		                                       const std::string& data, HTTPHeadersMap& headers)
+                                               const std::string& data, HTTPHeadersMap& headers)
 {
-	std::string server;
-	std::string resource;
-	std::string servicePort;
-	std::string resultHTTPReq;
-	const int doubleSlashSize = 2;
+    std::string server;
+    std::string resource;
+    std::string servicePort;
+    std::string resultHTTPReq;
+    const int doubleSlashSize = 2;
 
-	if (!inUrl.empty() && !method.empty())
-	{
-		if (inUrl.substr(0, 7) != "http://")
-	        return "";
+    if (!inUrl.empty() && !method.empty())
+    {
+        if (inUrl.substr(0, 7) != "http://")
+            return "";
 
-	    offset doubleSlashPos = inUrl.find_first_of("//");
+        offset doubleSlashPos = inUrl.find_first_of("//");
 
-	    if (doubleSlashPos != std::string::npos)
-	    {
-	        offset colonPosition = inUrl.find_first_of(":", doubleSlashPos + doubleSlashSize);
-	        // we have port != 80
-	        if ( colonPosition != std::string::npos && colonPosition > (doubleSlashPos + doubleSlashSize) )
-	        {
-	            offset n = colonPosition - (doubleSlashPos + doubleSlashSize);
-	            server = inUrl.substr( (doubleSlashPos + doubleSlashSize), n );
+        if (doubleSlashPos != std::string::npos)
+        {
+            offset colonPosition = inUrl.find_first_of(":", doubleSlashPos + doubleSlashSize);
+            // we have port != 80
+            if ( colonPosition != std::string::npos && colonPosition > (doubleSlashPos + doubleSlashSize) )
+            {
+                offset n = colonPosition - (doubleSlashPos + doubleSlashSize);
+                server = inUrl.substr( (doubleSlashPos + doubleSlashSize), n );
 
-	            offset slashPosition = inUrl.find_first_of("/", colonPosition + 1);
-	            resource = inUrl.substr(slashPosition);
+                offset slashPosition = inUrl.find_first_of("/", colonPosition + 1);
+                resource = inUrl.substr(slashPosition);
 
-	            if ( slashPosition != std::string::npos && slashPosition > colonPosition )
-	            {
-	                size_t n = slashPosition - (colonPosition + 1);
-	                servicePort = inUrl.substr(colonPosition + 1, n);
-	            }
-	        }
-	        else // standart web port 80
-	        {
-	            offset slashPosition = inUrl.find_first_of("/", doubleSlashPos + doubleSlashSize);
-	            if ( slashPosition != std::string::npos )
-	            {
-	                resource  = inUrl.substr(slashPosition);
-	                size_t n = slashPosition - (doubleSlashPos + doubleSlashSize);
-	                server = inUrl.substr(doubleSlashPos + doubleSlashSize, n);
-	            }
-	        }
-	    }
-	    resultHTTPReq = method + " " + resource + " HTTP/1.1\r\n";
-	    if (headers.find("Host") == headers.end())
-	    {
-	    	resultHTTPReq += "Host: " + server;
-	    	if (!servicePort.empty())
-	    		resultHTTPReq += ":" + servicePort;
-	    	resultHTTPReq += "\r\n";
-	    }
-	    for (HTTPHeadersMap::iterator it=headers.begin(); it!=headers.end(); ++it)
-	    		resultHTTPReq += it->first + ": " + it->second + "\r\n";
+                if ( slashPosition != std::string::npos && slashPosition > colonPosition )
+                {
+                    size_t n = slashPosition - (colonPosition + 1);
+                    servicePort = inUrl.substr(colonPosition + 1, n);
+                }
+            }
+            else // standart web port 80
+            {
+                offset slashPosition = inUrl.find_first_of("/", doubleSlashPos + doubleSlashSize);
+                if ( slashPosition != std::string::npos )
+                {
+                    resource  = inUrl.substr(slashPosition);
+                    size_t n = slashPosition - (doubleSlashPos + doubleSlashSize);
+                    server = inUrl.substr(doubleSlashPos + doubleSlashSize, n);
+                }
+            }
+        }
+        resultHTTPReq = method + " " + resource + " HTTP/1.1\r\n";
+        if (headers.find("Host") == headers.end())
+        {
+            resultHTTPReq += "Host: " + server;
+            if (!servicePort.empty())
+                resultHTTPReq += ":" + servicePort;
+            resultHTTPReq += "\r\n";
+        }
+        for (HTTPHeadersMap::iterator it=headers.begin(); it!=headers.end(); ++it)
+                resultHTTPReq += it->first + ": " + it->second + "\r\n";
 
-	    resultHTTPReq += endHeaders;
-	    if (!data.empty())
-	    		resultHTTPReq += data;
-	}
+        resultHTTPReq += endHeaders;
+        if (!data.empty())
+                resultHTTPReq += data;
+    }
 
-	return resultHTTPReq;
+    return resultHTTPReq;
+}
+
+std::string HTTPUtils::HTTPResponseToString(unsigned reponseCode/*, std::string& data, HTTPHeadersMap& headers*/)
+{
+    std::string returnHeaders;
+
+    std::string statusMessage = responseCodes.find(reponseCode)->second;
+    returnHeaders = "HTTP/1.1 200 OK \r\n";
+    returnHeaders += "Server: blitz-stream \r\n";
+    returnHeaders += "Content-Type: text/html \r\n";
+    //returnHeaders += "Content-Length: 20 \r\n";
+    returnHeaders += "Connection: close \r\n\r\n";
+    returnHeaders += "<html><body><h2>Hi from Emo</h2></body></html>";
+/*
+        try
+        {
+            header(http_version_1_1 + " " + boost::lexical_cast<std::string>(m_status_code) + " " + m_status_message);
+            header("Date: " + currentDateTime());
+            header("Server: " + server_name);
+        }
+        catch(boost::bad_lexical_cast &)
+        {
+            BLITZ_LOG_ERROR("bad lexical cast %d", m_status_code);
+        }
+
+        if (!filename.empty())
+        {
+            std::string extension = getFileExtension(filename);
+            header(mime_types.find(extension)->second);
+            header("Content-Disposition: inline; filename=" + filename);
+            header("Expires: 0");
+            header("Pragma: public");
+            header("Cache-Control: must-revalidate");
+            try
+            {
+                std::string size_txt = boost::lexical_cast<std::string>(size);
+                header("Content-Length: " + size_txt);
+            }
+            catch(boost::bad_lexical_cast &)
+            {
+                BLITZ_LOG_ERROR("bad lexical cast %d", size);
+            }
+
+            m_raw_headers += "Connection: keep-alive: " + http_end_headers;
+        }
+        else
+        {
+            m_raw_headers += mime_types.find("mpeg")->second + http_end_headers;
+        }
+*/
+    return returnHeaders;
 }
 
 

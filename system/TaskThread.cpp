@@ -29,6 +29,8 @@ void TaskThread::Entry()
         if (theTask)
         {
             theTask->Run();
+            // TODO task must be deleted
+            delete theTask;
         }
     }
 }
@@ -52,7 +54,9 @@ void TaskThreadPool::StartThreads()
     {
         TaskThread* thread = mThreadsArray.back();
         if (thread)
+        {
             thread->Start();
+        }
     }
 }
 
@@ -77,7 +81,9 @@ void TaskThreadPool::RemoveThreads()
     {
         TaskThread* thread = mThreadsArray.back();
         if (thread)
-                delete thread;
+        {
+            delete thread;
+        }
 
         mThreadsArray.pop_back();
     }
@@ -88,7 +94,9 @@ TaskThread* TaskThreadPool::GetThread(unsigned index)
     if (index)
     {
         if (mThreadsArray.size() > index)
-                return mThreadsArray[index];
+        {
+            return mThreadsArray[index];
+        }
     }
     return NULL;
 }
@@ -104,10 +112,14 @@ void TaskThreadPool::Signal(Task* inTask)
 
     if (numThreads)
     {
-        if (TaskThreadPool::lastUsedThread > numThreads)
-                lastUsedThread = 0;
+        if (TaskThreadPool::lastUsedThread >= (numThreads - 1))
+        {
+            lastUsedThread = 0;
+        }
         else
+        {
            lastUsedThread++;
+        }
 
         TaskThread* taskThread = mThreadsArray[lastUsedThread];
         taskThread->InsertTask(inTask);

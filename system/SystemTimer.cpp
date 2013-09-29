@@ -29,23 +29,55 @@ SystemTimer::SystemTimer()
 
 void SystemTimer::ExpiresSec(unsigned int seconds)
 {
-    mtimerImpl.expires_from_now(boost::posix_time::seconds(seconds));
+    if (mEventListener)
+    {
+        mtimerImpl.expires_from_now(boost::posix_time::seconds(seconds));
+    }
+    else
+    {
+        ErrorCode errCode(EFAULT);
+        throw SystemException(errCode);
+    }
 }
 
 void SystemTimer::ExpiresUsec(unsigned int useconds)
 {
-    mtimerImpl.expires_from_now(boost::posix_time::microseconds(useconds));
+    if (mEventListener)
+    {
+        mtimerImpl.expires_from_now(boost::posix_time::microseconds(useconds));
+    }
+    else
+    {
+        ErrorCode errCode(EFAULT);
+        throw SystemException(errCode);
+    }
 }
 
 void SystemTimer::AddTimerListener(TimerObserver* inListener)
 {
-    mEventListener = inListener;
+    if (inListener)
+    {
+        mEventListener = inListener;
+    }
+    else
+    {
+        ErrorCode errCode(EINVAL);
+        throw SystemException(errCode);
+    }
 }
 
 void SystemTimer::Wait()
 {
-    mtimerImpl.async_wait(boost::bind(&SystemTimer::HandleTimer, this,
+    if (mEventListener)
+    {
+        mtimerImpl.async_wait(boost::bind(&SystemTimer::HandleTimer, this,
                                             boost::asio::placeholders::error));
+    }
+    else
+    {
+        ErrorCode errCode(EFAULT);
+        throw SystemException(errCode);
+    }
 }
 
 void SystemTimer::Cancel()
@@ -54,8 +86,8 @@ void SystemTimer::Cancel()
     mtimerImpl.cancel(err);
     if (err)
     {
-        // print Error here
-        //err.message();
+        ErrorCode errCode(err.value());
+        throw SystemException(errCode);
     }
 }
 
@@ -64,12 +96,7 @@ void SystemTimer::HandleTimer(const boost::system::error_code& error)
     if (!error)
     {
         Task* timerTask = new Task();
-        if (timerTask && mEventListener)
-        {
-            timerTask->Connect(&TimerObserver::OnExpire, mEventListener);
-            TaskThreadPool::Signal(timerTask);
-        }
-        else
-            delete timerTask;
+        timerTask->Connect(&TimerObserver::OnExpire, mEventListener);
+        TaskThreadPool::Signal(timerTask);
     }
 }

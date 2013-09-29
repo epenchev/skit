@@ -165,17 +165,24 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName)
 
 void HTTPRequest::Init(const std::string& inHeader)
 {
-	ErrorCode err = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
-	if (!err)
-	{
-		offset endLinePos = inHeader.find_first_of('\n');
-		if (endLinePos != std::string::npos || endLinePos < inHeader.length())
-				mReqLine = inHeader.substr(0, endLinePos);
-		else
-			mErrCode.SetMessage("No valid request line found");
-	}
-	else
-		mErrCode = err;
+    ErrorCode err = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
+    if (!err)
+    {
+        offset endLinePos = inHeader.find_first_of('\n');
+        if (endLinePos != std::string::npos || endLinePos < inHeader.length())
+        {
+            mReqLine = inHeader.substr(0, endLinePos);
+        }
+        else
+        {
+            mErrCode.SetMessage("No valid request line found");
+        }
+    }
+    else
+    {
+        mErrCode = err;
+        std::cout << mErrCode.GetErrorMessage() << std::endl;;
+    }
 
 }
 
@@ -210,7 +217,9 @@ std::string HTTPRequest::GetContentType()
 
     HTTPHeadersMap::iterator it = mMapHeaders.find("Content-Type");
     if (mMapHeaders.end() != it)
-            return it->second;
+    {
+        return it->second;
+    }
 
     mErrCode.SetMessage("No such field 'Content-Type' in header");
     return "";
@@ -348,25 +357,25 @@ std::string HTTPRequest::GetRemoteHost()
 
 unsigned short HTTPRequest::GetRemoteServicePort()
 {
-	unsigned short servicePort = 0;
+    unsigned short servicePort = 0;
 
-	std::string hostName = GetHeader("Host");
-	if (!hostName.empty())
-	{
-		offset colonPosition = hostName.find_first_of(':');
-		if ( colonPosition != std::string::npos )
-		{
-			try
-			{
-				servicePort = atoi(hostName.substr(colonPosition + 1).c_str());
-			}
-			catch (std::exception& ex)
-			{
-				servicePort = 0;
-			}
-		}
-	}
-	return servicePort;
+    std::string hostName = GetHeader("Host");
+    if (!hostName.empty())
+    {
+        offset colonPosition = hostName.find_first_of(':');
+        if ( colonPosition != std::string::npos )
+        {
+            try
+            {
+                servicePort = atoi(hostName.substr(colonPosition + 1).c_str());
+            }
+            catch (std::exception& ex)
+            {
+                servicePort = 0;
+            }
+        }
+    }
+    return servicePort;
 }
 
 std::string HTTPRequest::GetRemoteAddr()
