@@ -135,21 +135,22 @@ HTTPRequest::HTTPRequest()
 void HTTPRequest::ReadHeaderFromFile(const char* fileName)
 {
     std::string header;
+    ErrorCode outErr;
     std::ifstream fileStream;
 
-    mErrCode.Clear();
     if (!fileName)
     {
-        mErrCode.SetMessage("Empty file name");
-        return;
+    	outErr.SetValue(EINVAL);
+    	throw SystemException(outErr);
     }
 
     fileStream.open(fileName);
     if (!fileStream.good() || !fileStream.is_open())
     {
         std::string errMsg = "Error opening file "; errMsg += fileName;
-        mErrCode.SetMessage(errMsg);
-        return;
+        outErr.SetValue(-1);
+        outErr.SetMessage(errMsg);
+        throw SystemException(outErr);
     }
 
     // TODO set a limit for file size here
@@ -159,14 +160,20 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName)
         fileStream.read(buf, 100);
         header += buf;
     }
+
     fileStream.close();
-    HTTPUtils::ReadHeader(header, mMapHeaders);
+    outErr = HTTPUtils::ReadHeader(header, mMapHeaders);
+    if (outErr)
+    {
+    	throw SystemException(outErr);
+    }
 }
 
 void HTTPRequest::Init(const std::string& inHeader)
 {
-    ErrorCode err = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
-    if (!err)
+	ErrorCode outError;
+	outError = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
+    if (!outError)
     {
         offset endLinePos = inHeader.find_first_of('\n');
         if (endLinePos != std::string::npos || endLinePos < inHeader.length())
@@ -175,13 +182,15 @@ void HTTPRequest::Init(const std::string& inHeader)
         }
         else
         {
-            mErrCode.SetMessage("No valid request line found");
+        	outError.SetValue(-1);
+        	outError.SetMessage("No valid request line found");
+        	throw SystemException(outError);
         }
     }
     else
     {
-        mErrCode = err;
-        std::cout << mErrCode.GetErrorMessage() << std::endl;;
+        // TODO Log
+        throw SystemException(outError);
     }
 
 }

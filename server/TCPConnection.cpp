@@ -30,13 +30,13 @@ TCPConnection::TCPConnection(unsigned sessionId, TCPClientSocket* inSocket)
     mSocket = inSocket;
     if (mSocket)
     {
-        mSocket->AttachSocketListener(this);
+        ErrorCode err;
+        mSocket->SetListener(this, err);
     }
 }
 
 TCPConnection::~TCPConnection()
 {
-    mSocket->RemoveSocketListener();
     mSocket->Disconnect();
 
     if (!mIOChannelsMap.empty())
@@ -95,27 +95,22 @@ IOChannel* TCPConnection::GetChannel(unsigned channelId)
     return NULL;
 }
 
-void TCPConnection::NotifyChannel(unsigned channelId, IOAction ioOper)
+void TCPConnection::NotifyChannel(unsigned channelId, IOAction ioOper, ErrorCode& err)
 {
-    TCPConnectionIOChannel* ioChan = (TCPConnectionIOChannel*)GetChannel(channelId);
-    if (!ioChan)
+    TCPConnectionIOChannel* channel = (TCPConnectionIOChannel*)GetChannel(channelId);
+    if (!channel)
     {
-        mError.SetValue(EFAULT);
-        throw SystemException(mError);
+        err.SetValue(EFAULT);
+        return;
     }
 
-    switch (ioOper)
+    if (IOWrite == ioOper)
     {
-        case IORead:
-        case IOReadSome:
-            DoRead(ioChan);
-            break;
-        case IOWrite:
-        case IOWriteSome:
-            DoWrite(ioChan);
-            break;
-        default:
-            break;
+        DoWrite(channel);
+    }
+    else // IORead, IOReadSome
+    {
+        DoRead(channel);
     }
 }
 
@@ -129,22 +124,15 @@ void TCPConnection::DoWrite(TCPConnectionIOChannel* ioChannel)
 
         try
         {
-            if (IOWrite == ioChannel->mIOaction)
-            {
-                // will send all the data in the buffer and then signal.
-                mSocket->Send(*ioChannel->mIOBuffer);
-            }
-            else if (IOWriteSome == ioChannel->mIOaction)
-            {
-                // TODO will send some data and will signal.
-                //mSocket->SendSome(*ioChannel->mIOBuffer);
-            }
+            mSocket->Send(*ioChannel->mIOBuffer);
         }
         catch (SystemException& exceptionErr)
         {
             mWriteBusy = false;
             mWrMutexLock.Unlock();
-            throw;
+
+            ioChannel->mError = exceptionErr.Code();
+            NotifyChannelListener(ioChannel, TCPConnection::OnWriteEvent);
         }
     }
     else // socket is busy
@@ -178,7 +166,8 @@ void TCPConnection::DoRead(TCPConnectionIOChannel* ioChannel)
         {
             mReadBusy = false;
             mRdMutexLock.Unlock();
-            throw;
+            ioChannel->mError = exceptionErr.Code();
+            NotifyChannelListener(ioChannel, TCPConnection::OnReadEvent);
         }
     }
     else  // socket is busy
@@ -190,19 +179,17 @@ void TCPConnection::DoRead(TCPConnectionIOChannel* ioChannel)
 
 void TCPConnection::Close()
 {
-   // if (this->IsConnected())
+    if (this->IsConnected())
     {
         mSocket->Disconnect();
         if (!mIOChannelsMap.empty())
         {
             for (IOChannels::iterator it = mIOChannelsMap.begin(); it != mIOChannelsMap.end(); ++it)
             {
-                TCPConnectionIOChannel* ioChann = it->second;
-                if (ioChann)
+                TCPConnectionIOChannel* ioChannel = it->second;
+                if (ioChannel)
                 {
-                    Task* closeTask = new Task();
-                    closeTask->Connect(&IOChannelObserver::OnConnectionClose, ioChann->mListener, ioChann);
-                    TaskThreadPool::Signal(closeTask);
+                     NotifyChannelListener(ioChannel, TCPConnection::OnCloseEvent);
                 }
             }
         }
@@ -213,44 +200,63 @@ bool TCPConnection::IsConnected()
 {
     if (mSocket)
     {
-        //return mSocket->IsOpen();
+        return mSocket->IsOpen();
     }
     return false;
 }
 
 std::string TCPConnection::GetRemoteAddress()
 {
-/*
-    TODO in socket
+    std::string address;
     if (mSocket->IsOpen())
     {
-        return mSocket->GetRemotePeerIP();
-    }*/
-    return "";
+        ErrorCode outErr;
+        address = mSocket->GetRemotePeerIP(outErr);
+    }
+    return address;
 
 }
 
 unsigned TCPConnection::GetRemotePort()
 {
-    /*
-     * TODO in socket
+    unsigned port;
     if (mSocket->IsOpen())
     {
-        return mSocket->GetRemotePeerPort();
+        ErrorCode outErr;
+        port = mSocket->GetRemotePeerPort(outErr);
     }
-    */
-    return 0;
-
+    return port;
 }
 
+void TCPConnection::NotifyChannelListener(TCPConnectionIOChannel* ioChannel, TCPConnection::IOEvent event)
+{
+    if (ioChannel)
+    {
+        Task* runTask = new Task();
 
-void TCPConnection::OnSend(ClientSocket* inSocket)
+        if (TCPConnection::OnWriteEvent == event)
+        {
+            runTask->Connect(&IOChannelObserver::OnWrite, ioChannel->mListener,
+                             ioChannel, ioChannel->mbytesTransfered, &ioChannel->mError);
+        }
+        else if (TCPConnection::OnReadEvent == event)
+        {
+            runTask->Connect(&IOChannelObserver::OnRead, ioChannel->mListener,
+                             ioChannel, ioChannel->mbytesTransfered, &ioChannel->mError);
+        }
+        else if (TCPConnection::OnCloseEvent == event)
+        {
+            runTask->Connect(&IOChannelObserver::OnConnectionClose, ioChannel->mListener, ioChannel);
+        }
+        TaskThreadPool::Signal(runTask);
+    }
+}
+
+void TCPConnection::OnSend(TCPClientSocket* inSocket, unsigned sendBytes, ErrorCode* inError)
 {
     if (inSocket)
     {
         mWrMutexLock.Lock();
-
-        ErrorCode err = mSocket->GetLastError();
         TCPConnectionIOChannel* ioChannel = (TCPConnectionIOChannel*)GetChannel(mWrOpenChanId);
         if (!ioChannel)
         {
@@ -260,49 +266,45 @@ void TCPConnection::OnSend(ClientSocket* inSocket)
         }
 
         mWrOpenChanId = 0;
-        if (err)
+        ioChannel->mError = *inError;
+        ioChannel->mbytesTransfered = sendBytes;
+        NotifyChannelListener(ioChannel, TCPConnection::OnWriteEvent);
+
+        // check if we have open channels waiting to send
+        bool sendError = true;
+        while (sendError)
         {
-            ioChannel->mError = err;
-        }
-
-        Task* onWriteTask = new Task();
-        onWriteTask->Connect(&IOChannelObserver::OnWrite, ioChannel->mListener,
-                                          ioChannel, mSocket->GetBytesTransfered());
-        TaskThreadPool::Signal(onWriteTask);
-
-        // check if we have open channels waiting
-        if (!mOpenWriteChannels.empty())
-        {
-            ioChannel = mOpenWriteChannels.front();
-            mOpenWriteChannels.pop_front();
-            mWrOpenChanId = ioChannel->GetChannelId();
-
-            if (IOWrite == ioChannel->mIOaction)
+            if (!mOpenWriteChannels.empty())
             {
-                mSocket->Send(*ioChannel->mIOBuffer);
+                ioChannel = mOpenWriteChannels.front();
+                mOpenWriteChannels.pop_front();
+                mWrOpenChanId = ioChannel->GetChannelId();
+                try
+                {
+                    mSocket->Send(*ioChannel->mIOBuffer);
+                    sendError = false;
+                }
+                catch (SystemException& exceptionErr)
+                {
+                    NotifyChannelListener(ioChannel, TCPConnection::OnWriteEvent);
+                    sendError = true;
+                }
             }
-            else if (IOWriteSome == ioChannel->mIOaction)
+            else
             {
-                // TODO with socket
-                //mSocket->SendSome(*ioChannel->mIOBuffer);
+                sendError = false;
+                mWriteBusy = false;
             }
         }
-        else
-        {
-            mWriteBusy = false;
-        }
-
         mWrMutexLock.Unlock();
     }
 }
 
-void TCPConnection::OnReceive(ClientSocket* inSocket)
+void TCPConnection::OnReceive(TCPClientSocket* inSocket, unsigned receivedBytes, ErrorCode* inError)
 {
     if (inSocket)
     {
         mRdMutexLock.Lock();
-
-        ErrorCode err = mSocket->GetLastError();
         TCPConnectionIOChannel* ioChannel = (TCPConnectionIOChannel*)GetChannel(mRdOpenChanId);
 
         if (!ioChannel)
@@ -313,87 +315,91 @@ void TCPConnection::OnReceive(ClientSocket* inSocket)
         }
 
         mRdOpenChanId = 0;
-        if (err)
+        ioChannel->mError = *inError;
+        ioChannel->mbytesTransfered = receivedBytes;
+        NotifyChannelListener(ioChannel, TCPConnection::OnReadEvent);
+
+        // check if we have open channels waiting for receive
+        bool recvError = true;
+        while (recvError)
         {
-            ioChannel->mError = err;
-        }
-
-        Task* onReadTask = new Task();
-        onReadTask->Connect(&IOChannelObserver::OnRead, ioChannel->mListener,
-                                  ioChannel, mSocket->GetBytesTransfered());
-        TaskThreadPool::Signal(onReadTask);
-
-        // check if we have open channels waiting
-        if (!mOpenReadChannels.empty())
-        {
-            ioChannel = mOpenReadChannels.front();
-            mOpenReadChannels.pop_front();
-
-            mRdOpenChanId = ioChannel->GetChannelId();
-            if (IORead == ioChannel->mIOaction)
+            if (!mOpenReadChannels.empty())
             {
-                mSocket->Receive(*ioChannel->mIOBuffer);
+                ioChannel = mOpenReadChannels.front();
+                mOpenReadChannels.pop_front();
+
+                mRdOpenChanId = ioChannel->GetChannelId();
+                try
+                {
+                    if (IORead == ioChannel->mIOaction)
+                    {
+                        mSocket->Receive(*ioChannel->mIOBuffer);
+                        recvError = false;
+                    }
+                    else if (IOReadSome == ioChannel->mIOaction)
+                    {
+                        mSocket->ReceiveSome(*ioChannel->mIOBuffer);
+                        recvError = false;
+                    }
+                }
+                catch (SystemException& exceptionErr)
+                {
+                    NotifyChannelListener(ioChannel, TCPConnection::OnReadEvent);
+                    recvError = true;
+                }
             }
-            else if (IOReadSome == ioChannel->mIOaction)
+            else
             {
-                mSocket->ReceiveSome(*ioChannel->mIOBuffer);
+                recvError = false;
+                mReadBusy = false;
             }
-        }
-        else
-        {
-            mReadBusy = false;
         }
         mRdMutexLock.Unlock();
     }
 }
 
-void TCPConnection::OnConnect(ClientSocket* inSocket)
+void TCPConnection::OnConnect(TCPClientSocket* inSocket, ErrorCode* inError)
 {
     // No need to implement this, this connection is to be created from server.
     return;
 }
 
 TCPConnectionIOChannel::TCPConnectionIOChannel(const TCPConnectionIOChannel& chan)
+ : mIOBuffer(NULL), mbytesTransfered(0)
 {
-    std::cout << "TCPConnectionIOChannel(const TCPConnectionIOChannel& chan) \n";
     this->mConnection = chan.mConnection;
     this->mChannelId = chan.mChannelId;
     this->mListener = chan.mListener;
 }
 
 TCPConnectionIOChannel::TCPConnectionIOChannel(unsigned channId, IOChannelObserver* listener, TCPConnection* conn)
-{
-    this->mConnection = conn;
-    this->mChannelId = channId;
-    this->mListener = listener;
-}
+ : mIOBuffer(NULL), mbytesTransfered(0), mConnection(conn), mListener(listener), mChannelId(channId)
+{}
 
-void TCPConnectionIOChannel::Emit(Buffer* data, IOAction ioOper)
+void TCPConnectionIOChannel::Emit(Buffer* data, IOAction ioOper, ErrorCode& outError)
 {
     if (data)
     {
         mIOaction = ioOper;
         this->mIOBuffer = data;
-        try
-        {
-            mConnection->NotifyChannel(mChannelId, mIOaction);
-        }
-        catch(SystemException& ex)
+        mConnection->NotifyChannel(mChannelId, mIOaction, outError);
+
+        if (outError)
         {
             // TODO Log error here
-            throw;
+            return;
         }
     }
     else
     {
-        mError.SetValue(EINVAL);
-        throw SystemException(mError);
+        outError.SetValue(EINVAL);
+        // TODO Log error here
     }
 }
 
-unsigned TCPConnectionIOChannel::GetSessionId()
+unsigned TCPConnectionIOChannel::GetConnId()
 {
-    return mConnection->GetSessionId();
+    return mConnection->GetConnId();
 }
 
 unsigned TCPConnectionIOChannel::GetChannelId()

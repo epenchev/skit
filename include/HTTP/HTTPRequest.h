@@ -45,12 +45,14 @@ public:
     /**
     * Create request from HTTP text headers.
     * @param inHeader - string with header.
+    * @throws SystemException in case of error.
     */
     void Init(const std::string& inHeader);
 
     /**
     * Read HTTP header input from file and process it.
     * @param fileName - string with file name.
+    * @throws SystemException in case of error.
     */
     void ReadHeaderFromFile(const char* fileName);
 
@@ -163,12 +165,6 @@ public:
     * @return std::set& - parameter names.
     */
     HTTPParamNamesSet& GetParameterNames();
-
-    /**
-    * Get the error from the last operation.
-    * @return ErrorCode reference with last operation error.
-    */
-    ErrorCode& GetLastError() { return mErrCode; }
 
 private:
     void ReadQueryString();

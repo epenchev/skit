@@ -52,9 +52,9 @@ public:
     void WaitForRequest();
 
 
-    void OnRead(IOChannel* chan, std::size_t bytesRead);
+    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr);
 
-    void OnWrite(IOChannel* chan, std::size_t bytesWriten);
+    void OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr);
 
     void OnConnectionClose(IOChannel* chan);
 
@@ -98,7 +98,7 @@ class HTTPServerObserver
 * Accept connections on a given port and accepts HTTP request from clients.
 * Different plug-in modules can be attached to the server via the HTTPServerObserver interface.
 */
-class HTTPServer : public ServerSocketObserver, public IOChannelObserver
+class HTTPServer : public TCPServerSocketObserver, public IOChannelObserver
 {
 public:
     HTTPServer(unsigned short port);
@@ -120,15 +120,15 @@ public:
     void RemoveServerListener(HTTPServerObserver* serverListener);
 
 
-    void OnRead(IOChannel* chan, std::size_t bytesRead);
+    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr);
 
-    void OnWrite(IOChannel* chan, std::size_t bytesWriten);
+    void OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr);
 
     void OnConnectionClose(IOChannel* chan);
 
 private:
     /* From ServerSocketObserver */
-    void OnAccept(ClientSocket* inNewSocket);
+    void OnAccept(TCPClientSocket* inNewSocket, ErrorCode* inError);
 
     TCPServerSocket mServerSock;
     HTTPServerObserver* mEventObserver;

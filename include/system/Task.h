@@ -99,6 +99,32 @@ public:
         Run = boost::bind(op, obj_ref, param_1, param_2, param_3);
     }
 
+    // four arguments
+    template <class Operation, class ObjectT, class T1, class T2, class T3, class T4>
+    inline void Connect(Operation op, ObjectT* obj_ptr, T1 param_1, T2 param_2, T3 param_3, T4 param_4)
+    {
+        Run = boost::bind(op, obj_ptr, param_1, param_2, param_3, param_4);
+    }
+
+    template <class Operation, class ObjectT, class T1, class T2, class T3, class T4>
+    inline void Connect(Operation op, ObjectT& obj_ref, T1 param_1, T2 param_2, T3 param_3, T4 param_4)
+    {
+        Run = boost::bind(op, obj_ref, param_1, param_2, param_3, param_4);
+    }
+
+    // five arguments
+    template <class Operation, class ObjectT, class T1, class T2, class T3, class T4, class T5>
+    inline void Connect(Operation op, ObjectT* obj_ptr, T1 param_1, T2 param_2, T3 param_3, T4 param_4, T5 param_5)
+    {
+        Run = boost::bind(op, obj_ptr, param_1, param_2, param_3, param_4, param_5);
+    }
+
+    template <class Operation, class ObjectT, class T1, class T2, class T3, class T4, class T5>
+    inline void Connect(Operation op, ObjectT& obj_ref, T1 param_1, T2 param_2, T3 param_3, T4 param_4, T5 param_5)
+    {
+        Run = boost::bind(op, obj_ref, param_1, param_2, param_3, param_4, param_5);
+    }
+
     template <class T>
     inline T* GetPtrToObject() { return (T*)enclosedObject; }
 

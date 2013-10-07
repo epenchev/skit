@@ -86,7 +86,9 @@ bool HTTPResponse::ContainsHeader(const std::string& name)
     {
         HTTPHeadersMap::iterator it = mMapHeaders.find(name);
         if (mMapHeaders.end() != it)
-                retCode = true;
+        {
+        	retCode = true;
+        }
     }
     return retCode;
 }
@@ -98,7 +100,9 @@ std::string HTTPResponse::GetHeader(const std::string& name)
     {
     	HTTPHeadersMap::iterator it = mMapHeaders.find(name);
         if (mMapHeaders.end() != it)
-                    return it->second;
+        {
+        	return it->second;
+        }
         else
         {
         	std::string errMsg = "No such field in header "; errMsg += name;
@@ -106,7 +110,9 @@ std::string HTTPResponse::GetHeader(const std::string& name)
         }
     }
     else
+    {
     	mErrCode.SetMessage("no name or map header is empty");
+    }
     return "";
 }
 
@@ -123,9 +129,13 @@ void HTTPResponse::RemoveHeader(const std::string& name)
 	{
 		GetHeader(name);
 		if (!GetLastError())
-				mMapHeaders.erase(name);
+		{
+			mMapHeaders.erase(name);
+		}
 		else
+		{
 			mErrCode.SetMessage("No such header in response");
+		}
 	}
 	mErrCode.SetMessage("Empty name");
 }
@@ -137,12 +147,18 @@ void HTTPResponse::SetHeader(const std::string& name, std::string value)
 	{
 		GetHeader(name);
 		if (!GetLastError())
-					mMapHeaders.at("name") = value;
+		{
+			mMapHeaders.at("name") = value;
+		}
 		else
+		{
 			mMapHeaders.insert(HTTPParam(name, value));
+		}
 	}
 	else
+	{
 		mErrCode.SetMessage("Empty name");
+	}
 }
 
 void HTTPResponse::SetResponseCode(unsigned responseCode)
@@ -151,12 +167,18 @@ void HTTPResponse::SetResponseCode(unsigned responseCode)
 	if (responseCode > 0)
 	{
 		if (!(HTTPCodes.find(responseCode)->second.empty()))
-				mResponseCode = responseCode;
+		{
+			mResponseCode = responseCode;
+		}
 		else
+		{
 			mErrCode.SetMessage("No such HTTP response code");
+		}
 	}
 	else
+	{
 		mErrCode.SetMessage("Empty response code");
+	}
 }
 
 std::string HTTPResponse::StatusCodeToStr(int statusCode)
@@ -164,7 +186,9 @@ std::string HTTPResponse::StatusCodeToStr(int statusCode)
 	mErrCode.Clear();
 	std::string statusMessage = HTTPCodes.find(statusCode)->second;
 	if (statusMessage.empty())
-			mErrCode.SetMessage("No such HTTP status code");
+	{
+		mErrCode.SetMessage("No such HTTP status code");
+	}
 
 	return statusMessage;
 }

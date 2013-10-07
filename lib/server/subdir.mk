@@ -4,26 +4,26 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../HTTP/HTTPRequest.cpp \
-../HTTP/HTTPResponse.cpp \
-../HTTP/HTTPUtils.cpp 
+../server/HTTPServer.cpp \
+../server/PluginManager.cpp \
+../server/TCPConnection.cpp 
 
 OBJS += \
-./HTTP/HTTPRequest.o \
-./HTTP/HTTPResponse.o \
-./HTTP/HTTPUtils.o 
+./server/HTTPServer.o \
+./server/PluginManager.o \
+./server/TCPConnection.o 
 
 CPP_DEPS += \
-./HTTP/HTTPRequest.d \
-./HTTP/HTTPResponse.d \
-./HTTP/HTTPUtils.d 
+./server/HTTPServer.d \
+./server/PluginManager.d \
+./server/TCPConnection.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-HTTP/%.o: ../HTTP/%.cpp
+server/%.o: ../server/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/usr/local/boost/include -I../include -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o"$@" "$<"
+	g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

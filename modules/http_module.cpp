@@ -1,9 +1,9 @@
 #include <iostream>
 #include <HTTP/HTTPRequest.h>
 #include <server/HTTPServer.h>
-#include <server/PluginModule.h>
+//#include <server/PluginModule.h>
 
-class SimpleModule : public HTTPSessionObserver, public PluginModule
+class SimpleModule : public HTTPSessionObserver/* , public PluginModule*/
 {
 public:  
   SimpleModule() {}
@@ -26,6 +26,7 @@ void SimpleModule::OnHTTPrequest(HTTPRequest* inRequest)
   }
 }
 
+/*
 void SimpleModule::OnModuleLoad()
 {}
 
@@ -37,7 +38,9 @@ const char* SimpleModule::GetModuleDescription()
 
 const char* SimpleModule::GetModuleName()
 { return NULL; }
+*/
 
+/*
 extern "C" PluginModule* CreateModuleObject()
 {
   return new SimpleModule();
@@ -47,7 +50,7 @@ extern "C" void DestroyModuleObject( PluginModule* object )
 {
   delete object;
 }
-
+*/
 
 #if 0
 

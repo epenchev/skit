@@ -62,7 +62,7 @@ public:
 
 
     // Make a HTTP reponse and return the result as a string.
-    static std::string HTTPResponseToString(unsigned reponseCode/*, std::string& data, HTTPHeadersMap& headers*/);
+    static std::string HTTPResponseToString(unsigned responseCode, const std::string* data, HTTPHeadersMap* headers);
 
 protected:
     HTTPUtils() {}

@@ -126,7 +126,6 @@ private:
     std::string errMessage;
 };
 
-
 class SystemException : public std::exception
 {
 public:

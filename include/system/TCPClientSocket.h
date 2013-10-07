@@ -22,53 +22,84 @@
 #define TCPCLIENTSOCKET_H_
 
 #include <boost/asio.hpp>
-#include "SocketInterface.h"
+#include "SocketObserver.h"
 #include "Buffer.h"
 #include "ErrorCode.h"
 
-class TCPClientSocket : public ClientSocket
+class TCPClientSocket
 {
 public:
     TCPClientSocket();
-    virtual ~TCPClientSocket() {}
+    virtual ~TCPClientSocket();
 
-    /* From ClientSocket */
+    /**
+    * Send data from Buffer asynchronously.
+    * When operation is complete ClientSocketObserver::OnSend() will be called.
+    * @param inData - reference to data to be sent.
+    * @throws SystemException in case of error
+    */
     void Send(Buffer& inData);
 
-    /* From ClientSocket */
+    /**
+    * Receive data in to Buffer asynchronously. Operation will complete when buffer is full.
+    * When operation is complete ClientSocketObserver::OnReceive() will be called.
+    * @param outData - reference to buffer for storing data.
+    * @throws SystemException in case of error.
+    */
     void Receive(Buffer& outData);
 
-    /* From ClientSocket */
+    /**
+    * Receive data in to Buffer asynchronously. May not read all requested bytes.
+    * Will read only available data in the moment.
+    * When operation is complete ClientSocketObserver::OnReceive() will be called.
+    * @param outData - reference to buffer for storing data.
+    * @throws SystemException in case of error.
+    */
     void ReceiveSome(Buffer& outData);
 
-    /* From ClientSocket */
-    std::string GetRemotePeerIP();
+    /**
+    * Get the IP address to the connected endpoint.
+    * @param outError - error from operation.
+    * @return string - reference representing IP address.
+    */
+    std::string GetRemotePeerIP(ErrorCode& outError);
 
-    /* From ClientSocket */
-    unsigned short GetRemotePeerPort();
+    /**
+    * Get the port to the connected endpoint.
+    * @param outError - error from operation.
+    * @return port value.
+    */
+    unsigned short GetRemotePeerPort(ErrorCode& outError);
 
-    /* From ClientSocket */
+    /**
+    * Connect to remote host.
+    * @param host - remote host name or IP address.
+    * @param netService - remote TCP/UDP port or service name.
+    */
     void Connect(std::string host, std::string netService);
 
-    /* From ClientSocket */
+    /**
+    * Return true if socket is open false otherwise.
+    */
+    bool IsOpen();
+
+    /**
+    * Disconnect from remote host.
+    */
     void Disconnect();
 
-    /* From ClientSocket */
-    void AttachSocketListener(ClientSocketObserver* inListener);
-
-    /* From ClientSocket */
-    void RemoveSocketListener();
-
-    /* From ClientSocket */
-    ErrorCode& GetLastError() { return mErrCode; }
-
-    std::size_t GetBytesTransfered() { return mBytesTransferred; }
+    /**
+    * Add observer object who will be notified about every socket event.
+    * A socket object can have only one observer listening for events.
+    * @param inListener - pointer to observer object.
+    * @param outError - error from operation.
+    */
+    void SetListener(TCPClientSocketObserver* inListener, ErrorCode& outError);
 
 private:
-    boost::asio::ip::tcp::socket mIOSock;         /**< socket object */
-    ClientSocketObserver*        mEventListener;  /**< socket observer for events */
-    ErrorCode  mErrCode;                          /**< error code of last socket operation */
-    std::size_t mBytesTransferred;                /**< bytes transferred by last socket operation */
+    boost::asio::ip::tcp::socket mIOSock;            /**< socket object */
+    TCPClientSocketObserver*     mEventListener;     /**< socket observer for events */
+    ErrorCode*                   mOutError;          /**< error code of last socket operation */
 
     /* boost socket IO handlers */
     void HandleWrite(const boost::system::error_code& error, std::size_t bytes_transferred);

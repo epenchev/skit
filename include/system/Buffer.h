@@ -21,57 +21,56 @@
 #ifndef BUFFER_H_
 #define BUFFER_H_
 
-#include <boost/asio/buffer.hpp>
-#include <boost/shared_ptr.hpp>
-
 /**
 * Buffer for raw data.
 */
 class Buffer
 {
 public:
-    virtual ~Buffer() {}
-
-    Buffer(const Buffer& buf)
-      : mBuff(boost::asio::buffer_cast<char*>(buf.mBuff), boost::asio::buffer_size(buf.mBuff)) {}
-
-    Buffer(void* data, std::size_t size)
-      : mBuff(data, size) {}
-
-    inline Buffer& operator = (const Buffer& buf)
-    {
-        boost::asio::buffer_copy(this->mBuff, buf.mBuff);
-        return *this;
-    }
 
     /**
-    * Create new Buffer object that is offset from the start of another.
-    * @return Buffer - Buffer value.
+     * Constructors.
     */
-    inline friend Buffer operator + (const Buffer& buf, std::size_t start)
-    {
-        boost::asio::mutable_buffer newBuf(buf.mBuff + start);
-        return Buffer(boost::asio::buffer_cast<void*>(newBuf), boost::asio::buffer_size(newBuf));
-    }
+    Buffer();
+    Buffer(const Buffer& buf);
+    Buffer(void* data, std::size_t size);
+
+    virtual ~Buffer();
+
+    Buffer& operator = (const Buffer& buf);
+
+    /**
+    * Get the full size of the buffer.
+    */
+    std::size_t Size() const;
+
+    /**
+    * Get internal pointer to memory in the Buffer.
+    */
+    char* Get() const;
+
+    /**
+    * Clear the contents of the buffer.
+    */
+    void Clear();
+
+    /**
+    * Append memory to the end of the buffer.
+    * @param memBytes - pointer to memory to append.
+    * @param len - size of memory to append.
+    */
+    void Append(const char *data, std::size_t len);
 
     /**
     * Cast buffer to specific simple type (char, int ..).
-    * @param buf - Buffer object to be casted.
-    * @return value to the new type.
     */
     template <class T>
-    inline friend T BufferCast(Buffer& buf) { return  boost::asio::buffer_cast<T>(buf.mBuff); }
-
-    /**
-    * Get the size of the buffer.
-    */
-    inline std::size_t GetSize() { return boost::asio::buffer_size(this->mBuff); }
+    T BufferCast() { return static_cast<T>(mbufPtr); }
 
 private:
-    boost::asio::mutable_buffers_1 mBuff;
+    char* mbufPtr;
+    std::size_t m_size;
 };
-
-typedef boost::shared_ptr<Buffer> BufferPtr;
 
 #endif /* BUFFER_H_ */
 

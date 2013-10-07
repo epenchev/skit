@@ -28,20 +28,34 @@ using boost::asio::ip::tcp;
 
 TCPClientSocket::TCPClientSocket()
  : mIOSock(TaskThreadPool::GetEventThread().mIOServiceLoop)
-{}
+{
+    mOutError = new ErrorCode();
+}
+
+TCPClientSocket::~TCPClientSocket()
+{
+    if (mIOSock.is_open())
+    {
+        this->Disconnect();
+    }
+    delete mOutError;
+}
 
 void TCPClientSocket::Send(Buffer& inData)
 {
+    ErrorCode err;
+
     if (!mEventListener)
     {
-        mErrCode.SetValue(EFAULT);
-        throw SystemException(mErrCode);
+
+        err.SetValue(EFAULT);
+        throw SystemException(err);
     }
 
     if (mIOSock.is_open())
     {
-        const char* dataBuf = BufferCast<const char*>(inData);
-        std::size_t dataSize = inData.GetSize();
+        const char* dataBuf = inData.BufferCast<const char*>();
+        std::size_t dataSize = inData.Size();
 
         if (dataBuf && dataSize)
         {
@@ -52,36 +66,38 @@ void TCPClientSocket::Send(Buffer& inData)
         }
         else
         {
-            mErrCode.SetValue(EINVAL);
-            throw SystemException(mErrCode);
+            err.SetValue(EINVAL);
+            throw SystemException(err);
         }
     }
 }
 
 void TCPClientSocket::Receive(Buffer& outData)
 {
+    ErrorCode err;
+
     if (!mEventListener)
     {
-         mErrCode.SetValue(EFAULT);
-         throw SystemException(mErrCode);
+        err.SetValue(EFAULT);
+        throw SystemException(err);
     }
 
     if (mIOSock.is_open())
     {
-        char* dataBuf = BufferCast<char*>(outData);
-        std::size_t dataSize = outData.GetSize();
+        char* dataBuf = outData.BufferCast<char*>();
+        std::size_t dataSize = outData.Size();
 
         if (dataBuf && dataSize)
         {
-            boost::asio::async_read(mIOSock, boost::asio::buffer(dataBuf, dataSize),
+           boost::asio::async_read(mIOSock, boost::asio::buffer(dataBuf, dataSize),
                                     boost::bind(&TCPClientSocket::HandleRead, this,
                                       boost::asio::placeholders::error,
                                         boost::asio::placeholders::bytes_transferred));
         }
         else
         {
-            mErrCode.SetValue(EINVAL);
-            throw SystemException(mErrCode);
+            err.SetValue(EINVAL);
+            throw SystemException(err);
         }
     }
 }
@@ -89,16 +105,18 @@ void TCPClientSocket::Receive(Buffer& outData)
 
 void TCPClientSocket::ReceiveSome(Buffer& outData)
 {
+    ErrorCode err;
+
     if (!mEventListener)
     {
-        mErrCode.SetValue(EFAULT);
-        throw SystemException(mErrCode);
+        err.SetValue(EFAULT);
+        throw SystemException(err);
     }
 
     if (mIOSock.is_open())
     {
-        char* dataBuf = BufferCast<char*>(outData);
-        std::size_t dataSize = outData.GetSize();
+        char* dataBuf = outData.BufferCast<char*>();
+        std::size_t dataSize = outData.Size();
 
         if (dataBuf && dataSize)
         {
@@ -109,13 +127,13 @@ void TCPClientSocket::ReceiveSome(Buffer& outData)
         }
         else
         {
-            mErrCode.SetValue(EINVAL);
-            throw SystemException(mErrCode);
+            err.SetValue(EINVAL);
+            throw SystemException(err);
         }
     }
 }
 
-std::string TCPClientSocket::GetRemotePeerIP()
+std::string TCPClientSocket::GetRemotePeerIP(ErrorCode& outError)
 {
     std::string peer;
     peer.clear();
@@ -127,23 +145,25 @@ std::string TCPClientSocket::GetRemotePeerIP()
 
         if (error)
         {
-            mErrCode.SetValue(error.value());
-            throw SystemException(mErrCode);
+            outError.SetValue(error.value());
         }
         else
         {
             peer = endpoint.address().to_string(error);
+            if (error)
+            {
+                outError.SetValue(error.value());
+            }
         }
     }
     else
     {
-        mErrCode.SetValue(ENOTCONN);
-        throw SystemException(mErrCode);
+        outError.SetValue(ENOTCONN);
     }
     return peer;
 }
 
-unsigned short TCPClientSocket::GetRemotePeerPort()
+unsigned short TCPClientSocket::GetRemotePeerPort(ErrorCode& outError)
 {
     unsigned short netPort = 0;
 
@@ -154,8 +174,7 @@ unsigned short TCPClientSocket::GetRemotePeerPort()
 
         if (error)
         {
-            mErrCode.SetValue(error.value());
-            throw SystemException(mErrCode);
+            outError.SetValue(error.value());
         }
         else
         {
@@ -164,8 +183,7 @@ unsigned short TCPClientSocket::GetRemotePeerPort()
     }
     else
     {
-        mErrCode.SetValue(ENOTCONN);
-        throw SystemException(mErrCode);
+        outError.SetValue(ENOTCONN);
     }
     return netPort;
 }
@@ -204,35 +222,27 @@ void TCPClientSocket::Disconnect()
     }
 }
 
-void TCPClientSocket::AttachSocketListener(ClientSocketObserver* inListener)
+void TCPClientSocket::SetListener(TCPClientSocketObserver* inListener, ErrorCode& outError)
 {
-    if (!mEventListener)
+    if (inListener)
     {
-        if (inListener)
-        {
-            mEventListener = inListener;
-        }
-        else
-        {
-            mErrCode.SetValue(EINVAL);
-            throw SystemException(mErrCode);
-        }
+        mEventListener = inListener;
     }
-}
-
-void TCPClientSocket::RemoveSocketListener()
-{
-    mEventListener = NULL;
+    else
+    {
+        outError.SetValue(EINVAL);
+    }
 }
 
 void TCPClientSocket::HandleWrite(const boost::system::error_code& error,
                                   std::size_t bytes_transferred)
 {
-    mBytesTransferred = bytes_transferred;
+    mOutError->Clear();
+    unsigned bytesWriten = bytes_transferred;
 
     if (error)
     {
-        mErrCode.SetValue(error.value());
+        mOutError->SetValue(error.value());
         if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted
@@ -240,21 +250,19 @@ void TCPClientSocket::HandleWrite(const boost::system::error_code& error,
     }
 
     Task* writeTask = new Task();
-    writeTask->Connect(&ClientSocketObserver::OnSend, mEventListener, this);
+    writeTask->Connect(&TCPClientSocketObserver::OnSend, mEventListener, this, bytesWriten, this->mOutError);
     TaskThreadPool::Signal(writeTask);
 }
 
 void TCPClientSocket::HandleRead(const boost::system::error_code& error,
                                  std::size_t bytes_transferred)
 {
-
-    mBytesTransferred = bytes_transferred;
+    mOutError->Clear();
+    unsigned bytesRead = bytes_transferred;
 
     if (error)
     {
-        std::cout << error.message() << std::endl;
-
-    	mErrCode.SetValue(error.value());
+        mOutError->SetValue(error.value());
         if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted, don't signal
@@ -262,7 +270,7 @@ void TCPClientSocket::HandleRead(const boost::system::error_code& error,
     }
 
    Task* readTask = new Task();
-   readTask->Connect(&ClientSocketObserver::OnReceive, mEventListener, this);
+   readTask->Connect(&TCPClientSocketObserver::OnReceive, mEventListener, this, bytesRead, this->mOutError);
    TaskThreadPool::Signal(readTask);
 
 }
@@ -270,11 +278,11 @@ void TCPClientSocket::HandleRead(const boost::system::error_code& error,
 void TCPClientSocket::HandleResolve(const boost::system::error_code& error,
                                     tcp::resolver::iterator endpoint_iterator)
 {
-    mErrCode.Clear();
+    mOutError->Clear();
 
     if (error)
     {
-        mErrCode.SetValue(error.value());
+        mOutError->SetValue(error.value());
         if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted, don't signal
@@ -282,7 +290,7 @@ void TCPClientSocket::HandleResolve(const boost::system::error_code& error,
 
         // signal only in case of error
         Task* connectTask = new Task();
-        connectTask->Connect(&ClientSocketObserver::OnConnect, mEventListener, this);
+        connectTask->Connect(&TCPClientSocketObserver::OnConnect, mEventListener, this, this->mOutError);
         TaskThreadPool::Signal(connectTask);
     }
     else
@@ -296,11 +304,11 @@ void TCPClientSocket::HandleResolve(const boost::system::error_code& error,
 
 void TCPClientSocket::HandleConnect(const boost::system::error_code& error)
 {
-    mErrCode.Clear();
+    mOutError->Clear();
 
     if (error)
     {
-        mErrCode.SetValue(error.value());
+        mOutError->SetValue(error.value());
         if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted, don't signal
@@ -308,7 +316,12 @@ void TCPClientSocket::HandleConnect(const boost::system::error_code& error)
     }
 
     Task* connectTask = new Task();
-    connectTask->Connect(&ClientSocketObserver::OnReceive, mEventListener, this);
+    connectTask->Connect(&TCPClientSocketObserver::OnConnect, mEventListener, this, this->mOutError);
     TaskThreadPool::Signal(connectTask);
+}
+
+bool TCPClientSocket::IsOpen()
+{
+    return mIOSock.is_open();
 }
 

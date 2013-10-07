@@ -25,6 +25,7 @@
 #include <iostream>
 #include "HTTP/HTTPRequest.h"
 #include "HTTP/HTTPUtils.h"
+#include "ErrorCode.h"
 
 HTTPSession::HTTPSession(unsigned sessionId, TCPClientSocket* inSocket) : TCPConnection(sessionId, inSocket)
 {
@@ -59,58 +60,69 @@ void HTTPSession::SendHTTPResponse()
 
 void HTTPSession::WaitForRequest()
 {
-    mIoChann = this->OpenChannel(this);
-    mIoChann->Emit(mRequestBuf, IOReadSome);
+    ErrorCode err;
+	mIoChann = this->OpenChannel(this);
+    mIoChann->Emit(mRequestBuf, IOReadSome, err);
 }
 
-void HTTPSession::OnRead(IOChannel* chan, std::size_t bytesRead)
+void HTTPSession::OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr)
 {
-    std::cout << "bytes read " << bytesRead << std::endl;
-    char* data = BufferCast<char*>(*mRequestBuf);
+	ErrorCode err;
+	std::cout << "bytes read " << bytesRead << std::endl;
+    char* data = mRequestBuf->BufferCast<char*>();
 
     if (bytesRead && data)
     {
-    	std::string requestStr(data, bytesRead);
-    	size_t pos = requestStr.find("\r\n\r\n");
-    	if (std::string::npos == pos)
-    	{
-    		if (bytesRead < 100)
-    		{
-    			std::cout << "Must disconnect !!! \n";
-    		}
-    		else
-    		{
-    			char* mainData = BufferCast<char*>(*mMainBuffer);
-    			strncat(mainData, data, bytesRead);
-    			memset(data, 0, 100);
-    			mIoChann->Emit(mRequestBuf, IOReadSome);
-    		}
-    	}
-    	else
-    	{
-    		HTTPRequest request;
-    		std::cout << "found end of request \n";
-    		char* mainData = BufferCast<char*>(*mMainBuffer);
-    		strncat(mainData, data, bytesRead);
-    		std::cout << mainData << std::endl;
-    		std::string str(mainData);
-    		request.Init(str);
-    		//if (request.GetLastError())
+        std::string requestStr(data, bytesRead);
 
-    		std::cout << request.GetPath() << std::endl;
-    		std::cout << request.GetRequestURI() << std::endl;
-    		std::cout << request.GetProtocol() << std::endl;
+        //std::cout << requestStr << std::endl;
+        //std::cout << "-----" << std::endl;
 
+        size_t pos = requestStr.find("\r\n\r\n");
+        if (std::string::npos == pos)
+        {
+            if (bytesRead < 100)
+            {
+                std::cout << "Must disconnect !!! \n";
+            }
+            else
+            {
+                char* mainData =  mMainBuffer->BufferCast<char*>();
+                strncat(mainData, data, bytesRead);
+                memset(data, 0, 100);
+                mIoChann->Emit(mRequestBuf, IOReadSome, err);
+            }
+        }
+        else
+        {
+            HTTPRequest request;
+            std::cout << "found end of request \n";
+            char* mainData =  mMainBuffer->BufferCast<char*>();
+            strncat(mainData, data, bytesRead);
+            std::cout << mainData << std::endl;
+            std::string str(mainData);
+            request.Init(str);
+            //if (request.GetLastError())
 
-    		std::string httpResponse = HTTPUtils::HTTPResponseToString(200);
-    		Buffer outbuf((char*)httpResponse.c_str(), httpResponse.size());
-    		mIoChann->Emit(&outbuf, IOWrite);
-    	}
+            std::cout << request.GetPath() << std::endl;
+            std::cout << request.GetRequestURI() << std::endl;
+            std::cout << request.GetProtocol() << std::endl;
+
+            std::string responseData = "<html><body><h2>Hi from Emo</h2></body></html>";
+
+            HTTPHeadersMap mapheaders;
+            mapheaders.insert(HTTPParam("Content-Type", "text/html"));
+
+            std::string httpResponse = HTTPUtils::HTTPResponseToString(200, &responseData, &mapheaders);
+            std::cout << httpResponse << std::endl;
+            Buffer outbuf((char*)httpResponse.c_str(), httpResponse.size());
+            mIoChann->Emit(&outbuf, IOWrite, err);
+        }
     }
     else
     {
-    	std::cout << "nothing to read must disconnect !!! \n";
-    	//chan->
+        std::cout << "nothing to read must disconnect !!! \n";
+        //chan->
     }
 
 
@@ -132,7 +144,7 @@ void HTTPSession::OnRead(IOChannel* chan, std::size_t bytesRead)
 #endif
 }
 
-void HTTPSession::OnWrite(IOChannel* chan, std::size_t bytesWriten)
+void HTTPSession::OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr)
 {
     std::cout << "bytes written " << bytesWriten << std::endl;
 
@@ -151,16 +163,12 @@ void HTTPSession::OnConnectionClose(IOChannel* chan)
 
 HTTPServer::HTTPServer(unsigned short port)
  : mServerSock(port)
-{
-    mServerSock.AddSocketListener(this);
-}
+{}
 
 
 HTTPServer::HTTPServer(std::string localAdress, unsigned short port)
  : mServerSock(localAdress, port)
-{
-    mServerSock.AddSocketListener(this);
-}
+{}
 
 HTTPServer::~HTTPServer()
 {
@@ -168,13 +176,14 @@ HTTPServer::~HTTPServer()
 }
 
 
-void HTTPServer::OnAccept(ClientSocket* inNewSocket)
+void HTTPServer::OnAccept(TCPClientSocket* inNewSocket, ErrorCode* inError)
 {
-	std::cout << "Got new connection \n";
+    ErrorCode err;
+    std::cout << "Got new connection \n";
     if (inNewSocket)
     {
-    	std::cout << "connected from " << inNewSocket->GetRemotePeerIP()
-    			              << " : " << inNewSocket->GetRemotePeerPort() << std::endl;
+        std::cout << "connected from " << inNewSocket->GetRemotePeerIP(err)
+                              << " : " << inNewSocket->GetRemotePeerPort(err) << std::endl;
 
         // TODO for testing only
         HTTPSession* session = new HTTPSession(1, (TCPClientSocket*)inNewSocket);
@@ -187,9 +196,10 @@ void HTTPServer::OnAccept(ClientSocket* inNewSocket)
 
 void HTTPServer::Start()
 {
-    mServerSock.Listen();
-    mServerSock.Accept();
-
+    ErrorCode err;
+    mServerSock.SetListener(this, err);
+    mServerSock.Listen(err);
+    mServerSock.Accept(err);
 }
 
 void HTTPServer::Stop()
@@ -222,11 +232,12 @@ void HTTPServer::RemoveServerListener(HTTPServerObserver* serverListener)
 
 }
 
-void HTTPServer::OnRead(IOChannel* chan, std::size_t bytesRead)
+void HTTPServer::OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr)
 { /* empty, no need to implement this */ }
 
-void HTTPServer::OnWrite(IOChannel* chan, std::size_t bytesWriten)
+void HTTPServer::OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr)
 { /* empty, no need to implement this */ }
+
 
 void HTTPServer::OnConnectionClose(IOChannel* chan)
 {

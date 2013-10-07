@@ -19,14 +19,18 @@
  */
 
 #include "HTTP/HTTPUtils.h"
+#include <sstream>
 #include <iostream>
 
 typedef std::size_t offset;
 
-static const char* endHeaders = "\r\n\r\n";
-static const char* endHeaders1 = "\n\n";
+static const std::string endHeaders = "\r\n\r\n";
+static const std::string endHeaders1 = "\n\n";
+static const std::string serverName = "blitz-stream";
+static const std::string http_version_1_0 = "HTTP/1.0";
+static const std::string http_version_1_1 = "HTTP/1.1";
+static const std::string http_crlf = "\r\n";
 
-const std::string serverName = "blitz-stream";
 class HttpResponseCodeMap : public std::map<unsigned, std::string>
 {
 public:
@@ -43,6 +47,22 @@ public:
     }
 } const static responseCodes;
 
+
+static const std::string currentDateTime()
+{
+    time_t     now = time(0);
+    struct tm  tstruct;
+    char       buf[80];
+    tstruct = *localtime(&now);
+
+    /* Visit http://www.cplusplus.com/reference/clibrary/ctime/strftime/
+    * for more information about date/time format
+    * strftime(buf, sizeof(buf), "%Y-%m-%d.%X", &tstruct);
+    */
+    strftime(buf, sizeof(buf), "%a, %d %b %g %T GMT", &tstruct);
+
+    return buf;
+}
 
 ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& outMapHeaders )
 {
@@ -143,7 +163,9 @@ std::string HTTPUtils::HTTPRequestToString(const std::string& inUrl, const std::
     if (!inUrl.empty() && !method.empty())
     {
         if (inUrl.substr(0, 7) != "http://")
+        {
             return "";
+        }
 
         offset doubleSlashPos = inUrl.find_first_of("//");
 
@@ -181,68 +203,118 @@ std::string HTTPUtils::HTTPRequestToString(const std::string& inUrl, const std::
         {
             resultHTTPReq += "Host: " + server;
             if (!servicePort.empty())
+            {
                 resultHTTPReq += ":" + servicePort;
+            }
             resultHTTPReq += "\r\n";
         }
         for (HTTPHeadersMap::iterator it=headers.begin(); it!=headers.end(); ++it)
-                resultHTTPReq += it->first + ": " + it->second + "\r\n";
+        {
+        	resultHTTPReq += it->first + ": " + it->second + "\r\n";
+        }
 
         resultHTTPReq += endHeaders;
         if (!data.empty())
-                resultHTTPReq += data;
+        {
+        	resultHTTPReq += data;
+        }
     }
 
     return resultHTTPReq;
 }
 
-std::string HTTPUtils::HTTPResponseToString(unsigned reponseCode/*, std::string& data, HTTPHeadersMap& headers*/)
+std::string HTTPUtils::HTTPResponseToString(unsigned responseCode, const std::string* data, HTTPHeadersMap* headers)
 {
-    std::string returnHeaders;
+    std::string returnHeaders = "";
+    std::string reponseData = "";
 
-    std::string statusMessage = responseCodes.find(reponseCode)->second;
-    returnHeaders = "HTTP/1.1 200 OK \r\n";
-    returnHeaders += "Server: blitz-stream \r\n";
-    returnHeaders += "Content-Type: text/html \r\n";
-    //returnHeaders += "Content-Length: 20 \r\n";
-    returnHeaders += "Connection: close \r\n\r\n";
-    returnHeaders += "<html><body><h2>Hi from Emo</h2></body></html>";
-/*
-        try
-        {
-            header(http_version_1_1 + " " + boost::lexical_cast<std::string>(m_status_code) + " " + m_status_message);
-            header("Date: " + currentDateTime());
-            header("Server: " + server_name);
-        }
-        catch(boost::bad_lexical_cast &)
-        {
-            BLITZ_LOG_ERROR("bad lexical cast %d", m_status_code);
-        }
+    if (responseCodes.count(responseCode) > 0)
+    {
+    	std::stringstream stringCode;
+    	stringCode << responseCode;
+    	std::string statusMessage = responseCodes.at(responseCode);
+    	returnHeaders = http_version_1_1 + " " + stringCode.str() + " " + statusMessage + http_crlf;
+    }
+    else
+    {
+    	return returnHeaders;
+    }
 
-        if (!filename.empty())
-        {
-            std::string extension = getFileExtension(filename);
-            header(mime_types.find(extension)->second);
-            header("Content-Disposition: inline; filename=" + filename);
-            header("Expires: 0");
-            header("Pragma: public");
-            header("Cache-Control: must-revalidate");
-            try
-            {
-                std::string size_txt = boost::lexical_cast<std::string>(size);
-                header("Content-Length: " + size_txt);
-            }
-            catch(boost::bad_lexical_cast &)
-            {
-                BLITZ_LOG_ERROR("bad lexical cast %d", size);
-            }
+    returnHeaders += "Server: " + serverName + http_crlf;
+    returnHeaders += "Date: " + currentDateTime() + http_crlf;
 
-            m_raw_headers += "Connection: keep-alive: " + http_end_headers;
-        }
-        else
-        {
-            m_raw_headers += mime_types.find("mpeg")->second + http_end_headers;
-        }
-*/
+    // add additional headers
+    if (headers)
+    {
+    	if (data)
+    	{
+    		if (data->size())
+    	    {
+    			HTTPHeadersMap::iterator it = headers->find("Content-Type");
+    	    	if (headers->end() != it)
+    	    	{
+    	    		returnHeaders += it->first + ": " + it->second + http_crlf;
+    	    	}
+    	    	else
+    	    	{
+    	    		// default mime type
+    	    		returnHeaders += "Content-Type: application/octet-stream" + http_crlf;
+    	    	}
+
+    	    	it = headers->find("Content-Length");
+    	    	if (headers->end() != it)
+    	    	{
+    	    		returnHeaders += it->first + ": " + it->second + http_crlf;
+    	    	}
+    	    	else
+    	    	{
+    	    		std::stringstream stringSize;
+    	    		stringSize << data->size();
+    	    		returnHeaders += "Content-Length: " + stringSize.str() + http_crlf;
+    	    	}
+    	    	reponseData = data->c_str();
+    	    }
+    	}
+
+    	for (HTTPHeadersMap::iterator it = headers->begin(); it != headers->end(); ++it)
+    	{
+    		// Server and Date headers can't be overridden
+    		std::string headerName = it->first;
+    		if ( headerName.compare("Server") != 0 &&
+    			 headerName.compare("Date") != 0   &&
+    			 // those are already added skip them if present
+    			 headerName.compare("Content-Type") != 0   &&
+    			 headerName.compare("Content-Length") != 0)
+    		{
+    			returnHeaders += it->first + ": " + it->second + http_crlf;
+    		}
+    	}
+    	HTTPHeadersMap::iterator it = headers->find("Connection");
+    	if (headers->end() == it)
+    	{
+    		returnHeaders += "Connection: close" + endHeaders;
+    	}
+    	else
+    	{
+    		returnHeaders += http_crlf;
+    	}
+    }
+    else
+    {
+    	if (data)
+    	{
+    		if (data->size())
+    	    {
+    			std::stringstream stringSize;
+    			stringSize << data->size();
+    			// default mime type
+    			returnHeaders += "Content-Type: application/octet-stream" + http_crlf;
+    			returnHeaders += "Content-Length: " + stringSize.str() + http_crlf;
+    	    }
+    	}
+    	returnHeaders += "Connection: close" + endHeaders;
+    }
+    returnHeaders += reponseData;
     return returnHeaders;
 }
 

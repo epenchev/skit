@@ -22,51 +22,56 @@
 #define TCPSERVERSOCKET_H_
 
 #include <string>
-#include <exception>
 #include <boost/asio.hpp>
-#include "SocketInterface.h"
 #include "TCPClientSocket.h"
-#include "Buffer.h"
 #include "ErrorCode.h"
+#include "SocketObserver.h"
 
-class TCPServerSocket : public ServerSocket
+class TCPServerSocket
 {
 public:
     TCPServerSocket(unsigned short port);
     TCPServerSocket(std::string localAdress, unsigned short port);
-    virtual ~TCPServerSocket() {}
+    virtual ~TCPServerSocket();
 
-    /* From ServerSocket */
-    void Accept();
+    /**
+    * Start accepting incoming connections.
+    * @param outError - error from operation.
+    */
+    void Accept(ErrorCode& outError);
 
-    /* From ServerSocket */
-    unsigned short GetPort();
+    /**
+    * Return the port socket is listening on.
+    * @return port value.
+    */
+    unsigned short GetListeningPort();
 
-    /* From ServerSocket */
-    void Listen();
+    /**
+    * Listen for incoming connections.
+    * @param outError - error from operation.
+    */
+    void Listen(ErrorCode& outError);
 
-    /* From ServerSocket */
-    void AddSocketListener(ServerSocketObserver* inListener);
+    /**
+    * Set observer object who will be notified about every socket event.
+    * @param inListener - pointer to observer object.
+    * @param outError - error from operation.
+    */
+    void SetListener(TCPServerSocketObserver* inListener, ErrorCode& outError);
 
-    /* From ServerSocket */
-    void RemoveSocketListener();
-
-   /**
-   * Get the last error from this socket.
-   * @return SocketError reference.
-   */
-   ErrorCode& GetError() { return mErrCode; }
+    /**
+    * Close listening socket and stop accepting.
+    */
+    void Stop();
 
 private:
 
-    // temp
-    ErrorCode mErrCode;
-
-    boost::asio::ip::tcp::acceptor mAcceptor;
-    unsigned short                 mlocalPort;
-    std::string                    mlocalAdress;
-    ServerSocketObserver*          mEventListener;  /**< socket observer for events */
-    bool                           misListening;     /**< is socket in listening state */
+    boost::asio::ip::tcp::acceptor mAcceptor;       /**< boost listener object */
+    unsigned short                 mlocalPort;      /**< listening port number */
+    std::string                    mlocalAdress;    /**< listening IP address as string */
+    TCPServerSocketObserver*       mEventListener;  /**< socket observer for events */
+    bool                           misListening;    /**< is socket in listening state */
+    ErrorCode*                     mOutError;          /**< error code of accept operation */
 
     /* boost tcp::acceptor IO handlers */
     void HandleAccept(TCPClientSocket* outSocket, const boost::system::error_code& error);

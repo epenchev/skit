@@ -38,16 +38,17 @@ public:
     TCPConnectionIOChannel(unsigned channId, IOChannelObserver* listener, TCPConnection* conn);
     virtual ~TCPConnectionIOChannel() {}
 
-    void Emit(Buffer* data, IOAction ioOper);
+    void Emit(Buffer* data, IOAction ioOper, ErrorCode& outError);
 
-    unsigned GetSessionId();
+    unsigned GetConnId();
 
     unsigned GetChannelId();
 
 private:
     friend class TCPConnection;
-    IOAction mIOaction;
     Buffer*  mIOBuffer;
+    unsigned mbytesTransfered;
+    IOAction mIOaction;
     ErrorCode mError;
     TCPConnection* mConnection;
     IOChannelObserver* mListener;
@@ -61,7 +62,7 @@ typedef std::list<TCPConnectionIOChannel*> ListIOChannels;
 * Class for TCP connection objects used in different TCP servers.
 * This is a object created from a server and bound to it.
 */
-class TCPConnection : public NetConnection, public ClientSocketObserver
+class TCPConnection : public NetConnection, public TCPClientSocketObserver
 {
 public:
     TCPConnection(unsigned sessionId, TCPClientSocket* inSocket);
@@ -71,7 +72,7 @@ public:
     bool IsConnected();
 
     /* From NetConnection */
-    unsigned GetSessionId() { return mConnId; }
+    unsigned GetConnId() { return mConnId; }
 
     /* From NetConnection */
     std::string GetRemoteAddress();
@@ -89,7 +90,7 @@ public:
     void CloseChannel(unsigned channelId);
 
     /* From NetConnection */
-    void NotifyChannel(unsigned channelId, IOAction ioOper);
+    void NotifyChannel(unsigned channelId, IOAction ioOper, ErrorCode& err);
 
     /* From NetConnection */
     IOChannel* GetChannel(unsigned channelId);
@@ -97,13 +98,13 @@ public:
 protected:
 
     /* From ClientSocketObserver */
-    void OnSend(ClientSocket* inSocket);
+    void OnSend(TCPClientSocket* inSocket, unsigned sendBytes, ErrorCode* inError);
 
     /* From ClientSocketObserver */
-    void OnReceive(ClientSocket* inSocket);
+    void OnReceive(TCPClientSocket* inSocket, unsigned receivedBytes, ErrorCode* inError);
 
     /* From ClientSocketObserver */
-    void OnConnect(ClientSocket* inSocket);
+    void OnConnect(TCPClientSocket* inSocket, ErrorCode* inError);
 
     bool mWriteBusy;
     bool mReadBusy;
@@ -123,8 +124,13 @@ protected:
     IOChannels mIOChannelsMap;
 
 private:
+    enum IOEvent { OnReadEvent = 0, OnWriteEvent, OnCloseEvent };
+
     void DoWrite(TCPConnectionIOChannel* ioChannel);
+
     void DoRead(TCPConnectionIOChannel* ioChannel);
+
+    void NotifyChannelListener(TCPConnectionIOChannel* ioChannel, TCPConnection::IOEvent event);
 
 };
 

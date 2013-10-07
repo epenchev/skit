@@ -22,21 +22,30 @@
 #include "system/TaskThread.h"
 #include "system/Task.h"
 #include <boost/bind.hpp>
-#include <exception>
 
 using boost::asio::ip::tcp;
 
 TCPServerSocket::TCPServerSocket(unsigned short port)
  : mAcceptor(TaskThreadPool::GetEventThread().mIOServiceLoop),
    mlocalPort(port), mlocalAdress(""), mEventListener(NULL), misListening(false)
-{}
+{
+    mOutError = new ErrorCode();
+}
 
 TCPServerSocket::TCPServerSocket(std::string localAdress, unsigned short port)
  : mAcceptor(TaskThreadPool::GetEventThread().mIOServiceLoop),
    mlocalPort(port), mlocalAdress(localAdress), mEventListener(NULL), misListening(false)
-{}
+{
+    mOutError = new ErrorCode();
+}
 
-void TCPServerSocket::Listen()
+TCPServerSocket::~TCPServerSocket()
+{
+    delete mOutError;
+    this->Stop();
+}
+
+void TCPServerSocket::Listen(ErrorCode& outError)
 {
     try
     {
@@ -56,68 +65,78 @@ void TCPServerSocket::Listen()
     }
     catch(boost::system::system_error& ex)
     {
-        mErrCode.SetValue(ex.code().value());
-        throw SystemException(mErrCode);
+        outError.SetValue(ex.code().value());
+        return;
     };
     misListening = true;
 }
 
 
-void TCPServerSocket::Accept()
+void TCPServerSocket::Accept(ErrorCode& outError)
 {
     if (!mEventListener)
     {
-        mErrCode.SetValue(EFAULT);
-        throw SystemException(mErrCode);
+        outError.SetValue(EFAULT);
+        return;
     }
-    TCPClientSocket* outSocket = new TCPClientSocket();
-    mAcceptor.async_accept(outSocket->mIOSock,
+    TCPClientSocket* clientSocket = new TCPClientSocket();
+    mAcceptor.async_accept(clientSocket->mIOSock,
                             boost::bind(&TCPServerSocket::HandleAccept, this,
-                                  outSocket, boost::asio::placeholders::error));
+                                    clientSocket, boost::asio::placeholders::error));
 }
 
-unsigned short TCPServerSocket::GetPort()
+unsigned short TCPServerSocket::GetListeningPort()
 {
     return mAcceptor.local_endpoint().port();
 }
 
-void TCPServerSocket::AddSocketListener(ServerSocketObserver* inListener)
+void TCPServerSocket::SetListener(TCPServerSocketObserver* inListener, ErrorCode& outError)
 {
-    if (!mEventListener)
+    if (inListener)
     {
-        if (inListener)
-        {
-            mEventListener = inListener;
-        }
-        else
-        {
-            mErrCode.SetValue(EINVAL);
-            throw SystemException(mErrCode);
-        }
+        mEventListener = inListener;
+    }
+    else
+    {
+        outError.SetValue(EINVAL);
+        return;
     }
 }
 
-
-void TCPServerSocket::RemoveSocketListener()
+void TCPServerSocket::Stop()
 {
-    mEventListener = NULL;
+    if (this->misListening)
+    {
+        // no error handling here, nobody cares
+        boost::system::error_code error;
+        mAcceptor.close(error);
+        this->misListening = false;
+    }
 }
 
 void TCPServerSocket::HandleAccept(TCPClientSocket* outSocket,
                                    const boost::system::error_code& error)
 {
+    mOutError->Clear();
     Task* acceptTask = new Task();
+
     if (error)
     {
-        // TODO log error
+        mOutError->SetValue(error.value());
         delete outSocket;
-        mErrCode.SetValue(error.value());
+        if (boost::asio::error::operation_aborted == error)
+        {
+            return; // operation aborted, don't signal
+        }
     }
-    acceptTask->Connect(&ServerSocketObserver::OnAccept, mEventListener, outSocket);
+
+    // warning, if acceptError is true socket is invalid object
+    acceptTask->Connect(&TCPServerSocketObserver::OnAccept, mEventListener, outSocket, this->mOutError);
     TaskThreadPool::Signal(acceptTask);
 
     // continue accepting new connections
-    this->Accept();
+    ErrorCode err;
+    this->Accept(err);
 }
 
 
