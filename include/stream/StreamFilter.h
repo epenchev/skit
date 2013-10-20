@@ -23,18 +23,22 @@
 
 class Buffer;
 class ErrorCode;
+class StreamFilter;
+
+#include "server/PluginModule.h"
 
 class FilterObserver
 {
 public:
-	virtual ~FilterObserver() {}
-    virtual void OnDataReady() = 0;
+    virtual ~FilterObserver() {}
+    virtual void OnDataReady(StreamFilter* filter, Buffer* data) = 0;
 };
 
-class StreamFilter
+class StreamFilter /*: public PluginModule*/
 {
 public:
-	virtual ~StreamFilter() {}
+    virtual ~StreamFilter() {}
+    virtual void Filter() = 0;
     virtual void WriteData(Buffer* data) = 0;
     virtual void AddListener(FilterObserver* listener) = 0;
     virtual void RemoveListener(FilterObserver* listener) = 0;

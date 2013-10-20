@@ -36,6 +36,7 @@
 
 #include "server/HTTPServer.h"
 #include "system/TaskThread.h"
+#include "server/ServerController.h"
 
 int main(int argc, char* argv[])
 {
@@ -122,6 +123,8 @@ int main(int argc, char* argv[])
 
     HTTPServer server("192.168.97.72", 8000);
     server.Start();
+
+    ServerController::LoadPlugin("/home/emo/workspace/blitz/modules/libmod_source_example.so");
 
     TaskThreadPool::AddThread();
     TaskThreadPool::AddThread();

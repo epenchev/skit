@@ -6,16 +6,19 @@
 CPP_SRCS += \
 ../server/HTTPServer.cpp \
 ../server/PluginManager.cpp \
+../server/ServerController.cpp \
 ../server/TCPConnection.cpp 
 
 OBJS += \
 ./server/HTTPServer.o \
 ./server/PluginManager.o \
+./server/ServerController.o \
 ./server/TCPConnection.o 
 
 CPP_DEPS += \
 ./server/HTTPServer.d \
 ./server/PluginManager.d \
+./server/ServerController.d \
 ./server/TCPConnection.d 
 
 

@@ -48,7 +48,7 @@ all: blitz
 blitz: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L/usr/local/boost/lib -o "blitz" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L/usr/local/boost/lib -L/home/emo/workspace/blitz/modules -Wl,-E -o "blitz" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

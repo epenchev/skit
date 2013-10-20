@@ -18,8 +18,10 @@
  *      Author: emo
  */
 
-#include "stream/Stream.h"
 #include <cstddef>
+#include "stream/Stream.h"
+#include "system/Buffer.h"
+#include "ErrorCode.h"
 
 Stream::Stream(unsigned streamId)
  : mstreamId(streamId), msource(NULL), mfilter(NULL), msink(NULL)
@@ -27,94 +29,151 @@ Stream::Stream(unsigned streamId)
 
 Stream::~Stream()
 {
+    if (msource)
+    {
+        msource->RemoveListener(this);
+    }
 
+    if (mfilter)
+    {
+        mfilter->RemoveListener(this);
+    }
+
+    if (msink)
+    {
+        msink->RemoveListerner(this);
+    }
+
+    for (std::list<StreamClient*>::iterator it = mlistClients.begin(); it != mlistClients.end(); ++it)
+    {
+        StreamClient* client = *it;
+        delete client;
+    }
+    mlistClients.clear();
 }
 
 void Stream::Play()
 {
-	if (msource)
-	{
-		msource->Start();
-	}
+    if (msource)
+    {
+        msource->Start();
+    }
 }
 
 void Stream::Pause()
 {
-	if (msource)
-	{
-		msource->Stop();
-	}
+    if (msource)
+    {
+        msource->Stop();
+    }
 }
 
 void Stream::Stop()
 {
-	if (msource)
-	{
-		msource->Stop();
-	}
+    if (msource)
+    {
+        msource->Stop();
+    }
 }
 
 void Stream::Seek()
 {
-	if (msource)
-	{
-		msource->Seek();
-	}
+    if (msource)
+    {
+        msource->Seek();
+    }
 }
 
 void Stream::SetSource(StreamSource* source)
 {
-	if (source)
-	{
-		this->msource = source;
-		msource->AddListener(this);
-	}
+    if (source)
+    {
+        this->msource = source;
+        msource->AddListener(this);
+    }
 }
 
 void Stream::SetFilter(StreamFilter* filter)
 {
-	if (filter)
-	{
-		this->mfilter = filter;
-	}
+    if (filter)
+    {
+        this->mfilter = filter;
+        mfilter->AddListener(this);
+    }
 }
 
 void Stream::SetSink(StreamSink* sink)
 {
-	if (sink)
-	{
-		this->msink = sink;
-	}
+    if (sink)
+    {
+        this->msink = sink;
+        msink->AddListerner(this);
+    }
 }
 
 void Stream::AddClient(StreamClient* client)
 {
-
+    if (client)
+    {
+        mlistClients.push_back(client);
+    }
 }
 
 void Stream::RemoveClient(StreamClient* client)
 {
-
+    if (!mlistClients.empty() && client)
+    {
+        for (std::list<StreamClient*>::iterator it = mlistClients.begin(); it != mlistClients.end(); ++it)
+        {
+            // = *it;
+        }
+    }
 }
 
 unsigned Stream::GetStreamId()
 {
-	return this->mstreamId;
+    return this->mstreamId;
 }
 
 StreamSource* Stream::GetSource()
 {
-	return this->msource;
+    return this->msource;
 }
 
 StreamFilter* Stream::GetFilter()
 {
-	return this->mfilter;
+    return this->mfilter;
 }
 
 StreamSink* Stream::GetSink()
 {
-	return this->msink;
+    return this->msink;
 }
+
+void Stream::OnStart(StreamSource* source)
+{
+
+}
+
+void Stream::OnStop(StreamSource* source)
+{
+
+}
+
+void Stream::OnDataReceive(StreamSource* source, Buffer* data, ErrorCode* error)
+{
+
+}
+
+void Stream::OnDataReady(StreamFilter* filter, Buffer* data)
+{
+
+}
+
+void Stream::OnDataSent(StreamClient* client , StreamSink* sink, ErrorCode* error)
+{
+
+}
+
 
 

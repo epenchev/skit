@@ -28,6 +28,7 @@
 class PluginModule
 {
 public:
+
     /**
     * Method invoked when module is loaded into the server core system.
     * Some initialization of module can be done here.

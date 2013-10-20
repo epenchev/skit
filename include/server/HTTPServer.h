@@ -23,8 +23,9 @@
 
 #include "system/TCPServerSocket.h"
 #include "TCPConnection.h"
-#include <set>
 #include "HTTP/HTTPRequest.h"
+#include <set>
+#include <map>
 
 class HTTPSessionObserver
 {
@@ -59,10 +60,10 @@ public:
     void OnConnectionClose(IOChannel* chan);
 
 private:
-    IOChannel* mIoChann;
-    std::set<HTTPSessionObserver*> mSessionListeners;
-    Buffer* mRequestBuf;
-    Buffer* mMainBuffer;
+    IOChannel* mioChannel;
+    std::set<HTTPSessionObserver*> msessionListeners;
+    Buffer* msocketBuffer;
+    std::string mrequestStr;
 };
 
 class HTTPServer;
@@ -71,6 +72,7 @@ class HTTPServer;
 */
 class HTTPServerObserver
 {
+public:
     /**
     * Triggered when new HTTP session is created.
     */
@@ -109,7 +111,8 @@ public:
 
     void Stop();
 
-    void GetGlobalServerInstance();
+    // TODO move in ServerController
+    //void GetGlobalServerInstance();
 
     unsigned int GetConnectionCount();
 
@@ -130,8 +133,11 @@ private:
     /* From ServerSocketObserver */
     void OnAccept(TCPClientSocket* inNewSocket, ErrorCode* inError);
 
+    bool mIsStarted;
     TCPServerSocket mServerSock;
-    HTTPServerObserver* mEventObserver;
+    std::map<unsigned, HTTPSession*> msessionsMap;
+    std::set<HTTPServerObserver*> mlisteners;
+
 };
 
 #endif /* HTTPSERVER_H_ */

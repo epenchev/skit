@@ -51,13 +51,19 @@ public:
 
 protected:
     /* from SourceObserver */
-    void OnStart();
+    void OnStart(StreamSource* source);
 
     /* from SourceObserver */
-    void OnStop();
+    void OnStop(StreamSource* source);
 
     /* from SourceObserver */
-    void OnDataReceive();
+    void OnDataReceive(StreamSource* source, Buffer* data, ErrorCode* error);
+
+    /* from FilterObserver */
+    void OnDataReady(StreamFilter* filter, Buffer* data);
+
+    /* from SinkObserver */
+    void OnDataSent(StreamClient* client , StreamSink* sink, ErrorCode* error);
 
 private:
     unsigned                    mstreamId;

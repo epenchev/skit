@@ -1,5 +1,5 @@
 /*
- * StreamSink.h
+ * ServerController.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,34 +14,42 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Oct 10, 2013
+ *  Created on: Oct 14, 2013
  *      Author: emo
  */
 
-#ifndef STREAMSINK_H_
-#define STREAMSINK_H_
+#ifndef SERVERCONTROLLER_H_
+#define SERVERCONTROLLER_H_
 
-class Buffer;
-class ErrorCode;
-class StreamSink;
-class StreamClient;
+#include <vector>
+#include <map>
+#include <string>
 
-#include "server/PluginModule.h"
+class Stream;
+class HTTPServer;
 
-class SinkObserver
+/**
+* Main server class for controlling the system.
+*/
+class ServerController
 {
 public:
-    virtual ~SinkObserver() {}
-    virtual void OnDataSent(StreamClient* client , StreamSink* sink, ErrorCode* error) = 0;
+    static unsigned RegisterStream(const std::string name);
+
+    static void DeregisterStream(unsigned id);
+
+    /* Get a stream by id */
+    static Stream* GetStream(unsigned id);
+
+    /* Get count of all registered streams */
+    static unsigned GetStreamCount();
+
+    static void LoadPlugin(const std::string& filePath);
+/*
+    static void SetHTTPServer(HTTPServer* server);
+
+    static HTTPServer* GetHTTPServer();
+*/
 };
 
-class StreamSink /*:  public PluginModule*/
-{
-public:
-    virtual ~StreamSink() {}
-    virtual void WriteData(Buffer* data, StreamClient* client) = 0;
-    virtual void AddListerner(SinkObserver* listener) = 0;
-    virtual void RemoveListerner(SinkObserver* listener) = 0;
-};
-
-#endif /* STREAMSINK_H_ */
+#endif /* SERVERCONTROLLER_H_ */

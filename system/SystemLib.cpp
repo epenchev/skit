@@ -32,7 +32,7 @@ void SystemLib::LoadFile(const char* filePath)
 {
     if (filePath)
     {
-        mLibHandler = dlopen(filePath, RTLD_LAZY);
+    	mLibHandler = dlopen(filePath, RTLD_LAZY | RTLD_GLOBAL);
         if (NULL == mLibHandler)
         {
             ErrorCode err(errno);

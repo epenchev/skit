@@ -22,20 +22,30 @@
 #define STREAMSOURCE_H_
 
 class StreamSource;
+class Buffer;
+class ErrorCode;
+
+#include "server/PluginModule.h"
+//#define BUILD_MOD
+#ifdef BUILD_MOD
+#define EXPORT_PUB __attribute__ ((visibility ("default")))
+#else
+#define EXPORT_PUB
+#endif
 
 class SourceObserver
 {
 public:
-	virtual ~SourceObserver() {}
+    virtual ~SourceObserver() {}
     virtual void OnStart(StreamSource* source) {}
     virtual void OnStop(StreamSource* source) {}
-    virtual void OnDataReceive(StreamSource* source) {}
+    virtual void OnDataReceive(StreamSource* source, Buffer* data, ErrorCode* error) {}
 };
 
-class StreamSource
+class EXPORT_PUB StreamSource /*: public PluginModule*/
 {
 public:
-	virtual ~StreamSource() = 0;
+    virtual ~StreamSource() {}
     virtual void Start() = 0;
     virtual void Stop() = 0;
     virtual void Seek() = 0;
