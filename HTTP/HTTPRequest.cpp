@@ -19,6 +19,7 @@
  */
 
 #include "HTTP/HTTPRequest.h"
+#include "Logger.h"
 #include <fstream>
 #include <cstdlib>
 
@@ -37,11 +38,9 @@ void HTTPRequest::ReadQueryParams()
     offset paramSplitPos = 0;
     offset nameValueSplitPos = 0;
 
-    mErrCode.Clear();
-
     if (mQueryString.empty())
     {
-        mErrCode.SetMessage("Empty query string");
+        LOG(logDEBUG) << "Empty query string";
         return;
     }
 
@@ -57,7 +56,7 @@ void HTTPRequest::ReadQueryParams()
             }
             catch (std::exception& ex)
             {
-                mErrCode.SetMessage(ex.what());
+                LOG(logDEBUG) << ex.what();
                 break;
             }
             paramSplitPos = mQueryString.find_first_of('&', nameValueSplitPos);
@@ -75,7 +74,7 @@ void HTTPRequest::ReadQueryParams()
                 }
                 catch (std::exception& ex)
                 {
-                    mErrCode.SetMessage(ex.what());
+                    LOG(logDEBUG) << ex.what();
                     break;
                 }
             }
@@ -95,7 +94,7 @@ void HTTPRequest::ReadQueryParams()
                     }
                     catch (std::exception& ex)
                     {
-                        mErrCode.SetMessage(ex.what());
+                        LOG(logDEBUG) << ex.what();
                         break;
                     }
                 }
@@ -106,7 +105,6 @@ void HTTPRequest::ReadQueryParams()
 
 void HTTPRequest::ReadQueryString()
 {
-    mErrCode.Clear();
     if (!mReqLine.empty())
     {
         offset queryStringStart = mReqLine.find_first_of('?');
@@ -121,7 +119,7 @@ void HTTPRequest::ReadQueryString()
                 }
                 catch(std::exception& ex)
                 {
-                    mErrCode.SetMessage(ex.what());
+                    LOG(logDEBUG) << ex.what();
                 }
             }
 
@@ -132,25 +130,26 @@ void HTTPRequest::ReadQueryString()
 HTTPRequest::HTTPRequest()
 {}
 
-void HTTPRequest::ReadHeaderFromFile(const char* fileName)
+void HTTPRequest::ReadHeaderFromFile(const char* fileName, ErrorCode& outError)
 {
     std::string header;
-    ErrorCode outErr;
     std::ifstream fileStream;
 
     if (!fileName)
     {
-    	outErr.SetValue(EINVAL);
-    	throw SystemException(outErr);
+        outError.SetValue(EINVAL);
+        LOG(logDEBUG) << outError.GetErrorMessage();
+        return;
     }
 
     fileStream.open(fileName);
     if (!fileStream.good() || !fileStream.is_open())
     {
         std::string errMsg = "Error opening file "; errMsg += fileName;
-        outErr.SetValue(-1);
-        outErr.SetMessage(errMsg);
-        throw SystemException(outErr);
+        outError.SetValue(-1);
+        outError.SetMessage(errMsg);
+        LOG(logDEBUG) << outError.GetErrorMessage();
+        return;
     }
 
     // TODO set a limit for file size here
@@ -162,17 +161,16 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName)
     }
 
     fileStream.close();
-    outErr = HTTPUtils::ReadHeader(header, mMapHeaders);
-    if (outErr)
-    {
-    	throw SystemException(outErr);
+    outError = HTTPUtils::ReadHeader(header, mMapHeaders);
+    if (outError) {
+        LOG(logDEBUG) << outError.GetErrorMessage();
     }
 }
 
-void HTTPRequest::Init(const std::string& inHeader)
+void HTTPRequest::Init(const std::string& inHeader, ErrorCode& outError)
 {
-	ErrorCode outError;
-	outError = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
+    mMapHeaders.clear();
+    outError = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
     if (!outError)
     {
         offset endLinePos = inHeader.find_first_of('\n');
@@ -182,25 +180,22 @@ void HTTPRequest::Init(const std::string& inHeader)
         }
         else
         {
-        	outError.SetValue(-1);
-        	outError.SetMessage("No valid request line found");
-        	throw SystemException(outError);
+            outError.SetValue(-1);
+            outError.SetMessage("No valid request line found");
+            LOG(logDEBUG) << outError.GetErrorMessage();
         }
     }
-    else
-    {
-        // TODO Log
-        throw SystemException(outError);
+    else {
+        LOG(logDEBUG) << outError.GetErrorMessage();
     }
 
 }
 
 int HTTPRequest::GetContentLength()
 {
-    mErrCode.Clear();
     if (mMapHeaders.empty())
     {
-        mErrCode.SetMessage("Header map is empty call ReadHeader()");
+        LOG(logDEBUG) << "Header map is empty call ReadHeader()";
         return 0;
     }
 
@@ -211,16 +206,14 @@ int HTTPRequest::GetContentLength()
         return atoi(length.c_str());
     }
 
-    mErrCode.SetMessage("No such header field 'Content-Length'");
     return 0;
 }
 
 std::string HTTPRequest::GetContentType()
 {
-    mErrCode.Clear();
     if (mMapHeaders.empty())
     {
-        mErrCode.SetMessage("Header map is empty call ReadHeader()");
+        LOG(logDEBUG) << "Header map is empty call ReadHeader()";
         return "";
     }
 
@@ -230,7 +223,6 @@ std::string HTTPRequest::GetContentType()
         return it->second;
     }
 
-    mErrCode.SetMessage("No such field 'Content-Type' in header");
     return "";
 }
 
@@ -243,10 +235,9 @@ std::string HTTPRequest::GetMethod()
 {
     int i = 0;
 
-    mErrCode.Clear();
     if (mReqLine.empty())
     {
-        mErrCode.SetMessage("Request line empty call ReadHeader()");
+        LOG(logDEBUG) << "Request line empty call ReadHeader()";
         return "";
     }
 
@@ -254,29 +245,31 @@ std::string HTTPRequest::GetMethod()
     {
         if (mReqLine.find(arrHttpRequestMethod[i]) != std::string::npos)
                     return arrHttpRequestMethod[i];
+        i++;
     }
 
-    mErrCode.SetMessage("No method match found");
+    LOG(logDEBUG) << "No method match found for request";
     return "";
 }
 
 std::string HTTPRequest::GetProtocol()
 {
-    mErrCode.Clear();
     if (mReqLine.empty())
     {
-        mErrCode.SetMessage("Request line empty call ReadHeader()");
+        LOG(logDEBUG) << "Request line empty call ReadHeader()";
         return "";
     }
 
     if (mReqLine.find(httpVer1_0) != std::string::npos)
+    {
                 return httpVer1_0;
-
+    }
     if (mReqLine.find(httpVer1_1) != std::string::npos)
+    {
                 return httpVer1_1;
+    }
 
-
-    mErrCode.SetMessage("No protocol match found");
+    LOG(logDEBUG) << "No protocol match found";
     return "";
 }
 
@@ -290,19 +283,21 @@ std::string HTTPRequest::GetPath()
     offset pathStartPos = 0;
     offset pathEndPos = 0;
 
-    mErrCode.Clear();
     if (!mReqLine.empty())
     {
-        // skip trailing slash
+        /* skip trailing slash */
         pathStartPos = mReqLine.find_first_of('/');
         if (pathStartPos != std::string::npos)
         {
-            // check if we have parameters in request
+            /* check if we have parameters in request */
             std::string method = GetMethod();
             if ((method.compare("GET") == 0)  &&  !mQueryString.empty())
+            {
                     pathEndPos = mReqLine.find_first_of('?');
-            else
+            }
+            else {
                 pathEndPos = mReqLine.find_first_of(' ', pathStartPos + 1);
+            }
 
             if (pathEndPos != std::string::npos && pathEndPos > pathStartPos)
             {
@@ -312,16 +307,16 @@ std::string HTTPRequest::GetPath()
                 }
                 catch (std::exception& ex)
                 {
-                    mErrCode.SetMessage(ex.what());
+                     LOG(logDEBUG) << ex.what();
                 }
             }
         }
         else {
-            mErrCode.SetMessage("No proper formating found in request line");
+             LOG(logDEBUG) << "No proper formating found in request line";
         }
     }
     else {
-        mErrCode.SetMessage("Request line empty call ReadHeader()");
+         LOG(logDEBUG) << "Request line empty call ReadHeader()";
     }
     return "";
 }
@@ -330,7 +325,7 @@ std::string HTTPRequest::GetRequestURL()
 {
     std::string headerHost = GetHeader("Host");
     std::string path = GetPath();
-    mErrCode.Clear();
+
     if (!headerHost.empty() && !path.empty())
     {
         headerHost += '/';
@@ -339,7 +334,7 @@ std::string HTTPRequest::GetRequestURL()
         return url;
     }
 
-    mErrCode.SetMessage("Empty host or path in header");
+    LOG(logDEBUG) << "Empty host or path in header";
     return "";
 }
 
@@ -347,7 +342,7 @@ std::string HTTPRequest::GetRequestURI()
 {
     std::string path = GetPath();
     std::string headerHost = GetHeader("Host");
-    mErrCode.Clear();
+
     if (!headerHost.empty() && !path.empty())
     {
         headerHost += '/';
@@ -355,7 +350,7 @@ std::string HTTPRequest::GetRequestURI()
         return uri;
     }
 
-    mErrCode.SetMessage("Empty host or path in header");
+    LOG(logDEBUG) << "Empty host or path in header";
     return "";
 }
 
@@ -394,7 +389,6 @@ std::string HTTPRequest::GetRemoteAddr()
 
 std::string HTTPRequest::GetHeader(const char* name)
 {
-    mErrCode.Clear();
     if (!mMapHeaders.empty() && name)
     {
         HTTPHeadersMap::iterator it = mMapHeaders.find(name);
@@ -403,11 +397,11 @@ std::string HTTPRequest::GetHeader(const char* name)
         else
         {
             std::string errMsg = "No such field in header "; errMsg += name;
-            mErrCode.SetMessage(errMsg);
+            LOG(logDEBUG) << errMsg;
         }
     }
     else {
-        mErrCode.SetMessage("no name or map header is empty");
+        LOG(logDEBUG) << "no name or map header is empty";
     }
 
     return "";
@@ -425,20 +419,21 @@ HTTPHeaderNamesSet& HTTPRequest::GetHeaderNames()
 
 std::string HTTPRequest::GetParameter(const char* name)
 {
-    mErrCode.Clear();
     if (!mMapParams.empty() && name)
     {
         HTTPReqParamsMap::iterator it = mMapParams.find(name);
         if (mMapParams.end() != it)
-                return it->second;
+        {
+            return it->second;
+        }
         else
         {
             std::string errMsg = "No such parameter"; errMsg += name;
-            mErrCode.SetMessage(errMsg);
+            LOG(logDEBUG) << errMsg;
         }
     }
     else {
-        mErrCode.SetMessage("no name or map parameters is empty");
+        LOG(logDEBUG) << "no name or map parameters is empty";
     }
 
     return "";

@@ -19,8 +19,10 @@
  */
 
 #include "HTTP/HTTPResponse.h"
+#include "Logger.h"
 #include <map>
 #include <utility>
+#include <sstream>
 #include <cstdlib>
 #include <exception>
 
@@ -42,76 +44,76 @@ public:
     }
 } const static HTTPCodes;
 
-HTTPResponse::HTTPResponse() : mResponseCode(0)
+HTTPResponse::HTTPResponse() : m_responseCode(0)
 {}
 
-void HTTPResponse::Init(const std::string& inHeader)
+void HTTPResponse::Init(const std::string& inHeader, ErrorCode& outError)
 {
-	ErrorCode err = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
-	if (!err)
-	{
-		offset pos = inHeader.find("HTTP/1.");
-		if (std::string::npos != pos)
-		{
-			try
-			{
-				std::string code = inHeader.substr(pos + 2, 3);
-				if (!code.empty())
-				{
-					mResponseCode = atoi(code.c_str());
-					return;
-				}
-			}
-			catch (std::exception& ex)
-			{
-				mErrCode.SetMessage(ex.what());
-				return;
-			}
-		}
-		mErrCode.SetMessage("Not a valid HTTP response");
-	}
-	else
-	{
-		mErrCode = err;
-		return;
-	}
+    outError.Clear();
+	ErrorCode err = HTTPUtils::ReadHeader(inHeader, m_mapheaders);
+    if (!err)
+    {
+        offset pos = inHeader.find("HTTP/1.");
+        if (std::string::npos != pos)
+        {
+            try
+            {
+                std::string code = inHeader.substr(pos + 2, 3);
+                if (!code.empty())
+                {
+                    m_responseCode = atoi(code.c_str());
+                }
+            }
+            catch (std::exception& ex)
+            {
+                LOG(logERROR) << ex.what();
+                outError.SetValue(-1);
+                outError.SetMessage(ex.what());
+                return;
+            }
+        }
+        LOG(logERROR) << "Not a valid HTTP response";
+    }
+    else
+    {
+    	LOG(logERROR) << err.GetErrorMessage();
+    	outError = err;
+    }
 
 }
 
 bool HTTPResponse::ContainsHeader(const std::string& name)
 {
-    bool retCode = false;
+    bool result = false;
 
-    if (!mMapHeaders.empty() && !name.empty())
+    if (!m_mapheaders.empty() && !name.empty())
     {
-        HTTPHeadersMap::iterator it = mMapHeaders.find(name);
-        if (mMapHeaders.end() != it)
+        HTTPHeadersMap::iterator it = m_mapheaders.find(name);
+        if (m_mapheaders.end() != it)
         {
-        	retCode = true;
+        	result = true;
         }
     }
-    return retCode;
+    return result;
 }
 
 std::string HTTPResponse::GetHeader(const std::string& name)
 {
-    mErrCode.Clear();
-    if (!mMapHeaders.empty() && !name.empty())
+    if (!m_mapheaders.empty() && !name.empty())
     {
-    	HTTPHeadersMap::iterator it = mMapHeaders.find(name);
-        if (mMapHeaders.end() != it)
+        HTTPHeadersMap::iterator it = m_mapheaders.find(name);
+        if (m_mapheaders.end() != it)
         {
-        	return it->second;
+            return it->second;
         }
         else
         {
-        	std::string errMsg = "No such field in header "; errMsg += name;
-            mErrCode.SetMessage(errMsg);
+            LOG(logERROR) << "No such field in header " + name;
         }
     }
     else
     {
-    	mErrCode.SetMessage("no name or map header is empty");
+    	LOG(logERROR) << "no name or map header is empty";
     }
     return "";
 }
@@ -119,77 +121,85 @@ std::string HTTPResponse::GetHeader(const std::string& name)
 
 HTTPHeadersMap& HTTPResponse::GetHeaders()
 {
-    return mMapHeaders;
+    return m_mapheaders;
 }
 
 void HTTPResponse::RemoveHeader(const std::string& name)
 {
-	mErrCode.Clear();
-	if (!name.empty())
-	{
-		GetHeader(name);
-		if (!GetLastError())
-		{
-			mMapHeaders.erase(name);
-		}
-		else
-		{
-			mErrCode.SetMessage("No such header in response");
-		}
-	}
-	mErrCode.SetMessage("Empty name");
+    if (!name.empty())
+    {
+        std::string field = GetHeader(name);
+        if (!field.empty())
+        {
+            m_mapheaders.erase(name);
+        }
+        else
+        {
+            LOG(logERROR) << "No such header in response";
+        }
+    }
 }
 
 void HTTPResponse::SetHeader(const std::string& name, std::string value)
 {
-	mErrCode.Clear();
-	if (!name.empty() && !value.empty())
-	{
-		GetHeader(name);
-		if (!GetLastError())
-		{
-			mMapHeaders.at("name") = value;
-		}
-		else
-		{
-			mMapHeaders.insert(HTTPParam(name, value));
-		}
-	}
-	else
-	{
-		mErrCode.SetMessage("Empty name");
-	}
+    if (!name.empty() && !value.empty())
+    {
+    	// header is present just change value
+    	if (m_mapheaders.find(name) != m_mapheaders.end())
+        {
+            m_mapheaders.at("name") = value;
+        }
+        else // new header field
+        {
+            m_mapheaders.insert(HTTPParam(name, value));
+        }
+    }
 }
 
 void HTTPResponse::SetResponseCode(unsigned responseCode)
 {
-	mErrCode.Clear();
-	if (responseCode > 0)
-	{
-		if (!(HTTPCodes.find(responseCode)->second.empty()))
-		{
-			mResponseCode = responseCode;
-		}
-		else
-		{
-			mErrCode.SetMessage("No such HTTP response code");
-		}
-	}
-	else
-	{
-		mErrCode.SetMessage("Empty response code");
-	}
+    if (!(HTTPCodes.find(responseCode)->second.empty()))
+    {
+    	m_responseCode = responseCode;
+    }
+    else
+    {
+    	LOG(logERROR) << "No such HTTP response code";
+    }
 }
 
-std::string HTTPResponse::StatusCodeToStr(int statusCode)
+unsigned HTTPResponse::GetResponseCode()
 {
-	mErrCode.Clear();
-	std::string statusMessage = HTTPCodes.find(statusCode)->second;
-	if (statusMessage.empty())
+    return m_responseCode;
+}
+
+std::string HTTPResponse::StatusCodeToStr(unsigned statusCode)
+{
+    std::string statusMessage = HTTPCodes.find(statusCode)->second;
+    if (statusMessage.empty())
+    {
+        LOG(logERROR) << "No such HTTP status code";
+    }
+
+    return statusMessage;
+}
+
+std::string HTTPResponse::Str()
+{
+	std::stringstream ss;
+	std::string textheaders = "";
+
+	if (m_responseCode)
 	{
-		mErrCode.SetMessage("No such HTTP status code");
+		ss << m_responseCode;
+		textheaders = ss.str() + " " + StatusCodeToStr(m_responseCode) + "\r\n";
+		for (HTTPHeadersMap::iterator it = m_mapheaders.begin(); it != m_mapheaders.end(); ++it)
+		{
+			textheaders += it->first + ": " + it->second + "\r\n";
+		}
+		textheaders += "\r\n\r\n";
 	}
 
-	return statusMessage;
+	return textheaders;
 }
 

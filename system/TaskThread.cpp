@@ -29,7 +29,6 @@ void TaskThread::Entry()
         if (theTask)
         {
             theTask->Run();
-            // TODO task must be deleted
             delete theTask;
         }
     }

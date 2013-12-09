@@ -19,66 +19,17 @@
  */
 
 #ifndef NETCONNECTION_H_
-#define NETCONNECTION_H
+#define NETCONNECTION_H_
 
-#include <string>
 #include "system/Buffer.h"
 #include "ErrorCode.h"
+#include <string>
 
-enum IOAction { IORead = 0, IOReadSome, IOWrite };
-class ChannelObserver;
+enum IOEvent { IORead = 0, IOReadSome, IOWrite };
 
-class IOChannel
-{
-public:
-    /**
-    * Read buffer size data from connection .
-    * @param Buffer - reference to buffer where data will be stored.
-    * All listeners will be notified when read completes.
-    */
-    virtual void Emit(Buffer* data, IOAction ioOper, ErrorCode& outError) = 0;
-
-    /**
-    * Return the unique connection ID. Each ID is allocated only from server.
-    * @return unsigned - connection ID.
-    */
-    virtual unsigned GetConnId() = 0;
-
-    /**
-    * Return the ID of this channel.
-    * @return unsigned - channel ID.
-    */
-    virtual unsigned GetChannelId() = 0;
-};
-
-/**
-* Abstract base class (Interface) for IOChannel observer.
-*/
-class IOChannelObserver
-{
-public:
-    /**
-    * Triggered when read operation on connection from this channel is complete.
-    * @param chan - pointer to IOChannel object.
-    * @param  bytesRead - bytes read.
-    * @param inErr - error code of the operation.
-    */
-    virtual void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr) = 0;
-
-    /**
-    * Triggered when read operation on connection from this channel is complete.
-    * @param chan - pointer to IOChannel object.
-    * @param  bytesWritten - bytes written.
-    * @param inErr - error code of the operation.
-    */
-    virtual void OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode* inErr) = 0;
-
-    /**
-    * Triggered when connection is closed.
-    * @param chan - pointer to IOChannel object.
-    */
-    virtual void OnConnectionClose(IOChannel* chan) = 0;
-};
+class IOChannel;
+class IOChannelListener;
+class NetConnectionListener;
 
 /**
 * Abstract base class (Interface) for network connections.
@@ -86,6 +37,7 @@ public:
 class NetConnection
 {
 public:
+
     /**
     * Return connection status.
     * @return bool - true if connected false otherwise.
@@ -93,10 +45,11 @@ public:
     virtual bool IsConnected() = 0;
 
     /**
-    * Return unique connection ID. Each ID is allocated only from server.
+    * Return the unique connection ID.
+    * Each ID is allocated only from server.
     * @return unsigned - connection ID.
     */
-    virtual unsigned GetConnId() = 0;
+    virtual unsigned GetID() = 0;
 
     /**
     * Get the IP addresses the client is connected from.
@@ -111,39 +64,63 @@ public:
     virtual unsigned GetRemotePort() = 0;
 
     /**
-    * Close the connection. All listeners will be notified.
+    * Disconnect from remote host.
     */
-    virtual void Close() = 0;
+    virtual void Disconnect() = 0;
 
     /**
-    * Get instance to IO channel associated with channel id.
-    * @param channelId - id of the channel.
+    * Get instance to IO channel associated with this id.
+    * @param id - unique id of the channel.
     * @return IOChannel instance.
     */
-    virtual IOChannel* GetChannel(unsigned channelId) = 0;
+    virtual IOChannel* GetChannel(unsigned id) = 0;
 
     /**
     * Open channel to NetConnection.
-    * @param inListener - IOChannelObserver listening for channel events.
+    * @param inListener - IOChannelListener listening for channel I/O events.
     * @return IOChannel - newly allocated instance.
     */
-    virtual IOChannel* OpenChannel(IOChannelObserver* inListener) = 0;
+    virtual IOChannel* OpenChannel(IOChannelListener* listener) = 0;
 
     /**
-    * Close IO channel associated with channel id.
-    * @param channelId - id of the channel.
+    * Close IO channel.
+    * @param channel - IOChannel instance to close.
     */
-    virtual void CloseChannel(unsigned channelId) = 0;
+    virtual void CloseChannel(IOChannel* channel) = 0;
 
     /**
-    * Notify connection for pending IO operation on IO channel.
-    * @param channelId - id of the channel.
-    * @param ioOper - IO operation to be performed ex.(read/write).
-    * @param outErr - return error code from operation.
+    * Notify connection for pending I/O operation on channel.
+    * @param event - I/O event to be performed.
+    * @param data - Buffer instance for I/O operation.
+    * @param channel - IOChannel instance.
     */
-    virtual void NotifyChannel(unsigned channelId, IOAction ioOper, ErrorCode& outErr) = 0;
+    virtual void Notify(IOEvent event, Buffer* data, IOChannel* channel) = 0;
+
+    /**
+    * Adds a listener for connection events to this object.
+    * @param listener - listener object.
+    */
+    virtual void AddListener(NetConnectionListener* listener) = 0;
+
+    /**
+    * Removes a listener for connection events to this object.
+    * @param listener - listener object.
+    */
+    virtual void RemoveListener(NetConnectionListener* listener) = 0;
 };
 
+/**
+* Interface for listeners to connection events.
+*/
+class NetConnectionListener
+{
+public:
 
+    /* A new connection was established. */
+    virtual void OnConnectionOpen(NetConnection* conn) {}
+
+    /* A connection was disconnected. */
+    virtual void OnConnectionClose(NetConnection* conn) {}
+};
 
 #endif /* NETCONNECTION_H_ */

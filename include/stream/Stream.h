@@ -25,12 +25,17 @@
 #include "StreamFilter.h"
 #include "StreamSink.h"
 #include "StreamClient.h"
-#include <list>
+#include "system/SystemThread.h"
+#include "server/NetConnection.h"
+#include <set>
+#include <map>
+#include <string>
 
 class Stream
  : public SourceObserver,
    public FilterObserver,
    public SinkObserver
+ //  public IOChannelObserver
 {
 public:
     Stream(unsigned streamId);
@@ -38,18 +43,22 @@ public:
     void Play();
     void Pause();
     void Stop();
-    void Seek();
+    void Seek(unsigned position);
     void SetSource(StreamSource* source);
     void SetFilter(StreamFilter* filter);
     void SetSink(StreamSink* sink);
     void AddClient(StreamClient* client);
     void RemoveClient(StreamClient* client);
+    void SetName(const char* name) { m_name = name; }
+    std::string GetName() { return m_name; }
     unsigned GetStreamId();
     StreamSource* GetSource();
     StreamFilter* GetFilter();
     StreamSink*   GetSink();
 
 protected:
+    void WriteSink(Buffer* data);
+
     /* from SourceObserver */
     void OnStart(StreamSource* source);
 
@@ -63,14 +72,27 @@ protected:
     void OnDataReady(StreamFilter* filter, Buffer* data);
 
     /* from SinkObserver */
-    void OnDataSent(StreamClient* client , StreamSink* sink, ErrorCode* error);
+    void OnDataOut(StreamClient* client, Buffer* data);
 
+    /* from IOChannelObserver */
+    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr);
+
+    /* from IOChannelObserver*/
+    void OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode* inErr);
+
+    /* from IOChannelObserver */
+    void OnConnectionClose(IOChannel* chan);
 private:
-    unsigned                    mstreamId;
-    StreamSource*                msource;
-    StreamFilter*                mfilter;
-    StreamSink*                  msink;
-    std::list<StreamClient*>     mlistClients;
+    bool                         m_started;
+    unsigned                     m_streamid;
+    SystemMutex                  m_mutexLockOutput; // todo
+    StreamSource*                m_source;
+    StreamFilter*                m_filter;
+    StreamSink*                  m_sink;
+    std::string                  m_name;
+    std::set<StreamClient*>      m_clients;
+    // client id -> IOChan
+    std::map<unsigned, IOChannel*> m_iochannels;  // todo thread safety
 };
 
 #endif /* STREAM_H_ */

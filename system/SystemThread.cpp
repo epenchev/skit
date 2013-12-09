@@ -19,6 +19,7 @@
  */
 
 #include "system/SystemThread.h"
+#include <exception>
 
 SystemThread::SystemThread()
 : mJoined(false), mpThread(NULL)
@@ -95,7 +96,7 @@ void SystemMutex::Lock()
     }
     catch(const boost::thread_resource_error& err)
     {
-    	// TODO incompatible with 1.49
+        // TODO incompatible with 1.49
         //mErrCode.SetValue(err.code().value());
         throw SystemException(mErrCode);
     }
@@ -118,7 +119,7 @@ bool SystemMutex::TryLock()
     catch(const boost::thread_resource_error& err)
     {
         // TODO incompatible with 1.49
-    	//mErrCode.SetValue(err.code().value());
+        //mErrCode.SetValue(err.code().value());
         throw SystemException(mErrCode);
     }
     return returnCode;

@@ -21,35 +21,56 @@
 #ifndef SERVERCONTROLLER_H_
 #define SERVERCONTROLLER_H_
 
-#include <vector>
-#include <map>
 #include <string>
+#include "IHTTPServer.h"
+#include "stream/Stream.h"
 
-class Stream;
-class HTTPServer;
+class StreamSource; // TODO test remove after
+
+/*
+class ClientObserver
+{
+    virtual void OnClientCreate() = 0;
+    virtual void OnClientDestroy() = 0;
+};
+*/
 
 /**
 * Main server class for controlling the system.
 */
-class ServerController
+class ServerController /*: public HTTPServerObserver*/
 {
 public:
-    static unsigned RegisterStream(const std::string name);
+    /* Create a stream and add it to the controller */
+    static unsigned CreateStream(const std::string name);
 
-    static void DeregisterStream(unsigned id);
+    /* destroy a stream and removed it from a controller */
+    static void DeteleStream(unsigned id);
 
     /* Get a stream by id */
     static Stream* GetStream(unsigned id);
+
+    /* Get a stream by name */
+    static Stream* GetStream(const char* name);
 
     /* Get count of all registered streams */
     static unsigned GetStreamCount();
 
     static void LoadPlugin(const std::string& filePath);
-/*
-    static void SetHTTPServer(HTTPServer* server);
 
-    static HTTPServer* GetHTTPServer();
-*/
+    static void SetHTTPServer(IHTTPServer* server);
+
+    static IHTTPServer* GetHTTPServer();
+
+    static StreamSource* GetFileSource(); // TODO test remove after
+
+private:
+
+    /* from IHTTPServer */
+    /* void OnHTTPSessionCreate(IHTTPSession* session); */
+
+    /* from IHTTPServer */
+    /* void OnHTTPSessionDestroy(IHTTPSession* session); */
 };
 
 #endif /* SERVERCONTROLLER_H_ */

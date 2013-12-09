@@ -37,6 +37,8 @@
 #include "server/HTTPServer.h"
 #include "system/TaskThread.h"
 #include "server/ServerController.h"
+#include "stream/Stream.h"
+#include "stream/StreamSource.h"
 
 int main(int argc, char* argv[])
 {
@@ -121,16 +123,34 @@ int main(int argc, char* argv[])
 
     std::cout << " Server starting ... \n";
 
-    HTTPServer server("192.168.97.72", 8000);
+    HTTPServer server(80);
     server.Start();
 
-    ServerController::LoadPlugin("/home/emo/workspace/blitz/modules/libmod_source_example.so");
+    ServerController::SetHTTPServer(&server);
+
+    /* ServerController::LoadPlugin("/home/emo/cpp/workspace/blitz/modules/libmod_source_example.so");
+    ServerController::LoadPlugin("/home/emo/cpp/workspace/blitz/modules/libhttp_module.so"); */
+
+    /*
+    unsigned streamid = ServerController::CreateStream("file");
+    std::cout << "Create stream \n";
+    Stream* s = ServerController::GetStream(streamid);
+    s->SetSource(ServerController::GetFileSource());
+    */
+
 
     TaskThreadPool::AddThread();
+    /*
     TaskThreadPool::AddThread();
     TaskThreadPool::AddThread();
     TaskThreadPool::AddThread();
+    */
     TaskThreadPool::StartThreads();
+
+
+    std::cout << "Start the stream \n";
+    //s->Play();
+
 
     while(1) {}
 

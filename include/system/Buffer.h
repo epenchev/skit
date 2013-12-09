@@ -21,6 +21,8 @@
 #ifndef BUFFER_H_
 #define BUFFER_H_
 
+#include <cstddef>
+
 /**
 * Buffer for raw data.
 */
@@ -71,6 +73,10 @@ private:
     char* mbufPtr;
     std::size_t m_size;
 };
+
+// TODO add create header
+#include <boost/shared_ptr.hpp>
+typedef boost::shared_ptr<Buffer> BufferPtr;
 
 #endif /* BUFFER_H_ */
 

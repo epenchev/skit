@@ -23,56 +23,34 @@
 
 #include "NetConnection.h"
 #include "ErrorCode.h"
-#include "system/TCPClientSocket.h"
+#include "system/TCPSocket.h"
 #include "system/SystemThread.h"
+#include "server/IOChannel.h"
 #include <list>
-#include <set>
 #include <map>
+#include <set>
 
-class TCPConnection;
-
-class TCPConnectionIOChannel : public IOChannel
+struct ChannelEvent
 {
-public:
-    TCPConnectionIOChannel(const TCPConnectionIOChannel& chan);
-    TCPConnectionIOChannel(unsigned channId, IOChannelObserver* listener, TCPConnection* conn);
-    virtual ~TCPConnectionIOChannel() {}
-
-    void Emit(Buffer* data, IOAction ioOper, ErrorCode& outError);
-
-    unsigned GetConnId();
-
-    unsigned GetChannelId();
-
-private:
-    friend class TCPConnection;
-    Buffer*  mIOBuffer;
-    unsigned mbytesTransfered;
-    IOAction mIOaction;
-    ErrorCode mError;
-    TCPConnection* mConnection;
-    IOChannelObserver* mListener;
-    unsigned mChannelId;
+    IOEvent ioevent;
+    Buffer* data;
+    unsigned chanid;
 };
-
-typedef std::map<unsigned, TCPConnectionIOChannel*> IOChannels;
-typedef std::list<TCPConnectionIOChannel*> ListIOChannels;
 
 /**
 * Class for TCP connection objects used in different TCP servers.
-* This is a object created from a server and bound to it.
 */
-class TCPConnection : public NetConnection, public TCPClientSocketObserver
+class TCPConnection : public NetConnection, public TCPSocketHandler
 {
 public:
-    TCPConnection(unsigned sessionId, TCPClientSocket* inSocket);
+    TCPConnection(unsigned id, TCPSocket* inSocket);
     virtual ~TCPConnection();
 
     /* From NetConnection */
     bool IsConnected();
 
     /* From NetConnection */
-    unsigned GetConnId() { return mConnId; }
+    unsigned GetID() { return m_id; }
 
     /* From NetConnection */
     std::string GetRemoteAddress();
@@ -81,57 +59,49 @@ public:
     unsigned GetRemotePort();
 
     /* From NetConnection */
-    void Close();
+    void Disconnect();
 
     /* From NetConnection */
-    IOChannel* OpenChannel(IOChannelObserver* inListener);
+    IOChannel* OpenChannel(IOChannelListener* inListener);
 
     /* From NetConnection */
-    void CloseChannel(unsigned channelId);
+    void CloseChannel(IOChannel* channel);
 
     /* From NetConnection */
-    void NotifyChannel(unsigned channelId, IOAction ioOper, ErrorCode& err);
+    void Notify(IOEvent event, Buffer* data, IOChannel* channel);
 
     /* From NetConnection */
     IOChannel* GetChannel(unsigned channelId);
 
+    /* From NetConnection */
+    void AddListener(NetConnectionListener* listener);
+
+    /* From NetConnection */
+    void RemoveListener(NetConnectionListener* listener);
+
 protected:
 
-    /* From ClientSocketObserver */
-    void OnSend(TCPClientSocket* inSocket, unsigned sendBytes, ErrorCode* inError);
+    /* From TCPSocketHandler */
+    void OnSend(TCPSocket* inSocket, std::size_t sendBytes, ErrorCode& inError);
 
-    /* From ClientSocketObserver */
-    void OnReceive(TCPClientSocket* inSocket, unsigned receivedBytes, ErrorCode* inError);
+    /* From TCPSocketHandler */
+    void OnReceive(TCPSocket* inSocket, std::size_t receivedBytes, ErrorCode& inError);
 
-    /* From ClientSocketObserver */
-    void OnConnect(TCPClientSocket* inSocket, ErrorCode* inError);
+    /* From TCPSocketHandler */
+    void OnConnect(TCPSocket* inSocket, ErrorCode& inError) {}
 
-    bool mWriteBusy;
-    bool mReadBusy;
+    unsigned m_id;                                /**< unique connection ID  */
+    TCPSocket* m_socket;                          /**< socket used with this connection */
+    SystemMutex m_channelsLock;                   /**< lock when getting/adding channels from/to connection */
+    SystemMutex m_writeLock;                      /**< lock from writing to socket */
+    SystemMutex m_readLock;                       /**< lock for reading from socket */
+    bool m_writeBusy;                             /**< socket busy writing */
+    bool m_readBusy;                              /**< socket busy reading */
+    std::set<NetConnectionListener*> m_listeners; /**< connection listeners/observers for connect and disconnect events */
 
-    unsigned mRdOpenChanId;
-    unsigned mWrOpenChanId;
-
-
-    unsigned long mConnId;        /**< unique connection ID  */
-    TCPClientSocket* mSocket;     /**< socket bound with this connection */
-    ErrorCode  mError;            /**< error code of last operation */
-
-    SystemMutex mWrMutexLock;
-    SystemMutex mRdMutexLock;
-    ListIOChannels mOpenWriteChannels;
-    ListIOChannels mOpenReadChannels;
-    IOChannels mIOChannelsMap;
-
-private:
-    enum IOEvent { OnReadEvent = 0, OnWriteEvent, OnCloseEvent };
-
-    void DoWrite(TCPConnectionIOChannel* ioChannel);
-
-    void DoRead(TCPConnectionIOChannel* ioChannel);
-
-    void NotifyChannelListener(TCPConnectionIOChannel* ioChannel, TCPConnection::IOEvent event);
-
+    std::map<unsigned, IOChannel*> m_channels;    /**< Channels map id/channel */
+    std::list<ChannelEvent> m_readChanEvents;     /**< Pending read channel events */
+    std::list<ChannelEvent> m_writeChanEvents;    /**< Pending write channel events */
 };
 
 

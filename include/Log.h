@@ -23,6 +23,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <sstream>
 
 #define BLITZ_TRACE_ERROR
 #define BLITZ_TRACE_WARN
@@ -45,9 +46,6 @@
 #else
 #define BLITZ_LOG_WARNING(fmt, args...)
 #endif
-
-
-
 
 // Templates here
 /**

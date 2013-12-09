@@ -22,12 +22,14 @@
 #define HTTPUTILS_H_
 
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 #include "ErrorCode.h"
 
 typedef std::map<std::string, std::string> HTTPHeadersMap;
 typedef std::pair<std::string, std::string> HTTPParam;
+typedef std::set<std::string> HTTPHeadersSet;
 
 class HTTPUtils
 {
@@ -50,7 +52,7 @@ public:
     static ErrorCode SplitHeaderLine(const std::string& line, HTTPParam& outParam);
 
     /**
-    * Make HTTP request and return the result as string.
+    * Make HTTP request string.
     * @param inUrl - string containing the URL.
     * @param method - string with HTTP method (GET, POST..).
     * @param data - string additional data after the headers can be empty.
@@ -60,9 +62,11 @@ public:
     static std::string HTTPRequestToString(const std::string& inUrl, const std::string& method,
                                                const std::string& data, HTTPHeadersMap& headers);
 
-
-    // Make a HTTP reponse and return the result as a string.
-    static std::string HTTPResponseToString(unsigned responseCode, const std::string* data, HTTPHeadersMap* headers);
+    /** Make a HTTP reponse string.
+    * @param code - HTTP response code.
+    * @param headers - reference to set with headers can be empty.
+    */
+    static std::string HTTPResponseToString(unsigned responseCode, HTTPHeadersMap& headers);
 
 protected:
     HTTPUtils() {}

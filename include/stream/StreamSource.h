@@ -48,7 +48,7 @@ public:
     virtual ~StreamSource() {}
     virtual void Start() = 0;
     virtual void Stop() = 0;
-    virtual void Seek() = 0;
+    virtual void Seek(int position) = 0;
     virtual bool IsSeekable() = 0;
     virtual void AddListener(SourceObserver* listener) = 0;
     virtual void RemoveListener(SourceObserver* listener) = 0;

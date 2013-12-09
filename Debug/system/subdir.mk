@@ -9,8 +9,8 @@ CPP_SRCS += \
 ../system/SystemLib.cpp \
 ../system/SystemThread.cpp \
 ../system/SystemTimer.cpp \
-../system/TCPClientSocket.cpp \
-../system/TCPServerSocket.cpp \
+../system/TCPAcceptor.cpp \
+../system/TCPSocket.cpp \
 ../system/TaskThread.cpp 
 
 OBJS += \
@@ -19,8 +19,8 @@ OBJS += \
 ./system/SystemLib.o \
 ./system/SystemThread.o \
 ./system/SystemTimer.o \
-./system/TCPClientSocket.o \
-./system/TCPServerSocket.o \
+./system/TCPAcceptor.o \
+./system/TCPSocket.o \
 ./system/TaskThread.o 
 
 CPP_DEPS += \
@@ -29,8 +29,8 @@ CPP_DEPS += \
 ./system/SystemLib.d \
 ./system/SystemThread.d \
 ./system/SystemTimer.d \
-./system/TCPClientSocket.d \
-./system/TCPServerSocket.d \
+./system/TCPAcceptor.d \
+./system/TCPSocket.d \
 ./system/TaskThread.d 
 
 

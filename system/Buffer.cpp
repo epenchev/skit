@@ -54,7 +54,8 @@ Buffer::Buffer(void* data, std::size_t size)
 
 Buffer::~Buffer()
 {
-   // delete mbufPtr;
+    // TODO
+    // delete mbufPtr;
 }
 
 Buffer& Buffer::operator = (const Buffer& buf)
@@ -98,15 +99,24 @@ void Buffer::Append(const char *data, std::size_t len)
     {
         if (len)
         {
-            char* oldBufPtr = mbufPtr;
-            std::size_t newSize = (len + m_size);
-            char* reallocPtr = new char[newSize];
-            memset(reallocPtr, 0, newSize);
-            memcpy(reallocPtr, mbufPtr, m_size);
-            memcpy(reallocPtr + m_size, data, len);
-            mbufPtr = reallocPtr;
-            m_size = newSize;
-            delete oldBufPtr;
+            if (!mbufPtr)
+            {
+                mbufPtr = new char[len];
+                memset(mbufPtr, 0, len);
+                m_size = len;
+            }
+            else
+            {
+                char* oldBufPtr = mbufPtr;
+                std::size_t newSize = (len + m_size);
+                char* reallocPtr = new char[newSize];
+                memset(reallocPtr, 0, newSize);
+                memcpy(reallocPtr, mbufPtr, m_size);
+                memcpy(reallocPtr + m_size, data, len);
+                mbufPtr = reallocPtr;
+                m_size = newSize;
+                delete oldBufPtr;
+            }
         }
     }
 }

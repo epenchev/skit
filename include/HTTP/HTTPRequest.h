@@ -45,124 +45,124 @@ public:
     /**
     * Create request from HTTP text headers.
     * @param inHeader - string with header.
-    * @throws SystemException in case of error.
+    * @param outError - error code with message.
     */
-    void Init(const std::string& inHeader);
+    void Init(const std::string& inHeader, ErrorCode& outError);
 
     /**
     * Read HTTP header input from file and process it.
     * @param fileName - string with file name.
-    * @throws SystemException in case of error.
+    * @param outError - error code with message.
     */
-    void ReadHeaderFromFile(const char* fileName);
+    void ReadHeaderFromFile(const char* fileName, ErrorCode& outError);
 
     /**
     * Returns the HTTP path element of the request no query params .
-    * @return string - string with path.
+    * @return string - string with path or empty string on error.
     */
     std::string GetPath();
 
     /**
     * Get the request content type.
-    * @return string - content type.
+    * @return string - content type or empty string on error.
     */
     std::string GetContentType();
 
     /**
     * Get the content length of the body of the message .
-    * @return int - content length.
+    * @return int - content length or 0 on error.
     */
     int GetContentLength();
 
     /**
     * Get the header as text.
-    * @return string - header text.
+    * @return string - header text or empty string on error.
     */
     std::string GetRawHeader();
 
     /**
     * Get the HTTP method : GET, POST, HEAD
-    * @return string - method name
+    * @return string - method name or empty string on error.
     */
     std::string GetMethod();
 
     /**
     * Get the request protocol (example: HTTP/1.1)
-    * @return string - protocol version.
+    * @return string - protocol version or empty string on error.
     */
     std::string GetProtocol();
 
     /**
     * Get the query string part of the url (everything after the ?)
-    * @return string - query.
+    * @return string - query or empty string on error.
     */
     std::string GetQueryString();
 
     /**
     * Get the request url (same as URI minus the query string)
-    * @return string - URL.
+    * @return string - URL or empty string on error.
     */
     std::string GetRequestURL();
 
     /**
     * Get the full request URI
-    * @return string - URI.
+    * @return string - URI or empty string on error.
     */
     std::string GetRequestURI();
 
     /**
     * Get the remote host name (if known) if not return ip address.
-    * @return string - Host name.
+    * @return string - Host name or empty string on error.
     */
     std::string GetRemoteHost();
 
     /**
     * Get the remote host name (if known) if not return ip address.
-    * @return string - Host name.
+    * @return string - Host name or empty string on error.
     */
     std::string GetRemoteAddr();
 
     /**
     * Get the remote service port.
-    * @return unsigned short - port number.
+    * @return unsigned short - port number or 0 on error.
     */
     unsigned short GetRemoteServicePort();
 
     /**
     * Get a HTTP header value such as 'Content-Length'
-    * @param name - header name .
-    * @return string - header value.
+    * @param name - header name.
+    * @return string - header value or empty string on error.
     */
     std::string GetHeader(const char* name);
 
     /**
     * Get the HTTP request header map.
-    * @return std::map& - header as map.
+    * @return std::map& - header as map or empty map on error.
     */
     HTTPHeadersMap& GetHeaderMap();
 
     /**
     * Get a Set of the header names.
-    * @return std::set - header names.
+    * @return std::set - header names or empty set on error.
     */
     HTTPHeaderNamesSet& GetHeaderNames();
 
     /**
     * Get a parameter value
     * @param name - name of the parameter.
-    * @return string - parameter value.
+    * @return string - parameter value or empty string on error.
     */
     std::string GetParameter(const char* name);
 
     /**
     * Get the entire parameter Map.
-    * @return std::map& - parameters.
+    * @return std::map& - parameters or empty map on error.
     */
     HTTPReqParamsMap& GetParameterMap();
 
     /**
     * Get a Set of parameter names.
-    * @return std::set& - parameter names.
+    * @return std::set& - parameter names or empty set on error.
     */
     HTTPParamNamesSet& GetParameterNames();
 
@@ -170,7 +170,6 @@ private:
     void ReadQueryString();
     void ReadQueryParams();
 
-    ErrorCode  mErrCode;                 /**< error code of last operation */
     std::string mReqLine;                /**< Request line including method, path, query string and protocol version. */
     std::string mQueryString;           /**< Query string part from the request line after the ? symbol. */
     std::string mHeaderText;             /**< Full header text. */

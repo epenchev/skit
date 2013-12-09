@@ -20,397 +20,387 @@
 
 #include "server/HTTPServer.h"
 #include "server/TCPConnection.h"
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
+#include "server/IOChannel.h"
 #include "HTTP/HTTPRequest.h"
 #include "HTTP/HTTPUtils.h"
 #include "ErrorCode.h"
 #include "system/Task.h"
 #include "system/TaskThread.h"
+#include "Logger.h"
+#include "utils/IDGenerator.h"
+#include <cstdlib>
+#include <cstring>
 
-HTTPSession::HTTPSession(unsigned sessionId, TCPClientSocket* inSocket)
- : TCPConnection(sessionId, inSocket), mioChannel(NULL), msocketBuffer(NULL)
+HTTPSession::HTTPSession(unsigned id, TCPSocket* inSocket)
+ : TCPConnection(id, inSocket), m_acceptRequest(true), m_channel(NULL), m_buffer(NULL)
 {}
 
 HTTPSession::~HTTPSession()
 {
-    delete msocketBuffer;
-    this->Close();
+    // m_channel is not destroyed TCPConnection will do it for us
+    delete m_buffer;
+    Disconnect();
 }
 
-void HTTPSession::AddHTTPSessionListener(HTTPSessionObserver* listener)
+void HTTPSession::AddHTTPSessionListener(HTTPSessionListener* listener)
 {
     if (listener)
     {
-        msessionListeners.insert(listener);
+        SystemMutexLocker lock(m_lockListeners);
+        m_listeners.insert(listener);
     }
     else
     {
-        // TODO Log
-        std::cout << "invalid HTTP session listener \n";
+        LOG(logERROR) << "Invalid listener";
     }
 }
 
-void HTTPSession::RemoveHTTPSessionListener(HTTPSessionObserver* listener)
+void HTTPSession::RemoveHTTPSessionListener(HTTPSessionListener* listener)
 {
     if (listener)
     {
-        std::set<HTTPSessionObserver*>::iterator it = msessionListeners.find(listener);
-        if (it != msessionListeners.end())
+        SystemMutexLocker lock(m_lockListeners);
+        std::set<HTTPSessionListener*>::iterator it = m_listeners.find(listener);
+        if (it != m_listeners.end())
         {
-            msessionListeners.erase(it);
+            m_listeners.erase(it);
         }
         else
         {
-            // TODO Log
-            std::cout << "Invalid HTTP session listener in Remove() call \n";
+            LOG(logWARNING) << "Listener not from this HTTP session";
         }
-    }
-}
-
-void HTTPSession::SendHTTPResponse()
-{
-    // TODO
-}
-
-void HTTPSession::WaitForRequest()
-{
-    ErrorCode err;
-
-    std::cout << "WaitForRequest() in  !! \n";
-    if (!msocketBuffer)
-    {
-        std::size_t bufferSize = 100;
-        msocketBuffer = new Buffer(new char[bufferSize], bufferSize);
-        msocketBuffer->Clear();
     }
     else
     {
-        msocketBuffer->Clear();
+        LOG(logERROR) << "Invalid listener";
     }
-
-    mioChannel = this->OpenChannel(this);
-    mioChannel->Emit(msocketBuffer, IOReadSome, err);
-    if (err)
-    {
-        // TODO log
-        std::cout << err.GetErrorMessage() << std::endl;
-    }
-    std::cout << "WaitForRequest() out of here !! \n";
 }
 
-void HTTPSession::OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr)
+void HTTPSession::AcceptRequest()
 {
-    ErrorCode err = *inErr;
-    std::cout << "bytes read " << bytesRead << std::endl;
+    if (m_acceptRequest)
+    {
+        m_acceptRequest = false; // disable accepting requests until this one is replied
+        if (!m_buffer)
+        {
+            m_buffer = new Buffer(new char[m_recvsize], m_recvsize);
+            m_buffer->Clear();
+        }
+        else
+        {
+            m_buffer->Clear();
+        }
+        if (!m_channel)
+        {
+            m_channel = OpenChannel(this);
+        }
+        m_channel->Read(*m_buffer, true);
+    }
+}
 
+void HTTPSession::NotifyOnHTTPrequest()
+{
+    SystemMutexLocker lock(m_lockListeners);
+    for (std::set<HTTPSessionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+    {
+        (*it)->OnHTTPrequest(*this, &m_request);
+    }
+}
+
+void HTTPSession::NotifyOnHTTPRequestReply(bool& forceReply)
+{
+    forceReply = false;
+    SystemMutexLocker lock(m_lockListeners);
+    for (std::set<HTTPSessionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+    {
+        (*it)->OnHTTPRequestReply(*this, &m_response, forceReply);
+         if (forceReply)
+         {
+             // send reply ignore other listeners
+             SendResponse();
+             break;
+         }
+    }
+}
+
+void HTTPSession::NotifyOnHTTPResponseSend()
+{
+    SystemMutexLocker lock(m_lockListeners);
+    for (std::set<HTTPSessionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+    {
+        (*it)->OnReplySend(this);
+    }
+}
+
+void HTTPSession::OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode& err)
+{
     if (!err)
     {
-        if (bytesRead)
+        if (bytesRead && bytesRead <= m_buffer->Size())
         {
-            mrequestStr.append(msocketBuffer->BufferCast<char*>());
-            size_t pos = mrequestStr.find("\r\n\r\n");
-            if (std::string::npos == pos)
+            char partHeader[m_recvsize + 1] = { 0 };
+            memcpy(partHeader, m_buffer->BufferCast<char*>(), bytesRead);
+            if (m_reqheaders.empty())
             {
-                if (bytesRead < msocketBuffer->Size())
+                m_reqheaders = partHeader;
+            }
+            else
+            {
+                m_reqheaders += partHeader;
+            }
+
+            // search for end of request
+            if (std::string::npos ==  m_reqheaders.find("\r\n\r\n"))
+            {
+                if (bytesRead < m_buffer->Size())
                 {
-                    // TODO Log
-                    std::cout << "Must disconnect !!! \n";
+                    // TODO implement timeout protection in TCPConnection and the remove this
+                    LOG(logWARNING) << "Buffer not full, end of request not found, headers may be invalid, disconnecting";
+                    Disconnect();
                 }
                 else
                 {
-                    mioChannel->Emit(msocketBuffer, IOReadSome, err);
-                    if (err)
-                    {
-                        // TODO log
-                        std::cout << err.GetErrorMessage() << std::endl;
-                    }
+                    // collect the rest of the headers
+                    m_channel->Read(*m_buffer, true);
                 }
             }
             else // found end of request assemble HTTPRequest object
             {
-                HTTPRequest request;
-                std::cout << "found end of request \n";
-                request.Init(mrequestStr);
-                //if (request.GetLastError()) TODO Error checking
+            	LOG(logINFO) << "HTTP Request received";
 
-                std::cout << request.GetPath() << std::endl;
-                std::cout << request.GetRequestURI() << std::endl;
-                std::cout << request.GetProtocol() << std::endl;
+                ErrorCode ercode;
+                m_request.Init(m_reqheaders, ercode);
+                m_reqheaders.clear();
+                delete m_buffer;
+                m_buffer = NULL;
 
-                if (!msessionListeners.empty())
+                if (err)
                 {
-                	// notify listeners for HTTP request
-                	for (std::set<HTTPSessionObserver*>::iterator it = msessionListeners.begin(); it != msessionListeners.end(); ++it)
-                    {
-                		HTTPSessionObserver* listener = *it;
-                        Task* eventTask = new Task();
-                        eventTask->Connect(&HTTPSessionObserver::OnHTTPrequest, listener, &request);
-                        TaskThreadPool::Signal(eventTask);
-                    }
-                }
-                else
-                {
-                	// TODO log
-                    std::cout << "No server listeners HTTP::OnAccept \n";
+                    LOG(logERROR) << ercode.GetErrorMessage();
+                    return;
                 }
 
-#if 0
-                std::string responseData = "<html><body><h2>Hi from Emo</h2></body></html>";
-
-                HTTPHeadersMap mapheaders;
-                mapheaders.insert(HTTPParam("Content-Type", "text/html"));
-
-                std::string httpResponse = HTTPUtils::HTTPResponseToString(200, &responseData, &mapheaders);
-                std::cout << httpResponse << std::endl;
-                Buffer outbuf((char*)httpResponse.c_str(), httpResponse.size());
-                mioChannel->Emit(&outbuf, IOWrite, err);
-#endif
+                // notify listeners for HTTP request
+                NotifyOnHTTPrequest();
+                bool replySend = false;
+                NotifyOnHTTPRequestReply(replySend);
+                if (!replySend)
+                {
+                	SendResponse();
+                }
             }
         }
         else
         {
-            std::cout << "nothing to bytesRead == 0 read must disconnect !!! \n";
-            //chan->
+            LOG(logINFO) << "nothing to read bytesRead == 0 read must disconnect !!! \n";
         }
     }
     else
     {
-        // TODO log
-        std::cout << err.GetErrorMessage() << std::endl;
+        LOG(logERROR) << err.GetErrorMessage();
     }
+}
 
-#if 0
-    //if (data)
+void HTTPSession::OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode& err)
+{
+	// clean up after sending response
+	m_acceptRequest = true;
+	delete m_buffer;
+	m_buffer = NULL;
+
+	//Disconnect();
+
+	if (!err)
     {
-        std::cout << data << std::endl;
-        std::string str(data);
-        request.Init(str);
-        std::cout << request.GetPath() << std::endl;
-        std::cout << request.GetRequestURI() << std::endl;
-        std::cout << request.GetProtocol() << std::endl;
-
-
-        std::string httpResponse = HTTPUtils::HTTPResponseToString(200);
-        Buffer outbuf((char*)httpResponse.c_str(), httpResponse.size());
-        mioChannel->Emit(&outbuf, IOWrite);
+        LOG(logINFO) << "bytes written " << bytesWritten;
+        NotifyOnHTTPResponseSend();
     }
-#endif
+    else
+    {
+        LOG(logERROR) << err.GetErrorMessage();
+        if (m_listeners.empty())
+        {
+            Disconnect();
+        }
+        else
+        {
+            NotifyOnHTTPResponseSend(); // with error
+        }
+    }
+
 }
 
-void HTTPSession::OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr)
+void HTTPSession::SendResponse()
 {
-    std::cout << "bytes written " << bytesWriten << std::endl;
-
-    //std::string temp(BufferCast<char*>(*msocketBuffer));
-    //temp.clear();
-    //mioChannel->Emit(msocketBuffer, IOReadSome);
-    this->Close();
+    std::string response = m_response.Str();
+    if (response.empty())
+    {
+    	LOG(logDEBUG) << "No response headers disconnect";
+    	Disconnect();
+    }
+    else
+    {
+    	std::size_t bufferSize = response.size() + 1;
+    	m_buffer = new Buffer(new char[bufferSize], bufferSize);
+    	m_buffer->Clear();
+    	memcpy(m_buffer->BufferCast<char*>(), response.c_str(), bufferSize);
+    	m_channel->Write(*m_buffer);
+    }
 }
-
-void HTTPSession::OnConnectionClose(IOChannel* chan)
-{
-    std::cout << "Connection is closed \n";
-}
-
-
 
 HTTPServer::HTTPServer(unsigned short port)
- : mIsStarted(false), mServerSock(port)
+ : m_started(false), m_acceptor(port)
 {}
 
 
 HTTPServer::HTTPServer(std::string localAdress, unsigned short port)
- :  mIsStarted(false), mServerSock(localAdress, port)
+ :  m_started(false), m_acceptor(localAdress, port)
 {}
 
 HTTPServer::~HTTPServer()
 {
-    if (!mIsStarted)
-    {
-        for (std::map<unsigned, HTTPSession*>::iterator it = msessionsMap.begin(); it != msessionsMap.end(); ++it)
-        {
-            HTTPSession* session = msessionsMap.end()->second;
-            delete session;
-        }
-    }
-    else
-    {
-        // TODO Log
-        std::cout << "Server is not stopped connections are not destroyed leaking memory " << std::endl;
-    }
+    Stop();
 }
 
-
-void HTTPServer::OnAccept(TCPClientSocket* inNewSocket, ErrorCode* inError)
+void HTTPServer::OnAccept(TCPSocket* inNewSocket, ErrorCode& inError)
 {
-    HTTPSession* session = NULL;
-    ErrorCode err = *inError;
-    if (!err)
+    if (!inError && inNewSocket)
     {
-        if (inNewSocket)
+        ErrorCode err;
+        LOG(logINFO) << "connected from " << inNewSocket->GetRemoteIP(err) << ":"
+                                  << inNewSocket->GetRemotePort(err);
+
+        HTTPSession* session = new HTTPSession(IDGenerator::Instance().Next(), inNewSocket);
+        m_lockSessions.Lock();
+        m_sessions.insert(session);
+        m_lockSessions.Unlock();
+
+        // don't modify the listeners list while in use
+        SystemMutexLocker lock(m_lockListeners);
+        for (std::set<HTTPServerListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
         {
-            // TODO log
-            std::cout << "connected from " << inNewSocket->GetRemotePeerIP(err) << ":"
-                                  << inNewSocket->GetRemotePeerPort(err) << std::endl;
-
-            if (!msessionsMap.empty())
-            {
-                HTTPSession* lastSession = msessionsMap.rbegin()->second;
-                session = new HTTPSession((lastSession->GetConnId() + 1), inNewSocket);
-            }
-            else
-            {
-                session = new HTTPSession(1, inNewSocket);
-            }
-            // Attach to session as listener (catch disconnect events)
-            IOChannel* channel = session->OpenChannel(this);
-            msessionsMap.insert(std::pair<unsigned,HTTPSession*>(channel->GetChannelId(), session));
-
-            // Start listening for incoming HTTP requests
-            session->WaitForRequest();
-
-            if (!mlisteners.empty())
-            {
-            	// notify listeners for incoming connection
-            	for (std::set<HTTPServerObserver*>::iterator it = mlisteners.begin(); it != mlisteners.end(); ++it)
-                {
-            		HTTPServerObserver* listener = *it;
-                    Task* eventTask = new Task();
-                    eventTask->Connect(&HTTPServerObserver::OnHTTPSessionCreate, listener, session);
-                    TaskThreadPool::Signal(eventTask);
-                }
-            }
-            else
-            {
-            	// TODO log
-            	std::cout << "No server listeners HTTP::OnAccept \n";
-            }
-
+            // TODO async here don't block accept, low priority task queue and high priority task queue
+            (*it)->OnHTTPSessionCreate(session);
         }
-        else
-        {
-            // TODO log
-            std::cout << "Invalid TCPClientSocket object" << std::endl;
-        }
+        // Listen for HTTP headers
+        session->AcceptRequest();
     }
     else
     {
-        // TODO log
-        std::cout << err.GetErrorMessage() << std::endl;
+        LOG(logERROR) << inError.GetErrorMessage();
     }
 }
 
 void HTTPServer::Start()
 {
-    ErrorCode err;
-
-    if (!mIsStarted)
+    LOG(logINFO) << "Starting web server ...";
+    if (!m_started)
     {
-        mServerSock.SetListener(this, err);
-        mServerSock.Listen(err);
-        mServerSock.Accept(err);
-        mIsStarted = true;
-
-        if (!mlisteners.empty())
+        try
         {
-        	for (std::set<HTTPServerObserver*>::iterator it = mlisteners.begin(); it != mlisteners.end(); ++it)
-        	{
-        		HTTPServerObserver* listener = *it;
-        		Task* eventTask = new Task();
-        		eventTask->Connect(&HTTPServerObserver::OnServerStart, listener, this);
-        		TaskThreadPool::Signal(eventTask);
-        	}
+            m_acceptor.SetHandler(this);
+            m_acceptor.Listen();
+            m_acceptor.Start();
         }
-        else
+        catch(SystemException& ex)
         {
-        	// TODO log
-        	std::cout << " No HTTP server listeners \n";
+            LOG(logERROR) << "Error starting web server: " << ex.Code().GetErrorMessage();
+            return;
+        }
+        m_started = true;
+
+        // don't modify the listeners list while in use
+        SystemMutexLocker lock(m_lockListeners);
+        for (std::set<HTTPServerListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+        {
+            (*it)->OnServerStart(this);
         }
     }
 }
 
 void HTTPServer::Stop()
 {
-    if (mIsStarted)
+    if (m_started)
     {
-        mServerSock.Stop();
-        for (std::set<HTTPServerObserver*>::iterator it = mlisteners.begin(); it != mlisteners.end(); ++it)
-        {
-            HTTPServerObserver* listener = *it;
-            // notify every listener that we are stopping so detaching from connection can be done
-            listener->OnServerStop(this);
-        }
+        LOG(logINFO) << "Stopping web server ...";
+        m_acceptor.Stop();
+        m_started = false;
 
-        // close all connections and detach server from listening for events on connection channels
-        for (std::map<unsigned, HTTPSession*>::iterator it = msessionsMap.begin(); it != msessionsMap.end(); ++it)
+        // don't modify the listeners list while in use
+        m_lockListeners.Lock();
+        for (std::set<HTTPServerListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
         {
-            HTTPSession* session = msessionsMap.end()->second;
-            // close channel so we don't get nofied for every connection close
-            session->CloseChannel(it->first);
-            session->Close();
+            (*it)->OnServerStop(this);
         }
+        m_lockListeners.Unlock();
+
+        // close all connections
+        m_lockSessions.Lock();
+        for (std::set<HTTPSession*>::iterator it = m_sessions.begin(); it != m_sessions.end(); ++it)
+        {
+            // skip disconnect event
+            (*it)->RemoveListener(this);
+            (*it)->Disconnect();
+        }
+        m_lockSessions.Unlock();
     }
     else
     {
-        // TODO log
-        std::cout << "Server already stopped" << std::endl;
+        LOG(logINFO) << "Server already stopped";
     }
 }
 
 unsigned int HTTPServer::GetConnectionCount()
 {
-    return msessionsMap.size();
+    SystemMutexLocker lock(m_lockSessions);
+    unsigned int sessionCount = m_sessions.size();
+
+    return sessionCount;
 }
 
-void HTTPServer::GetServerProperties()
+void HTTPServer::AddServerListener(HTTPServerListener* listener)
 {
-    // TODO to be implemented
-}
-
-void HTTPServer::AddServerListener(HTTPServerObserver* serverListener)
-{
-    if (serverListener)
+    if (listener)
     {
-        mlisteners.insert(serverListener);
-    }
-    else
-    {
-        // TODO Log
-        std::cout << "Invalid HTTP server listener \n";
+        SystemMutexLocker lock(m_lockListeners);
+        m_listeners.insert(listener);
     }
 }
 
-void HTTPServer::RemoveServerListener(HTTPServerObserver* serverListener)
+void HTTPServer::RemoveServerListener(HTTPServerListener* listener)
 {
-    if (serverListener)
+    if (listener)
     {
-        std::set<HTTPServerObserver*>::iterator it = mlisteners.find(serverListener);
-        if (it != mlisteners.end())
+        SystemMutexLocker lock(m_lockListeners);
+        std::set<HTTPServerListener*>::iterator it = m_listeners.find(listener);
+        if (it != m_listeners.end())
         {
-            mlisteners.erase(it);
+            m_listeners.erase(it);
         }
     }
-    else
+}
+
+void HTTPServer::OnConnectionClose(NetConnection* conn)
+{
+    if (conn)
     {
-        // TODO Log
-        std::cout << "Invalid HTTP server listener in Remove() call \n";
+        LOG(logINFO) << "Connection is closed";
+        HTTPSession* session = dynamic_cast<HTTPSession*>(conn);
+        if (session)
+        {
+            SystemMutexLocker lockerSessions(m_lockSessions);
+            std::set<HTTPSession*>::iterator it = m_sessions.find(session);
+            if (it != m_sessions.end())
+            {
+                SystemMutexLocker lock(m_lockListeners);
+                for (std::set<HTTPServerListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+                {
+                    (*it)->OnHTTPSessionDestroy(session);
+                }
+            }
+            m_sessions.erase(it);
+            delete session;
+        }
     }
 }
-
-void HTTPServer::OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr)
-{ /* empty, no need to implement this */ }
-
-void HTTPServer::OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr)
-{ /* empty, no need to implement this */ }
-
-
-void HTTPServer::OnConnectionClose(IOChannel* chan)
-{
-    // TODO Log
-    std::cout << "Connection is closed \n";
-}
-
-
 

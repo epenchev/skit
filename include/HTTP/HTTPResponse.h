@@ -38,7 +38,7 @@ public:
     * Create reponse from HTTP text headers.
     * @param inHeader - string with header.
     */
-    void Init(const std::string& inHeader);
+    void Init(const std::string& inHeader, ErrorCode& outError);
 
     /**
     * Returns true if response header contains parameter name.
@@ -50,13 +50,13 @@ public:
     /**
     * Get header value
     * @param name - header name .
-    * @return string - header value.
+    * @return string - header value, empty string on error.
     */
     std::string GetHeader(const std::string& name);
 
     /**
     * Get the current response headers as a map
-    * @return std::map& - header as map.
+    * @return std::map& - headers as map, empty map if no headers present.
     */
     HTTPHeadersMap& GetHeaders();
 
@@ -67,8 +67,8 @@ public:
     void RemoveHeader(const std::string& name);
 
     /**
-    * Set header value
-    * @param string - name of header.
+    * Set header value or insert new header field if name is not present.
+    * @param string - name of header field.
     * @param string - value.
     */
     void SetHeader(const std::string& name, std::string value);
@@ -80,23 +80,28 @@ public:
     void SetResponseCode(unsigned responseCode);
 
     /**
-    * Convert an HTTP status code to a string.
-    * @param int - status code number.
-    * @return string - status message.
+    * Get the HTTP response code.
+    * @return unsigned - HTTP response code.
     */
-    std::string StatusCodeToStr(int statusCode);
+    unsigned GetResponseCode();
 
     /**
-    * Get the error from the last operation.
-    * @return ErrorCode reference with last operation error.
+    * Convert an HTTP status code to a string.
+    * @param unsigned - status code number.
+    * @return string - status message.
     */
-    ErrorCode& GetLastError() { return mErrCode; }
+    std::string StatusCodeToStr(unsigned statusCode);
+
+    /**
+    * Get the string representation of the response.
+    * @return string - response object as string, empty string on failure.
+    */
+    std::string Str();
 
 private:
-    ErrorCode  mErrCode;         /**< error code of last operation */
-    HTTPHeadersMap mMapHeaders;  /**< Map headers name->value */
-    std::string mTextHeaders;    /**< HTTP headers as text */
-    int mResponseCode;           /**< HTTP response code */
+    HTTPHeadersMap m_mapheaders;  /**< Map headers name->value */
+    std::string m_textheaders;   /**< HTTP headers as text */
+    unsigned m_responseCode;          /**< HTTP response code */
 };
 
 #endif /* HTTPRESPONSE_H_ */

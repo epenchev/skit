@@ -71,6 +71,7 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
 
     if (inHeader.empty())
     {
+        errCode.SetValue(-1);
         errCode.SetMessage("Empty header");
         return errCode;
     }
@@ -78,6 +79,7 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
     if (std::string::npos == inHeader.find(endHeaders) &&
         std::string::npos == inHeader.find(endHeaders1))
     {
+        errCode.SetValue(-1);
         errCode.SetMessage("Error, end of headers not found");
         return errCode;
     }
@@ -100,6 +102,7 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
             }
             catch(std::exception& ex)
             {
+                errCode.SetValue(-1);
                 errCode.SetMessage(ex.what());
                 return errCode;
             }
@@ -112,6 +115,7 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
     }
     else
     {
+        errCode.SetValue(-1);
         errCode.SetMessage("Error parsing header, no proper formating found");
     }
 
@@ -136,15 +140,20 @@ ErrorCode HTTPUtils::SplitHeaderLine(const std::string& line, HTTPParam& outPara
             }
             catch(std::exception& ex)
             {
+                errCode.SetValue(-1);
                 errCode.SetMessage(ex.what());
                 return errCode;
             }
         }
-        else {
+        else
+        {
+            errCode.SetValue(-1);
             errCode.SetMessage("Error splitting, control char ':' missing");
         }
     }
-    else {
+    else
+    {
+        errCode.SetValue(-1);
         errCode.SetMessage("Line is empty");
     }
 
@@ -202,119 +211,62 @@ std::string HTTPUtils::HTTPRequestToString(const std::string& inUrl, const std::
         if (headers.find("Host") == headers.end())
         {
             resultHTTPReq += "Host: " + server;
-            if (!servicePort.empty())
-            {
+            if (!servicePort.empty()) {
                 resultHTTPReq += ":" + servicePort;
             }
             resultHTTPReq += "\r\n";
         }
         for (HTTPHeadersMap::iterator it=headers.begin(); it!=headers.end(); ++it)
         {
-        	resultHTTPReq += it->first + ": " + it->second + "\r\n";
+            resultHTTPReq += it->first + ": " + it->second + "\r\n";
         }
 
         resultHTTPReq += endHeaders;
-        if (!data.empty())
-        {
-        	resultHTTPReq += data;
+        if (!data.empty()) {
+            resultHTTPReq += data;
         }
     }
 
     return resultHTTPReq;
 }
 
-std::string HTTPUtils::HTTPResponseToString(unsigned responseCode, const std::string* data, HTTPHeadersMap* headers)
+std::string HTTPUtils::HTTPResponseToString(unsigned code, HTTPHeadersMap& headers)
 {
     std::string returnHeaders = "";
     std::string reponseData = "";
 
-    if (responseCodes.count(responseCode) > 0)
+    if (responseCodes.count(code) > 0)
     {
-    	std::stringstream stringCode;
-    	stringCode << responseCode;
-    	std::string statusMessage = responseCodes.at(responseCode);
-    	returnHeaders = http_version_1_1 + " " + stringCode.str() + " " + statusMessage + http_crlf;
+        std::stringstream stringCode;
+        stringCode << code;
+        std::string statusMessage = responseCodes.at(code);
+        returnHeaders = http_version_1_1 + " " + stringCode.str() + " " + statusMessage + http_crlf;
     }
     else
     {
-    	return returnHeaders;
+        return returnHeaders;
     }
 
     returnHeaders += "Server: " + serverName + http_crlf;
     returnHeaders += "Date: " + currentDateTime() + http_crlf;
 
-    // add additional headers
-    if (headers)
-    {
-    	if (data)
-    	{
-    		if (data->size())
-    	    {
-    			HTTPHeadersMap::iterator it = headers->find("Content-Type");
-    	    	if (headers->end() != it)
-    	    	{
-    	    		returnHeaders += it->first + ": " + it->second + http_crlf;
-    	    	}
-    	    	else
-    	    	{
-    	    		// default mime type
-    	    		returnHeaders += "Content-Type: application/octet-stream" + http_crlf;
-    	    	}
 
-    	    	it = headers->find("Content-Length");
-    	    	if (headers->end() != it)
-    	    	{
-    	    		returnHeaders += it->first + ": " + it->second + http_crlf;
-    	    	}
-    	    	else
-    	    	{
-    	    		std::stringstream stringSize;
-    	    		stringSize << data->size();
-    	    		returnHeaders += "Content-Length: " + stringSize.str() + http_crlf;
-    	    	}
-    	    	reponseData = data->c_str();
-    	    }
-    	}
-
-    	for (HTTPHeadersMap::iterator it = headers->begin(); it != headers->end(); ++it)
-    	{
-    		// Server and Date headers can't be overridden
-    		std::string headerName = it->first;
-    		if ( headerName.compare("Server") != 0 &&
-    			 headerName.compare("Date") != 0   &&
-    			 // those are already added skip them if present
-    			 headerName.compare("Content-Type") != 0   &&
-    			 headerName.compare("Content-Length") != 0)
-    		{
-    			returnHeaders += it->first + ": " + it->second + http_crlf;
-    		}
-    	}
-    	HTTPHeadersMap::iterator it = headers->find("Connection");
-    	if (headers->end() == it)
-    	{
-    		returnHeaders += "Connection: close" + endHeaders;
-    	}
-    	else
-    	{
-    		returnHeaders += http_crlf;
-    	}
-    }
-    else
+    for (HTTPHeadersMap::iterator it = headers.begin(); it != headers.end(); ++it)
     {
-    	if (data)
-    	{
-    		if (data->size())
-    	    {
-    			std::stringstream stringSize;
-    			stringSize << data->size();
-    			// default mime type
-    			returnHeaders += "Content-Type: application/octet-stream" + http_crlf;
-    			returnHeaders += "Content-Length: " + stringSize.str() + http_crlf;
-    	    }
-    	}
-    	returnHeaders += "Connection: close" + endHeaders;
+    	// Server and Date headers can't be overridden
+    	std::string headerName = it->first;
+        if ( headerName.compare("Server") != 0 &&
+             headerName.compare("Date") != 0 )
+        {
+        	returnHeaders += it->first + ": " + it->second + http_crlf;
+        }
     }
-    returnHeaders += reponseData;
+    if (headers.end() == headers.find("Connection"))
+    {
+    	returnHeaders += "Connection: close" + http_crlf;
+    }
+    returnHeaders += endHeaders;
+
     return returnHeaders;
 }
 

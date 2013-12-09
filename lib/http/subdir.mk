@@ -4,23 +4,26 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../stream/Stream.cpp \
-../stream/StreamClient.cpp 
+../HTTP/HTTPRequest.cpp \
+../HTTP/HTTPResponse.cpp \
+../HTTP/HTTPUtils.cpp 
 
 OBJS += \
-./stream/Stream.o \
-./stream/StreamClient.o 
+./HTTP/HTTPRequest.o \
+./HTTP/HTTPResponse.o \
+./HTTP/HTTPUtils.o 
 
 CPP_DEPS += \
-./stream/Stream.d \
-./stream/StreamClient.d 
+./HTTP/HTTPRequest.d \
+./HTTP/HTTPResponse.d \
+./HTTP/HTTPUtils.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-stream/%.o: ../stream/%.cpp
+HTTP/%.o: ../HTTP/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/usr/local/boost/include -I../include -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

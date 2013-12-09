@@ -21,123 +21,110 @@
 #ifndef HTTPSERVER_H_
 #define HTTPSERVER_H_
 
-#include "system/TCPServerSocket.h"
+#include "system/TCPSocket.h"
+#include "system/TCPAcceptor.h"
+#include "system/SystemThread.h"
 #include "TCPConnection.h"
 #include "HTTP/HTTPRequest.h"
+#include "HTTP/HTTPResponse.h"
+#include "IHTTPServer.h"
 #include <set>
 #include <map>
 
-class HTTPSessionObserver
-{
-public:
-    virtual void OnHTTPrequest(HTTPRequest* inRequest) = 0;
-};
-
 /**
 * HTTP network session.
-* Interface between media clients and server using HTTP protocol.
 */
-class HTTPSession : public TCPConnection, public IOChannelObserver
+class HTTPSession : public IHTTPSession, public TCPConnection, public IOChannelListener
 {
 public:
-    HTTPSession(unsigned sessionId, TCPClientSocket* inSocket);
-
+    HTTPSession(unsigned id, TCPSocket* inSocket);
     virtual ~HTTPSession();
 
-    void AddHTTPSessionListener(HTTPSessionObserver* listener);
+    /* From IHTTPSession */
+    void AddHTTPSessionListener(HTTPSessionListener* listener);
 
-    void RemoveHTTPSessionListener(HTTPSessionObserver* listener);
+    /* From IHTTPSession */
+    void RemoveHTTPSessionListener(HTTPSessionListener* listener);
 
-    void SendHTTPResponse();
+    /* From IHTTPSession */
+    void AcceptRequest();
 
-    void WaitForRequest();
+    /* From IHTTPSession */
+    const HTTPRequest& GetRequest() const { return m_request; }
 
+    /* From IOChannelListener */
+    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode& err);
 
-    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr);
-
-    void OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr);
-
-    void OnConnectionClose(IOChannel* chan);
+    /* From IOChannelListener */
+    void OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode& err);
 
 private:
-    IOChannel* mioChannel;
-    std::set<HTTPSessionObserver*> msessionListeners;
-    Buffer* msocketBuffer;
-    std::string mrequestStr;
+
+    /**
+    * Send the HTTP response.
+    */
+    void SendResponse();
+
+    // notify listeners for HTTP request
+    void NotifyOnHTTPrequest();
+
+    // process reply from listeners
+    void NotifyOnHTTPRequestReply(bool& replyOut);
+
+    void NotifyOnHTTPResponseSend();
+
+    bool m_acceptRequest;                        /**< if can accept requests or still waiting for reply to be send  */
+    IOChannel* m_channel;                        /**< Connection channel for I/O events */
+    Buffer* m_buffer;                            /**< buffer for I/O operations */
+    std::string m_reqheaders;                    /**< string with full or part HTTP request headers */
+    HTTPRequest m_request;                       /**< HTTP request object */
+    HTTPResponse m_response;                     /**< HTTP response object */
+    SystemMutex m_lockchan;                      /**< I/O channel lock */
+    SystemMutex m_lockListeners;                 /**< listeners lock */
+    std::set<HTTPSessionListener*> m_listeners;  /**< listeners/observers for session events */
+    const static std::size_t m_recvsize = 100;   /**< receive buffer size bytes */
 };
-
-class HTTPServer;
-/**
-* Abstract base class for implementing event listeners(observers) for HTTPServer object.
-*/
-class HTTPServerObserver
-{
-public:
-    /**
-    * Triggered when new HTTP session is created.
-    */
-    virtual void OnHTTPSessionCreate(HTTPSession* session) = 0;
-
-    /**
-    * Triggered when HTTP session is destroyed.
-    */
-    virtual void OnHTTPSessionDestroy(HTTPSession* session) = 0;
-
-    /**
-    * Triggered when server is starting.
-    */
-    virtual void OnServerStart(HTTPServer* server) = 0;
-
-    /**
-    * Triggered when server is shutting down.
-    */
-    virtual void OnServerStop(HTTPServer* server) = 0;
-};
-
 
 /**
 * HTTP server.
-* Accept connections on a given port and accepts HTTP request from clients.
+* Accept HTTP connections on a given port.
 * Different plug-in modules can be attached to the server via the HTTPServerObserver interface.
 */
-class HTTPServer : public TCPServerSocketObserver, public IOChannelObserver
+class HTTPServer : public IHTTPServer, public TCPAcceptorHandler, public NetConnectionListener
 {
 public:
     HTTPServer(unsigned short port);
     HTTPServer(std::string localAdress, unsigned short port);
     virtual ~HTTPServer();
 
+    /* From IHTTPServer */
     void Start();
 
+    /* From IHTTPServer */
     void Stop();
 
-    // TODO move in ServerController
-    //void GetGlobalServerInstance();
+    /* From IHTTPServer */
+    unsigned GetConnectionCount();
 
-    unsigned int GetConnectionCount();
+    /* From IHTTPServer */
+    void AddServerListener(HTTPServerListener* listener);
 
-    void GetServerProperties();
+    /* From IHTTPServer */
+    void RemoveServerListener(HTTPServerListener* listener);
 
-    void AddServerListener(HTTPServerObserver* serverListener);
-
-    void RemoveServerListener(HTTPServerObserver* serverListener);
-
-
-    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr);
-
-    void OnWrite(IOChannel* chan, std::size_t bytesWriten, ErrorCode* inErr);
-
-    void OnConnectionClose(IOChannel* chan);
+    /* From NetConnectionListener */
+    void OnConnectionClose(NetConnection* conn);
 
 private:
-    /* From ServerSocketObserver */
-    void OnAccept(TCPClientSocket* inNewSocket, ErrorCode* inError);
+    /* From TCPAcceptorHandler */
+    void OnAccept(TCPSocket* inNewSocket, ErrorCode& inError);
 
-    bool mIsStarted;
-    TCPServerSocket mServerSock;
-    std::map<unsigned, HTTPSession*> msessionsMap;
-    std::set<HTTPServerObserver*> mlisteners;
-
+    bool m_started;                                 /**< server started flag  */
+    TCPAcceptor m_acceptor;                         /**< TCP acceptor object  */
+    SystemMutex m_lockListeners;                    /**< listeners lock */
+    SystemMutex m_lockSessions;                     /**< sessions lock */
+    std::set<HTTPSession*> m_sessions;              /**< HTTP sessions/connections */
+    std::set<HTTPServerListener*> m_listeners;      /**< listeners/observers for server events */
 };
 
 #endif /* HTTPSERVER_H_ */

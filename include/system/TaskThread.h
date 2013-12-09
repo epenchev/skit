@@ -78,8 +78,8 @@ public:
 private:
     boost::asio::io_service mIOServiceLoop;
 
-    friend class TCPClientSocket;
-    friend class TCPServerSocket;
+    friend class TCPSocket;
+    friend class TCPAcceptor;
     friend class SystemTimer;
 };
 

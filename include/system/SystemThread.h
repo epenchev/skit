@@ -26,7 +26,6 @@
 #include <boost/thread/locks.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/system/system_error.hpp>
-#include <exception>
 #include "ErrorCode.h"
 
 typedef boost::thread::id thread_id;

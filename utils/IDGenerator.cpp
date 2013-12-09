@@ -1,5 +1,5 @@
 /*
- * StreamSink.h
+ * IDGenerator.cpp
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,34 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Oct 10, 2013
+ *  Created on: Nov 1, 2013
  *      Author: emo
  */
 
-#ifndef STREAMSINK_H_
-#define STREAMSINK_H_
+#include "utils/IDGenerator.h"
 
-class Buffer;
-class ErrorCode;
-class StreamSink;
-class StreamClient;
-
-#include "server/PluginModule.h"
-
-class SinkObserver
+IDGenerator& IDGenerator::Instance()
 {
-public:
-    virtual ~SinkObserver() {}
-    virtual void OnDataOut(StreamClient* client, Buffer* data) = 0;
-};
+    static IDGenerator generator;
+    return generator;
+}
 
-class StreamSink /*:  public PluginModule*/
+unsigned IDGenerator::Next()
 {
-public:
-    virtual ~StreamSink() {}
-    virtual void WriteData(Buffer* data, StreamClient* client) = 0;
-    virtual void AddListerner(SinkObserver* listener) = 0;
-    virtual void RemoveListerner(SinkObserver* listener) = 0;
-};
-
-#endif /* STREAMSINK_H_ */
+    return ++_id;
+}
