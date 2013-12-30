@@ -23,12 +23,13 @@
 #include "system/Buffer.h"
 #include "ErrorCode.h"
 #include "Logger.h"
+#include "stream/StreamFactory.h"
+#include "system/Task.h"
+#include "system/TaskThread.h"
 
-Stream::Stream(unsigned id)
- : m_started(false), m_streamid(id), m_source(NULL), m_filter(NULL), m_sink(NULL)
-{
-    //Log::ReportingLevel() = logERROR;
-}
+Stream::Stream(unsigned streamID, StreamSource* source, StreamFilter* filter, StreamSink* sink)
+ : m_streamID(streamID), m_source(source), m_filter(filter), m_sink(sink)
+{}
 
 Stream::~Stream()
 {
@@ -40,213 +41,128 @@ Stream::~Stream()
     {
         m_filter->RemoveListener(this);
     }
-    if (m_sink)
-    {
-        m_sink->RemoveListerner(this);
-    }
-    for (std::set<StreamClient*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
-    {
-        StreamClient* client = *it;
-        client->Disconnect();
-    }
-    m_clients.clear();
+}
+
+void Stream::AddListener(StreamListener* listener)
+{
+	LOG(logDEBUG) << "Add a listener to stream:" << m_streamID
+			      << " " << StreamFactory::GetStreamName(m_streamID);
+	if (listener)
+	{
+		SystemMutexLocker lock(m_lockListeners);
+		m_listeners.insert(listener);
+		LOG(logDEBUG) << "Listener added to stream:" << m_streamID
+				      << " " << StreamFactory::GetStreamName(m_streamID);
+	}
+}
+
+void Stream::RemoveListener(StreamListener* listener)
+{
+	LOG(logDEBUG) << "Remove a listener from stream:" << m_streamID
+			      << " " << StreamFactory::GetStreamName(m_streamID);
+	if (listener)
+	{
+		SystemMutexLocker lock(m_lockListeners);
+		if (m_listeners.count(listener) > 0)
+		{
+			m_listeners.erase(listener);
+			LOG(logDEBUG) << "Listener removed from stream:" << m_streamID
+					      << " " << StreamFactory::GetStreamName(m_streamID);
+		}
+	}
 }
 
 void Stream::Play()
 {
-    if (m_source)
+    LOG(logDEBUG) << "Start stream:" << m_streamID
+    		      << " " << StreamFactory::GetStreamName(m_streamID);
+	if (m_source)
     {
-        if (!m_started)
-        {
-            LOG(logERROR) << "Playing";
-            m_started = true;
-            m_source->Start();
-        }
+		if (StreamFactory::IsPublished(m_streamID))
+		{
+			m_source->Start();
+			LOG(logINFO) << "Playing stream:" << StreamFactory::GetStreamName(m_streamID);
+		}
     }
 }
 
 void Stream::Pause()
 {
+	LOG(logDEBUG) << "Pause stream:" << StreamFactory::GetStreamName(m_streamID);
     if (m_source)
     {
         m_source->Stop();
+        LOG(logINFO) << "Stream:" << StreamFactory::GetStreamName(m_streamID) << " paused";
     }
 }
 
 void Stream::Stop()
 {
-    if (m_source && m_started)
+	LOG(logDEBUG) << "Stop stream:" << StreamFactory::GetStreamName(m_streamID);
+	if (m_source)
     {
-        m_started = false;
         m_source->Stop();
+        LOG(logINFO) << "Stream:" << StreamFactory::GetStreamName(m_streamID) << " stopped";
     }
 }
 
 void Stream::Seek(unsigned position)
 {
-    LOG(logDEBUG) << "Seeking into stream:" << m_streamid << " at position:" << position;
+    LOG(logDEBUG) << "Seeking into stream:" << m_streamID << " at position:" << position;
     if (m_source)
     {
         if (m_source->IsSeekable())
         {
             m_source->Seek(position);
+            LOG(logDEBUG) << "Stream:" << m_streamID  << "set to position:" << position;
         }
-        else
-        {
-            LOG(logWARNING) << "Stream is not seekable";
-        }
-    }
-    else
-    {
-        LOG(logERROR) << "no source present in stream";
-    }
-}
-
-void Stream::SetSource(StreamSource* source)
-{
-    if (source)
-    {
-        m_source = source;
-        m_source->AddListener(this);
-    }
-    else
-    {
-        LOG(logERROR) << "Invalid source";
-    }
-}
-
-void Stream::SetFilter(StreamFilter* filter)
-{
-    if (filter)
-    {
-        m_filter = filter;
-        m_filter->AddListener(this);
-    }
-    else
-    {
-        LOG(logERROR) << "Invalid filter";
-    }
-}
-
-void Stream::SetSink(StreamSink* sink)
-{
-    if (sink)
-    {
-        m_sink = sink;
-        m_sink->AddListerner(this);
-    }
-    else
-    {
-        LOG(logERROR) << "Invalid sink";
     }
 }
 
 void Stream::AddClient(StreamClient* client)
 {
-    LOG(logERROR) << "client count:" << m_clients.size();
+	SystemMutexLocker lock(m_lockClients);
+	LOG(logDEBUG) << "Add client to stream " << StreamFactory::GetStreamName(m_streamID);
     if (client)
     {
         if (m_clients.count(client) != 0)
         {
-            //LOG(logDEBUG) << "client:" << client->GetId() << " already present in the stream " << m_name;
+            LOG(logWARNING) << "client:" << client->GetID() << " already present in the stream "
+            		        << StreamFactory::GetStreamName(m_streamID);
         }
         else
         {
-            //LOG(logDEBUG) << "Adding client:" << client->GetId() << " to stream: " << m_name;
-            NetConnection* clientConn = *client->GetConnections().begin();
-            if (!clientConn)
-            {
-                LOG(logWARNING) << "Invalid connection from client:" << client->GetId();
-            }
-            else
-            {
-                //LOG(logDEBUG) << "Opening channel " << clientConn->GetConnId();
-                IOChannel* iochan; /*= clientConn->OpenChannel(this); */
-                //LOG(logDEBUG) << "Channel opened " << iochan->GetChannelId();
-                if (iochan)
-                {
-                    m_clients.insert(client);
-                    //LOG(logDEBUG) << "Channel:" << iochan->GetChannelId()
-                                         //       << " -> Connection:" << iochan->GetChannelId();
-                    m_iochannels.insert(std::pair<unsigned, IOChannel*>(client->GetId(), iochan));
-                    Play();
-                }
-                else
-                {
-                    LOG(logERROR) << "Error opening channel to connection" << client->GetId();
-                }
-            }
+        	m_clients.insert(client);
+        	LOG(logDEBUG) << "Notify listeners OnClientSubscribed()";
+        	SystemMutexLocker listenersLock(m_lockListeners);
+        	for (std::set<StreamListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+        	{
+        		Task* eventTask = new Task();
+        		eventTask->Connect(&StreamListener::OnClientSubscribed, *it, boost::ref(*this), *client);
+        		TaskThreadPool::Signal(eventTask);
+        	}
         }
-    }
-    else
-    {
-        LOG(logERROR) << "Invalid client";
     }
 }
 
 void Stream::RemoveClient(StreamClient* client)
 {
-    LOG(logERROR) << "client count:" << m_clients.size();
-    if (!m_clients.empty())
+	SystemMutexLocker lock(m_lockClients);
+	LOG(logDEBUG) << "Remove client from stream " << StreamFactory::GetStreamName(m_streamID);
+    if (client)
     {
-        if (client)
+    	if (m_clients.count(client) > 0)
         {
-            if (m_clients.count(client) > 0)
-            {
-                m_clients.erase(client);
-            }
+    		m_clients.erase(client);
+    		LOG(logDEBUG) << "Notify listeners OnClientUnSubscribed()";
+    		SystemMutexLocker listenersLock(m_lockListeners);
+    		for (std::set<StreamListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+    		{
+    			Task* eventTask = new Task();
+    		    eventTask->Connect(&StreamListener::OnClientUnSubscribed, *it,  boost::ref(*this), *client);
+    		    TaskThreadPool::Signal(eventTask);
+    		}
         }
-        else
-        {
-            LOG(logERROR) << "Invalid client";
-        }
-    }
-    else
-    {
-        LOG(logERROR) << "Invalid clients list in stream";
-    }
-}
-
-unsigned Stream::GetStreamId()
-{
-    return m_streamid;
-}
-
-StreamSource* Stream::GetSource()
-{
-    return m_source;
-}
-
-StreamFilter* Stream::GetFilter()
-{
-    return m_filter;
-}
-
-StreamSink* Stream::GetSink()
-{
-    return m_sink;
-}
-
-void Stream::OnStart(StreamSource* source)
-{
-    if (m_source->IsSeekable())
-    {
-        LOG(logDEBUG) << "Source resumed";
-    }
-    else
-    {
-        LOG(logINFO) << "Stream started";
-    }
-}
-
-void Stream::OnStop(StreamSource* source)
-{
-    LOG(logINFO) << "Stream stopped";
-    for (std::set<StreamClient*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
-    {
-        StreamClient* client = *it;
-        client->Disconnect();
-        RemoveClient(client);
     }
 }
 
@@ -256,75 +172,36 @@ void Stream::WriteSink(Buffer* data)
     {
         if (m_sink)
         {
-            if (!m_clients.empty())
-            {
-                for (std::set<StreamClient*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
-                {
-                    StreamClient* client = *it;
-                    m_sink->WriteData(data, client);
-                }
-            }
-        }
-        else
-        {
-            //LOG(logWARNING) << "No sink present in stream ID:" << m_streamid;
-            // TODO add as separate function
-            if (m_clients.empty())
-            {
-                LOG(logERROR) << "No clients subscribed to this stream:" << m_name;
-                return;
-            }
-
-            LOG(logERROR) << "client cout:" << m_clients.size();
-            for (std::set<StreamClient*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
-            {
-                StreamClient* client = *it;
-                if (client)
-                {
-                    if (m_iochannels.count(client->GetId()) > 0)
-                    {
-                        ErrorCode err;
-                        IOChannel* iochan = m_iochannels.at(client->GetId());
-                        //iochan->Emit(data, IOWrite, err);
-                    }
-                }
-                else
-                {
-                    LOG(logERROR) << "Invalid client in stream:" << m_name;
-                }
-            }
-
+            m_sink->WriteData(data, this);
         }
     }
 }
 
-void Stream::OnDataReceive(StreamSource* source, Buffer* data, ErrorCode* error)
+void Stream::OnStart(StreamSource& source)
 {
-    ErrorCode err;
-    err = *error;
+    LOG(logINFO) << "Stream started";
+}
 
-    // TODO notify listener if present.
-    if (!err)
+void Stream::OnStop(StreamSource& source)
+{
+    LOG(logINFO) << "Stream stopped";
+}
+
+void Stream::OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error)
+{
+    if (!error)
     {
         if (data)
         {
-            //LOG(logDEBUG) << "Got data from source with size:" << data->Size();
-            // Ensure thread safety for filter and sink.
-            m_mutexLockOutput.Lock();
-            if (m_source->IsSeekable())
-            {
-                // VOD, play source after sink is done
-                m_started = false;
-            }
             if (m_filter)
             {
+                // give filter work
                 m_filter->WriteData(data);
             }
             else
             {
                 WriteSink(data);
             }
-            m_mutexLockOutput.Unlock();
         }
         else
         {
@@ -333,7 +210,7 @@ void Stream::OnDataReceive(StreamSource* source, Buffer* data, ErrorCode* error)
     }
     else
     {
-        LOG(logERROR) << err.GetErrorMessage();
+        LOG(logERROR) << error.GetErrorMessage();
     }
 }
 
@@ -347,82 +224,5 @@ void Stream::OnDataReady(StreamFilter* filter, Buffer* data)
     {
         LOG(logERROR) << "Invalid data from filter";
     }
-}
-
-void Stream::OnDataOut(StreamClient* client, Buffer* data)
-{
-    // if source is VOD resume read operation with Play()
-    if (m_source->IsSeekable())
-    {
-        //Play();
-    }
-
-    if (!m_clients.empty())
-    {
-        for (std::set<StreamClient*>::iterator it = m_clients.begin(); it != m_clients.end(); ++it)
-        {
-            StreamClient* client = *it;
-            // TODO Get connections.
-        }
-    }
-}
-
-void Stream::OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode* inErr)
-{
-    ErrorCode err = *inErr;
-    if (err)
-    {
-        LOG(logERROR) << err.GetErrorMessage();
-        StreamClient* delcl = NULL;
-        for (std::set<StreamClient*>::iterator it=m_clients.begin(); it!=m_clients.end(); ++it)
-        {
-            StreamClient* cl = *it;
-            NetConnection* clientConn = *cl->GetConnections().begin();
-            /*
-            if (chan->GetConnId() == clientConn->GetID())
-            {
-                delcl = cl;
-                LOG(logERROR) << "client removed";
-            }
-            */
-        }
-        RemoveClient(delcl);
-        // TODO temp fix remove
-        //StreamClient* client = *m_clients.begin();
-        //client->Disconnect();
-        //RemoveClient(client);
-
-
-    }
-    else
-    {
-        //LOG(logDEBUG) << "bytes written:" << bytesWritten;
-        // if source is VOD resume read operation with Play()
-        if (m_source->IsSeekable())
-        {
-            Play();
-        }
-    }
-}
-
-void Stream::OnConnectionClose(IOChannel* chan)
-{
-    LOG(logERROR) << "connection  close    ";
-    StreamClient* delcl = NULL;
-    for (std::set<StreamClient*>::iterator it=m_clients.begin(); it!=m_clients.end(); ++it)
-    {
-        StreamClient* cl = *it;
-        NetConnection* clientConn = *cl->GetConnections().begin();
-
-        /*
-        if (chan->GetID() == clientConn->GetID())
-        {
-            delcl = cl;
-            LOG(logERROR) << "Remove client";
-        }
-        */
-    }
-    RemoveClient(delcl);
-
 }
 

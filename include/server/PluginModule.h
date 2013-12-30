@@ -22,6 +22,18 @@
 #define PLUGINMODULE_H_
 
 /**
+* Base class for all plug-ins.
+*/
+class PluginObject
+{
+public:
+	/**
+	* Class name identifier for the plug-in.
+	*/
+	virtual const char* GetClassID() = 0;
+};
+
+/**
 * Interface for creating plug-in modules extending server logic.
 * A custom module must implement this interface in order to comply with server plug-in system.
 */
@@ -32,8 +44,6 @@ public:
     /**
     * Method invoked when module is loaded into the server core system.
     * Some initialization of module can be done here.
-    * The server core object is passed here so access to server subsystems is given to the module.
-    * @param ServerInstance - Server core object.
     */
     virtual void OnModuleLoad() = 0;
 
@@ -61,6 +71,25 @@ public:
     * @return string - module author.
     */
     virtual const char* GetModuleAuthor() = 0;
+
+    /**
+    * Get the unique identifier of a module.
+    * @return unsigned - module identifier.
+    */
+    virtual unsigned GetModuleID() = 0;
+
+    /**
+    * Create an instance of PluginObject from this module.
+    * This is like a factory method.
+    * @return PluginObject* - PluginObject instance.
+    */
+    virtual PluginObject* CreateInstance() = 0;
+
+    /**
+    * Destroy an instance of PluginObject created with CreateInstance() factory method.
+    * @param obj - Instance of PluginObject to be destroyed.
+    */
+    virtual void DestroyInstance(PluginObject* obj) = 0;
 };
 
 #endif /* PLUGINMODULE_H_ */

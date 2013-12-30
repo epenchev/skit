@@ -22,9 +22,6 @@
 #define PLUGIN_MANAGER_H_
 
 #include "PluginModule.h"
-#include "system/SystemLib.h"
-#include <map>
-#include <list>
 
 /**
 * Create module (plug-in) objects extending the server logic to some user needs.
@@ -33,40 +30,24 @@
 class PluginManager
 {
 public:
-
     /**
     * Load library file containing plug-in module code.
     * @param inPath - path to the file.
-    * @return int - plug-in id of the library or -1 if loading failed.
+    * @return PluginModule* - plug-in module object.
     */
-    static int LoadModule(const char* inPath);
+    static PluginModule* LoadModule(const char* inPath);
 
     /**
     * Unload plug-in library module from server memory.
-    * @param pluginID - id of the plug-in library to unload.
+    * @param module - module to unload.
     */
-    static void UnloadModule(int pluginID);
+    static void UnloadModule(PluginModule* module);
 
     /**
-    * Get plug-in object instance associated with this id.
-    * @param pluginID - id of the plug-in.
-    * @return PluginModule* - valid pointer to object or NULL in case of error.
+    * Get a module by module identifier
+    * @param id - id of the module.
     */
-    static PluginModule* CreateInstance(int pluginID);
-
-private:
-
-    /**
-    * Destroy all created previously objects from this module.
-    * @param pluginID - id of the plug-in module.
-    */
-    static void DestroyInstances(int pluginID);
-
-    /**
-    * Helper function for accessing the native library associated with this id.
-    * @param pluginID - id of the plug-in module.
-    */
-    static SystemLib* GetSystemLib(int pluginID);
+    static PluginModule* GetModule(unsigned id);
 };
 
 #endif /* PLUGIN_MANAGER_H_ */

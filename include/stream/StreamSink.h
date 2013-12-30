@@ -21,27 +21,20 @@
 #ifndef STREAMSINK_H_
 #define STREAMSINK_H_
 
+#include <string>
+
 class Buffer;
-class ErrorCode;
-class StreamSink;
-class StreamClient;
+class Stream;
 
-#include "server/PluginModule.h"
-
-class SinkObserver
+class StreamSink
 {
 public:
-    virtual ~SinkObserver() {}
-    virtual void OnDataOut(StreamClient* client, Buffer* data) = 0;
-};
-
-class StreamSink /*:  public PluginModule*/
-{
-public:
-    virtual ~StreamSink() {}
-    virtual void WriteData(Buffer* data, StreamClient* client) = 0;
-    virtual void AddListerner(SinkObserver* listener) = 0;
-    virtual void RemoveListerner(SinkObserver* listener) = 0;
+    /**
+    * Write data to sink.
+    * @param data - Buffer with data to be writen.
+    * @param s    - Stream this sink is associated with.
+    */
+    virtual void WriteData(Buffer* data, Stream* s) = 0;
 };
 
 #endif /* STREAMSINK_H_ */

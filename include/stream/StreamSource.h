@@ -21,36 +21,85 @@
 #ifndef STREAMSOURCE_H_
 #define STREAMSOURCE_H_
 
+#include <string>
+
 class StreamSource;
 class Buffer;
 class ErrorCode;
 
-#include "server/PluginModule.h"
-//#define BUILD_MOD
+/* #define BUILD_MOD */
 #ifdef BUILD_MOD
 #define EXPORT_PUB __attribute__ ((visibility ("default")))
 #else
 #define EXPORT_PUB
 #endif
 
+/**
+* StreamSource listener/observer for events.
+*/
 class SourceObserver
 {
 public:
-    virtual ~SourceObserver() {}
-    virtual void OnStart(StreamSource* source) {}
-    virtual void OnStop(StreamSource* source) {}
-    virtual void OnDataReceive(StreamSource* source, Buffer* data, ErrorCode* error) {}
+
+    /**
+    * Triggered when the source is started.
+    * @param source - the source itself
+    */
+    virtual void OnStart(StreamSource& source) {}
+
+    /**
+    * Triggered when the source is stopped.
+    * @param source - the source itself
+    */
+    virtual void OnStop(StreamSource& source) {}
+
+    /**
+    * Triggered when there is data from the source.
+    * @param source - the source itself.
+    * @param data - pointer to Buffer with data from source.
+    * @param error - error code if present when reading the source.
+    */
+    virtual void OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error) {}
 };
 
-class EXPORT_PUB StreamSource /*: public PluginModule*/
+/**
+* Source/reader for media streams implemented usually from plug-ins.
+*/
+class EXPORT_PUB StreamSource
 {
 public:
-    virtual ~StreamSource() {}
-    virtual void Start() = 0;
+    /**
+    * Start the source.
+    */
+    virtual void Start(/* Stream* s TODO for sink and filter also */) = 0;
+
+    /**
+    * Stop the source.
+    */
     virtual void Stop() = 0;
+
+    /**
+    * Seek into a given position if source is seek-able.
+    * @param position - position to seek to.
+    */
     virtual void Seek(int position) = 0;
+
+    /**
+    * Checks if source is seek-able.
+    * @return true if seek-able false otherwise.
+    */
     virtual bool IsSeekable() = 0;
+
+    /**
+    * Add a listener/observer for source events.
+    * @param listener - pointer to listener.
+    */
     virtual void AddListener(SourceObserver* listener) = 0;
+
+    /**
+    * Remove a listener/observer from source.
+    * @param listener - pointer to listener to be removed.
+    */
     virtual void RemoveListener(SourceObserver* listener) = 0;
 };
 

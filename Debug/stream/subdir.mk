@@ -5,15 +5,18 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
 ../stream/Stream.cpp \
-../stream/StreamClient.cpp 
+../stream/StreamClient.cpp \
+../stream/StreamFactory.cpp 
 
 OBJS += \
 ./stream/Stream.o \
-./stream/StreamClient.o 
+./stream/StreamClient.o \
+./stream/StreamFactory.o 
 
 CPP_DEPS += \
 ./stream/Stream.d \
-./stream/StreamClient.d 
+./stream/StreamClient.d \
+./stream/StreamFactory.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

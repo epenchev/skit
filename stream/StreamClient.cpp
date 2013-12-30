@@ -26,7 +26,7 @@
 #include "system/Buffer.h"
 
 StreamClient::StreamClient()
- : m_subscribed(false), m_clientId(1), m_creationTime(0)
+ : m_clientID(1), m_creationTime(0), m_subscribedStreamID(0)
 {}
 
 StreamClient::~StreamClient()
@@ -37,45 +37,33 @@ unsigned long StreamClient::GetCreationTime()
     return m_creationTime;
 }
 
-void StreamClient::Subscribe(unsigned streamId)
+void StreamClient::Subscribe(Stream* s)
 {
-    if (streamId)
+    if (s)
     {
-        Stream* s = ServerController::GetStream(streamId);
-        if (s)
-        {
-            s->AddClient(this);
-            m_subscribed = true;
-            LOG(logINFO) << "Subscribed to stream " << s->GetName();
-        }
-        else
-        {
-            LOG(logINFO) << "Error getting stream with id:" << streamId;
-        }
+        s->AddClient(this);
+        m_subscribedStreamID = s->GetStreamID();
+        //LOG(logINFO) << "Subscribed to stream:" << s->GetStreamID() << " " << s->GetName();
     }
 }
 
-void StreamClient::UnSubscribe(unsigned streamId)
+void StreamClient::UnSubscribe()
 {
-    if (streamId)
-    {
-        Stream* s = ServerController::GetStream(streamId);
+	if (IsSubscribed())
+	{
+		/* TODO
+		StreamFactory::GetStream(m_subscribedStreamID);
         if (s)
         {
             s->RemoveClient(this);
-            m_subscribed = false;
-            LOG(logINFO) << "remove from stream " << s->GetName();
+            LOG(logINFO) << "remove from stream ";
         }
-        else
-        {
-            LOG(logINFO) << "Error getting stream with id:" << streamId;
-        }
+        */
     }
-}
-
-void StreamClient::Write(BufferPtr data)
-{
-
+	else
+	{
+		LOG(logINFO) << "Client is not subscribed";
+	}
 }
 
 void StreamClient::Register(NetConnection* conn)
@@ -86,38 +74,19 @@ void StreamClient::Register(NetConnection* conn)
     }
 }
 
-void StreamClient::Unregister(NetConnection* conn)
-{
-    if (conn)
-    {
-        m_connections.erase(conn);
-    }
-}
-
 std::set<NetConnection*>& StreamClient::GetConnections()
 {
     return m_connections;
 }
 
-bool StreamClient::IsSubscribed()
+unsigned StreamClient::IsSubscribed()
 {
-    return m_subscribed;
+    return m_subscribedStreamID;
 }
 
-void StreamClient::GetProperties()
+unsigned StreamClient::GetID()
 {
-
+    return m_clientID;
 }
 
-unsigned StreamClient::GetId()
-{
-    return m_clientId;
-}
-
-void StreamClient::Disconnect()
-{
-    // todo for test
-    NetConnection* conn = *m_connections.begin();
-    conn->Disconnect();
-}
 

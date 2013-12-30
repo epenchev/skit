@@ -21,56 +21,24 @@
 #ifndef SERVERCONTROLLER_H_
 #define SERVERCONTROLLER_H_
 
-#include <string>
-#include "IHTTPServer.h"
-#include "stream/Stream.h"
-
-class StreamSource; // TODO test remove after
-
-/*
-class ClientObserver
-{
-    virtual void OnClientCreate() = 0;
-    virtual void OnClientDestroy() = 0;
-};
-*/
+#include "server/IHTTPServer.h"
 
 /**
-* Main server class for controlling the system.
+* Main class for controlling the system and access all server subsystems.
 */
-class ServerController /*: public HTTPServerObserver*/
+class ServerController
 {
 public:
-    /* Create a stream and add it to the controller */
-    static unsigned CreateStream(const std::string name);
 
-    /* destroy a stream and removed it from a controller */
-    static void DeteleStream(unsigned id);
+    /**
+    * Load a plugin module into the server.
+    * @param filePath - string with full path to plugin file.
+    */
+    static void LoadPlugin(const char* filePath);
 
-    /* Get a stream by id */
-    static Stream* GetStream(unsigned id);
-
-    /* Get a stream by name */
-    static Stream* GetStream(const char* name);
-
-    /* Get count of all registered streams */
-    static unsigned GetStreamCount();
-
-    static void LoadPlugin(const std::string& filePath);
-
+    // TODO Remove
     static void SetHTTPServer(IHTTPServer* server);
-
     static IHTTPServer* GetHTTPServer();
-
-    static StreamSource* GetFileSource(); // TODO test remove after
-
-private:
-
-    /* from IHTTPServer */
-    /* void OnHTTPSessionCreate(IHTTPSession* session); */
-
-    /* from IHTTPServer */
-    /* void OnHTTPSessionDestroy(IHTTPSession* session); */
 };
 
 #endif /* SERVERCONTROLLER_H_ */

@@ -26,73 +26,154 @@
 #include "StreamSink.h"
 #include "StreamClient.h"
 #include "system/SystemThread.h"
-#include "server/NetConnection.h"
+#include "utils/PropertyMap.h"
 #include <set>
-#include <map>
-#include <string>
 
-class Stream
- : public SourceObserver,
-   public FilterObserver,
-   public SinkObserver
- //  public IOChannelObserver
+class Stream; // forward
+
+/**
+* Stream listener for adding/removing clients.
+*/
+class StreamListener
 {
 public:
-    Stream(unsigned streamId);
+
+    /**
+    * Triggered when new client is added/subscribed to stream.
+    * @param s - Stream reference.
+    * @param client - client added.
+    */
+    virtual void OnClientSubscribed(Stream& s, StreamClient& client) {}
+
+    /**
+    * Triggered when a client is removed/unsubscribed from a stream.
+    * @param s - Stream reference.
+    * @param client - client removed.
+    */
+    virtual void OnClientUnSubscribed(Stream& s, StreamClient& client) {}
+};
+
+/**
+* Pipeline for streaming, encoding, transcoding and fetching multimedia streams.
+*/
+class Stream : public SourceObserver, public FilterObserver
+{
+public:
+    Stream(unsigned streamID, StreamSource* source, StreamFilter* filter, StreamSink* sink);
+    /* When stream gets deleted all clients will be removed automatically
+     * without notification to StreamListeners from the stream. */
     virtual ~Stream();
+
+    /**
+    * Start stream.
+    */
     void Play();
-    void Pause();
+
+    /**
+    * Pause stream and if Play() is called stream is started from current position.
+    */
+    void Pause(); // TODO maybe not needed.
+
+    /**
+    * Stop stream and if Play() is called stream is started from beginning.
+    */
     void Stop();
-    void Seek(unsigned position);
-    void SetSource(StreamSource* source);
-    void SetFilter(StreamFilter* filter);
-    void SetSink(StreamSink* sink);
+
+    /**
+    * Seek into the stream to the given position.
+    * @param pos - position stream will be moved to.
+    */
+    void Seek(unsigned pos);
+
+    /**
+    * Add a client to the stream.
+    * @param client - StreamClient.
+    */
     void AddClient(StreamClient* client);
+
+    /**
+    * Remove client from stream.
+    * @param client - client to be removed.
+    */
     void RemoveClient(StreamClient* client);
-    void SetName(const char* name) { m_name = name; }
-    std::string GetName() { return m_name; }
-    unsigned GetStreamId();
-    StreamSource* GetSource();
-    StreamFilter* GetFilter();
-    StreamSink*   GetSink();
+
+    /**
+    * Get the properties of the stream items/units. Can do get/set operations for various properties.
+    * @return PropertyMap reference.
+    */
+    PropertyMap& GetProperties() { return m_propetries; }
+
+    /**
+    * Get the unique stream identifier.
+    * @return unsigned - stream identifier.
+    */
+    unsigned GetStreamID()    { return m_streamID; }
+
+    /**
+    * Get the source/reader of the stream.
+    * @return StreamSource* pointer to object.
+    */
+    StreamSource* GetSource() { return m_source; }
+
+    /**
+    * Get the filter/transcoder if present of the stream.
+    * @return StreamFilter* pointer to object or NULL.
+    */
+    StreamFilter* GetFilter() { return m_filter; }
+
+    /**
+    * Get the sink/writer if present of the stream.
+    * @return StreamSink* pointer to object or NULL.
+    */
+    StreamSink* GetSink()   { return m_sink; }
+
+    /**
+    * Get a copy of the clients list, when you are accessing the list some clients may become invalid in the time.
+    * @return std::set - copy of the container holding the clients.
+    */
+    std::set<StreamClient*> GetClientList() { return m_clients; }
+
+    /**
+    * Add a listener/observer object to be notified on stream events.
+    * @param listener - listener/observer object
+    */
+    void AddListener(StreamListener* listener);
+
+    /**
+    * Remove a listener/observer object.
+    * @param listener - listener/observer object
+    */
+    void RemoveListener(StreamListener* listener);
 
 protected:
+    /**
+    * Write output data to sink.
+    * @param data - Buffer with output data.
+    */
     void WriteSink(Buffer* data);
 
     /* from SourceObserver */
-    void OnStart(StreamSource* source);
+    void OnStart(StreamSource& source);
 
     /* from SourceObserver */
-    void OnStop(StreamSource* source);
+    void OnStop(StreamSource& source);
 
     /* from SourceObserver */
-    void OnDataReceive(StreamSource* source, Buffer* data, ErrorCode* error);
+    void OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error);
 
     /* from FilterObserver */
     void OnDataReady(StreamFilter* filter, Buffer* data);
 
-    /* from SinkObserver */
-    void OnDataOut(StreamClient* client, Buffer* data);
-
-    /* from IOChannelObserver */
-    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode* inErr);
-
-    /* from IOChannelObserver*/
-    void OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode* inErr);
-
-    /* from IOChannelObserver */
-    void OnConnectionClose(IOChannel* chan);
 private:
-    bool                         m_started;
-    unsigned                     m_streamid;
-    SystemMutex                  m_mutexLockOutput; // todo
-    StreamSource*                m_source;
-    StreamFilter*                m_filter;
-    StreamSink*                  m_sink;
-    std::string                  m_name;
-    std::set<StreamClient*>      m_clients;
-    // client id -> IOChan
-    std::map<unsigned, IOChannel*> m_iochannels;  // todo thread safety
+    unsigned      m_streamID;      /**< Stream unique identifier */
+    SystemMutex    m_lockClients;   /**< lock for the clients container, provides thread safety when adding/removing clients */
+    SystemMutex    m_lockListeners; /**< lock listener container, provides thread safety when adding/removing listeners */
+    StreamSource*  m_source;  /**< Stream source/reader */
+    StreamFilter*  m_filter;  /**< Stream encoder/decoder */
+    StreamSink*    m_sink;    /**< Stream sink/writer */
+    std::set<StreamClient*>      m_clients;    /**< Clients subscribed to the stream */
+    std::set<StreamListener*>    m_listeners;  /**< listeners for events */
+    PropertyMap                  m_propetries; /**< Properties if the stream as well as properties of the source, filter and sink */
 };
 
 #endif /* STREAM_H_ */

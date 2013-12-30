@@ -18,205 +18,99 @@
  *      Author: emo
  */
 
+#include "system/SystemLib.h"
 #include "server/PluginManager.h"
+#include "utils/IDGenerator.h"
 #include "ErrorCode.h"
+#include "Logger.h"
+#include <map>
 
-/**< map association with plug-in id and native library instance */
-static std::map<unsigned, SystemLib*> msysLibMap;
+/**< map association with plug-in module object and native library instance */
+static std::map<PluginModule*, SystemLib*> m_libs;
 
-/**<  map association with plug-in id objects created from this library module */
-static std::map<unsigned, std::list<PluginModule*> > mpluginObjectsMap;
-
-int PluginManager::LoadModule(const char* inPath)
+PluginModule* PluginManager::LoadModule(const char* inPath)
 {
-    int outId = -1;
-    if (!inPath)
+	PluginModule* outmod = NULL;
+	if (!inPath)
     {
-        // TODO LOG
-        std::cout << "Empty file path \n";
-        return outId;
+    	LOG(logERROR) << "Empty file path";
+        return outmod;
     }
 
     SystemLib* lib = new SystemLib();
     try
     {
+    	ErrorCode err;
         lib->LoadFile(inPath);
+        PluginModule* (*createFunc)(unsigned);
+        createFunc = (PluginModule* (*)(unsigned)) lib->GetSymbol("CreateModuleObject", err);
+        if (createFunc)
+        {
+        	outmod = (PluginModule*)createFunc(IDGenerator::Instance().Next());
+        	m_libs.insert(std::pair<PluginModule*, SystemLib*>(outmod, lib));
+        	outmod->OnModuleLoad();
+        }
+        else if (err)
+        {
+        	LOG(logERROR) << err.GetErrorMessage();
+        	delete lib;
+        }
     }
     catch(SystemException& ex)
     {
-        // TODO LOG
-        std::cout << ex.Code().GetErrorMessage();
-        delete lib;
-        return outId;
-    }
-
-    if (msysLibMap.empty())
-    {
-        outId = 1;
-        msysLibMap.insert(std::make_pair(outId, lib));
-    }
-    else
-    {
-        std::map<unsigned, SystemLib*>::iterator it = msysLibMap.end();
-        unsigned id = it->first + 1;
-
-        msysLibMap.insert(std::make_pair(id, lib));
-        outId = id;
-    }
-
-    return outId;
-}
-
-void PluginManager::UnloadModule(int pluginID)
-{
-    SystemLib* lib = PluginManager::GetSystemLib(pluginID);
-    if (lib)
-    {
-        PluginManager::DestroyInstances(pluginID);
-        msysLibMap.erase(pluginID);
+    	LOG(logERROR) << ex.Code().GetErrorMessage();
         delete lib;
     }
-    else
-    {
-        // TODO log
-        std::cout << "Error geting lib";
-    }
+    return outmod;
 }
 
-PluginModule* PluginManager::CreateInstance(int pluginID)
+void PluginManager::UnloadModule(PluginModule* module)
 {
-    ErrorCode error;
-    PluginModule* outPluginMod = NULL;
-
-    SystemLib* lib = PluginManager::GetSystemLib(pluginID);
-    if (lib)
-    {
-        PluginModule* (*createFunc)();
-        createFunc = (PluginModule* (*)()) lib->GetSymbol("CreateModuleObject", error);
-        if (createFunc)
-        {
-            // Just in case don't crash the server
-            try
-            {
-                outPluginMod = (PluginModule*)createFunc();
-                if (!outPluginMod)
-                {
-                    // TODO log
-                    // std::cout << "Invalid module object  ";
-                    return outPluginMod;
-                }
-
-                if (mpluginObjectsMap.count(pluginID) > 0)
-                {
-                    std::map<unsigned, std::list<PluginModule*> >::iterator it = mpluginObjectsMap.find(pluginID);
-                    std::list<PluginModule*> pluginObjects = it->second;
-
-                    // Add new created plug-in object
-                    pluginObjects.push_back(outPluginMod);
-                }
-                else // no objects instances have been created with this module
-                {
-                    std::list<PluginModule*> pluginObjects;
-                    pluginObjects.push_back(outPluginMod);
-                    mpluginObjectsMap.insert(std::make_pair(pluginID, pluginObjects));
-                }
-            }
-            catch(std::exception& ex)
-            {
-                // TODO log
-                std::cout << "ex.what() ";
-                outPluginMod = NULL;
-            }
-        }
-        else
-        {
-            // TODO log
-            std::cout << "Unable to lookup symbol CreateModuleObject ";
-            std::cout << error.GetErrorMessage() ;
-        }
-    }
-    else
-    {
-        // TODO log
-        std::cout << "Error geting lib";
-    }
-
-    return outPluginMod;
+	ErrorCode err;
+	void (*destroyFunc)(PluginModule*);
+	if (module)
+	{
+		std::map<PluginModule*, SystemLib*>::iterator it = m_libs.find(module);
+		if (it != m_libs.end())
+		{
+			SystemLib* lib = it->second;
+			PluginModule* module = it->first;
+			m_libs.erase(it);
+			module->OnModuleUnLoad();
+			destroyFunc = (void (*)(PluginModule*)) lib->GetSymbol("DestroyModuleObject", err);
+			if (destroyFunc)
+			{
+				destroyFunc(module);
+			}
+			else if (err)
+			{
+				LOG(logERROR) << err.GetErrorMessage();
+			}
+			delete lib;
+			m_libs.erase(it);
+		}
+		else
+		{
+			LOG(logWARNING) << " No such module in list" << module->GetModuleName();
+		}
+	}
 }
 
-void PluginManager::DestroyInstances(int pluginID)
+PluginModule* PluginManager::GetModule(unsigned id)
 {
-    ErrorCode error;
-    void (*destroyFunc)(PluginModule*);
-
-    SystemLib* lib = PluginManager::GetSystemLib(pluginID);
-    if (lib) // pluginID is validated here
-    {
-        // Get Objects loaded from this library
-        if (mpluginObjectsMap.count(pluginID) > 0)
-        {
-            std::map<unsigned, std::list<PluginModule*> >::iterator it = mpluginObjectsMap.find(pluginID);
-
-            std::list<PluginModule*> pluginObjects = it->second;
-            destroyFunc = (void (*)(PluginModule*)) lib->GetSymbol("DestroyModuleObject", error);
-            if (destroyFunc)
-            {
-                for ( std::list<PluginModule*>::iterator itObj = pluginObjects.begin();
-                                                                   itObj != pluginObjects.end(); it++)
-                {
-                    PluginModule* pluginObj = *itObj;
-                    destroyFunc(pluginObj);
-                }
-                // Just to be nice
-                pluginObjects.clear();
-            }
-            else
-            {
-                // TODO log
-                std::cout << "Unable to lookup symbol DestroyModuleObject ";
-                std::cout << error.GetErrorMessage() ;
-            }
-        }
-    }
-    else
-    {
-        // TODO log
-        std::cout << "Error geting lib";
-    }
+	PluginModule* outMod = NULL;
+	if (id)
+	{
+		std::map<PluginModule*, SystemLib*>::iterator it = m_libs.begin();
+		for (;it != m_libs.end(); ++it)
+		{
+			PluginModule* module = it->first;
+			if (module->GetModuleID() == id)
+			{
+				outMod = module;
+				break;
+			}
+		}
+	}
+	return outMod;
 }
-
-SystemLib* PluginManager::GetSystemLib(int pluginID)
-{
-    SystemLib* lib = NULL;
-    if (!pluginID)
-    {
-        // TODO
-        std::cout << "Error invalid ID ";
-        return lib;
-    }
-
-    if (!msysLibMap.empty())
-    {
-        unsigned searchId = (unsigned)pluginID;
-        if (msysLibMap.count(searchId) > 0)
-        {
-            std::map<unsigned, SystemLib*>::iterator it = msysLibMap.find(searchId);
-            lib = it->second;
-        }
-        else
-        {
-            // TODO log
-            std::cout << "No such id present in list";
-        }
-    }
-    else
-    {
-        // TODO log
-        std::cout << "No libs loaded";
-    }
-
-    return lib;
-}
-
-
-

@@ -22,25 +22,46 @@
 #define STREAMFILTER_H_
 
 class Buffer;
-class ErrorCode;
 class StreamFilter;
 
-#include "server/PluginModule.h"
+#include <string>
 
+/**
+* StreamFilter listener/observer for events.
+*/
 class FilterObserver
 {
 public:
-    virtual ~FilterObserver() {}
+    /**
+    * Triggered when there is data ready encoded/decoded from the filter.
+    * @param filter - the filter itself.
+    * @param data - Buffer object with the data.
+    */
     virtual void OnDataReady(StreamFilter* filter, Buffer* data) = 0;
 };
 
-class StreamFilter /*: public PluginModule*/
+/**
+* Decoder/encoder for media streams implemented usually from plug-ins.
+*/
+class StreamFilter
 {
 public:
-    virtual ~StreamFilter() {}
-    virtual void Filter() = 0;
+    /**
+    * Give work (data) to filter.
+    * @param data - Buffer with data filter will be encoding/decoding.
+    */
     virtual void WriteData(Buffer* data) = 0;
+
+    /**
+    * Add a listener/observer for filter events.
+    * @param listener - pointer to listener.
+    */
     virtual void AddListener(FilterObserver* listener) = 0;
+
+    /**
+    * Remove a listener/observer from filter.
+    * @param listener - pointer to listener to be removed.
+    */
     virtual void RemoveListener(FilterObserver* listener) = 0;
 };
 

@@ -71,7 +71,7 @@ public:
     void Notify(IOEvent event, ErrorCode& err, std::size_t iobytes);
 
 private:
-    unsigned m_channelId;           /**< Channel ID */
+    unsigned m_channelId;          /**< Channel ID */
     SystemMutex m_writelock;        /**< write buffer lock */
     SystemMutex m_readlock;         /**< read buffer lock */
     Buffer* m_writebuff;            /**< buffer for write operations  */
@@ -86,8 +86,6 @@ private:
 class IOChannelListener
 {
 public:
-    virtual ~IOChannelListener() {}
-
     /**
     * Triggered when read operation on connection from this channel is complete.
     * @param chan - pointer to IOChannel object.

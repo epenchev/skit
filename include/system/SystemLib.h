@@ -35,7 +35,6 @@ public:
     /**
     * Constructor for the SystemLib class.
     * @param filePath - file to load given as full path.
-    * Note: call GetLastError() method after creating object for confirming loading is successfull.
     */
     SystemLib();
 
@@ -53,10 +52,8 @@ public:
     */
     void* GetSymbol(const char* inSymbolName, ErrorCode& outErr);
 
-    //ErrorCode& GetLastError() { return mErrCode; }
 private:
     void* mLibHandler;    /**< library handler */
-    ErrorCode  mErrCode;  /**< error code of last operation */
 };
 
 #endif /* SYSTEMLIB_H_ */

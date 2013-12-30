@@ -170,8 +170,3 @@ private:
 
 
 #endif /* SYSTEMTHREAD_H_ */
-
-
-
-
-

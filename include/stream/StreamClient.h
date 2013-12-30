@@ -21,11 +21,10 @@
 #ifndef STREAMCLIENT_H_
 #define STREAMCLIENT_H_
 
-#include <cstddef>
 #include <set>
-#include "system/Buffer.h"
+#include "server/NetConnection.h"
 
-class NetConnection;
+class Stream;
 
 /**
 * Client is an abstraction representing user connected to Blitz media server.
@@ -45,33 +44,26 @@ public:
     void Register(NetConnection* conn);
 
     /**
-    * Removes client-connection association for given connection.
-    * No thread safety provided for this call.
-    * @param conn - pointer to NetConnection object.
-    */
-    void Unregister(NetConnection* conn);
-
-    /**
     * Returns the time at which the client was created.
     */
     unsigned long GetCreationTime();
 
     /**
     * Subscribe client to a Stream.
-    * @param streamId - stream unique id.
+    * @param s - Stream to subscribe to.
     */
-    void Subscribe(unsigned streamId);
+    void Subscribe(Stream* s);
 
     /**
-    * Remove client subscription.
-    * @param streamId - stream unique id.
+    * Unsubscribe client from current stream.
     */
-    void UnSubscribe(unsigned streamId);
+    void UnSubscribe();
 
     /**
     * Is client subscribed to a Stream.
+    * @return stream ID - stream ID if client is subscribed or 0 otherwise.
     */
-    bool IsSubscribed();
+    unsigned IsSubscribed();
 
     /**
     *  Return set of connections for this client.
@@ -79,27 +71,14 @@ public:
     std::set<NetConnection*>& GetConnections();
 
     /**
-    * Get properties for this client.
-    */
-    void GetProperties();
-
-    /**
     * Returns the client id.
     */
-    unsigned GetId();
-
-    /**
-    * Disconnects client connections. Event OnDisconnect() will be emitted.
-    * Client will be destroyed after.
-    */
-    void Disconnect();
-
-    void Write(BufferPtr data);
+    unsigned GetID();
 
 private:
-    bool m_subscribed;                       /**< subscribed flag */
-    unsigned m_clientId;                     /**< Clients identifier  */
-    unsigned long m_creationTime;            /**< Creation time as timestamp. */
+    unsigned m_clientID;                     /**< Client identifier  */
+    unsigned long m_creationTime;           /**< Creation time as time-stamp. */
+    unsigned m_subscribedStreamID;          /**< subscribed stream identifier */
     std::set<NetConnection*> m_connections;  /**< connections associated with client */
 };
 

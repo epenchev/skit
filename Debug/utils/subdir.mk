@@ -4,13 +4,16 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 CPP_SRCS += \
-../utils/IDGenerator.cpp 
+../utils/IDGenerator.cpp \
+../utils/PropertyMap.cpp 
 
 OBJS += \
-./utils/IDGenerator.o 
+./utils/IDGenerator.o \
+./utils/PropertyMap.o 
 
 CPP_DEPS += \
-./utils/IDGenerator.d 
+./utils/IDGenerator.d \
+./utils/PropertyMap.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
