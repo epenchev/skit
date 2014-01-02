@@ -28,6 +28,6 @@ system \
 stream \
 server \
 modules \
-. \
 HTTP \
+. \
 

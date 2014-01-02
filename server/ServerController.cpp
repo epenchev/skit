@@ -21,7 +21,7 @@
 #include <map>
 #include "server/ServerController.h"
 #include "server/PluginManager.h"
-#include "Logger.h"
+#include "utils/Logger.h"
 
 static IHTTPServer*                        m_httpServer = NULL;             /**< HTTP server instance */
 static std::map<unsigned, PluginModule*>   m_plugins;                       /**< plug-ins register */

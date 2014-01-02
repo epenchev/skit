@@ -20,12 +20,76 @@
 
 #include <cstddef>
 #include "stream/Stream.h"
-#include "system/Buffer.h"
-#include "ErrorCode.h"
-#include "Logger.h"
 #include "stream/StreamFactory.h"
+#include "system/Buffer.h"
+#include "utils/ErrorCode.h"
+#include "utils/Logger.h"
 #include "system/Task.h"
 #include "system/TaskThread.h"
+
+StreamClient::StreamClient()
+ : m_clientID(1), m_creationTime(0), m_subscribedStreamID(0)
+{}
+
+StreamClient::~StreamClient()
+{}
+
+unsigned long StreamClient::GetCreationTime()
+{
+    return m_creationTime;
+}
+
+void StreamClient::Subscribe(Stream* s)
+{
+    if (s)
+    {
+        s->AddClient(this);
+        m_subscribedStreamID = s->GetStreamID();
+        //LOG(logINFO) << "Subscribed to stream:" << s->GetStreamID() << " " << s->GetName();
+    }
+}
+
+void StreamClient::UnSubscribe()
+{
+	if (IsSubscribed())
+	{
+		/* TODO
+		StreamFactory::GetStream(m_subscribedStreamID);
+        if (s)
+        {
+            s->RemoveClient(this);
+            LOG(logINFO) << "remove from stream ";
+        }
+        */
+    }
+	else
+	{
+		LOG(logINFO) << "Client is not subscribed";
+	}
+}
+
+void StreamClient::Register(NetConnection* conn)
+{
+    if (conn)
+    {
+        m_connections.insert(conn);
+    }
+}
+
+std::set<NetConnection*>& StreamClient::GetConnections()
+{
+    return m_connections;
+}
+
+unsigned StreamClient::IsSubscribed()
+{
+    return m_subscribedStreamID;
+}
+
+unsigned StreamClient::GetID()
+{
+    return m_clientID;
+}
 
 Stream::Stream(unsigned streamID, StreamSource* source, StreamFilter* filter, StreamSink* sink)
  : m_streamID(streamID), m_source(source), m_filter(filter), m_sink(sink)
@@ -74,16 +138,26 @@ void Stream::RemoveListener(StreamListener* listener)
 
 void Stream::Play()
 {
-    LOG(logDEBUG) << "Start stream:" << m_streamID
-    		      << " " << StreamFactory::GetStreamName(m_streamID);
-	if (m_source)
-    {
-		if (StreamFactory::IsPublished(m_streamID))
+	if (StreamFactory::IsPublished(m_streamID))
+	{
+		LOG(logDEBUG) << "Starting stream:" << m_streamID
+    		          << " " << StreamFactory::GetStreamName(m_streamID);
+		if (m_source && m_sink)
 		{
-			m_source->Start();
-			LOG(logINFO) << "Playing stream:" << StreamFactory::GetStreamName(m_streamID);
+			m_source->Start(*this);
+			m_sink->Start(*this);
+			if (m_filter)
+			{
+				m_filter->Start(*this);
+			}
+			LOG(logINFO) << "Stream: " << StreamFactory::GetStreamName(m_streamID) << " started";
 		}
     }
+	else
+	{
+		LOG(logWARNING) << "Stream " << m_streamID
+		                << " is not published can't play, must publish first";
+	}
 }
 
 void Stream::Pause()
@@ -203,14 +277,10 @@ void Stream::OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error)
                 WriteSink(data);
             }
         }
-        else
-        {
-            LOG(logERROR) << "Invalid data from source";
-        }
     }
     else
     {
-        LOG(logERROR) << error.GetErrorMessage();
+        LOG(logERROR) << "Got error from source " << error.GetErrorMessage();
     }
 }
 

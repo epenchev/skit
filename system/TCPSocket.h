@@ -23,7 +23,7 @@
 
 #include <boost/asio.hpp>
 #include "Buffer.h"
-#include "ErrorCode.h"
+#include "utils/ErrorCode.h"
 
 class TCPSocket;
 

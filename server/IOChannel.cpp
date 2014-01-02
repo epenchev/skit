@@ -19,7 +19,7 @@
  */
 
 #include "server/IOChannel.h"
-#include "Logger.h"
+#include "utils/Logger.h"
 
 IOChannel::IOChannel(unsigned id, IOChannelListener* listener, NetConnection* conn)
  : m_channelId(id), m_writebuff(NULL), m_readbuff(NULL), m_connection(conn), m_listener(listener)

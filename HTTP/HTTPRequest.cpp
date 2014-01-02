@@ -19,7 +19,7 @@
  */
 
 #include "HTTP/HTTPRequest.h"
-#include "Logger.h"
+#include "utils/Logger.h"
 #include <fstream>
 #include <cstdlib>
 

@@ -18,9 +18,9 @@
  *      Author: emo
  */
 
-#include "system/SystemTimer.h"
-#include "system/Task.h"
-#include "system/TaskThread.h"
+#include "SystemTimer.h"
+#include "Task.h"
+#include "TaskThread.h"
 #include <boost/bind.hpp>
 
 SystemTimer::SystemTimer()

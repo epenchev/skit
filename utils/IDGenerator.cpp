@@ -18,7 +18,7 @@
  *      Author: emo
  */
 
-#include "utils/IDGenerator.h"
+#include "IDGenerator.h"
 
 IDGenerator& IDGenerator::Instance()
 {

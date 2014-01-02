@@ -22,7 +22,7 @@
 #define NETCONNECTION_H_
 
 #include "system/Buffer.h"
-#include "ErrorCode.h"
+#include "utils/ErrorCode.h"
 #include <string>
 
 enum IOEvent { IORead = 0, IOReadSome, IOWrite };

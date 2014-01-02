@@ -19,7 +19,7 @@
  */
 
 #include "HTTP/HTTPResponse.h"
-#include "Logger.h"
+#include "utils/Logger.h"
 #include <map>
 #include <utility>
 #include <sstream>

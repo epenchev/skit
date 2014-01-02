@@ -24,7 +24,7 @@
 #include <map>
 #include <set>
 #include <string>
-#include "ErrorCode.h"
+#include "utils/ErrorCode.h"
 #include "HTTP/HTTPUtils.h"
 
 typedef std::set<std::string> HTTPHeaderNamesSet;

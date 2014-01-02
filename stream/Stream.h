@@ -21,15 +21,72 @@
 #ifndef STREAM_H_
 #define STREAM_H_
 
-#include "StreamSource.h"
-#include "StreamFilter.h"
-#include "StreamSink.h"
-#include "StreamClient.h"
+#include "stream/StreamSource.h"
+#include "stream/StreamFilter.h"
+#include "stream/StreamSink.h"
 #include "system/SystemThread.h"
 #include "utils/PropertyMap.h"
+#include "server/NetConnection.h"
 #include <set>
 
 class Stream; // forward
+
+/**
+* Client is an abstraction representing user connected to Blitz media server.
+* Clients are tied to connections and subscribed to Streams.
+*/
+class StreamClient
+{
+public:
+    StreamClient();
+    virtual ~StreamClient();
+
+    /**
+    * Associate connection with client.
+    * No thread safety provided for this call.
+    * @param conn - pointer to NetConnection object.
+    */
+    void Register(NetConnection* conn);
+
+    /**
+    * Returns the time at which the client was created.
+    */
+    unsigned long GetCreationTime();
+
+    /**
+    * Subscribe client to a Stream.
+    * @param s - Stream to subscribe to.
+    */
+    void Subscribe(Stream* s);
+
+    /**
+    * Unsubscribe client from current stream.
+    */
+    void UnSubscribe();
+
+    /**
+    * Is client subscribed to a Stream.
+    * @return stream ID - stream ID if client is subscribed or 0 otherwise.
+    */
+    unsigned IsSubscribed();
+
+    /**
+    *  Return set of connections for this client.
+    */
+    std::set<NetConnection*>& GetConnections();
+
+    /**
+    * Returns the client id.
+    */
+    unsigned GetID();
+
+private:
+    unsigned m_clientID;                     /**< Client identifier  */
+    unsigned long m_creationTime;           /**< Creation time as time-stamp. */
+    unsigned m_subscribedStreamID;          /**< subscribed stream identifier */
+    std::set<NetConnection*> m_connections;  /**< connections associated with client */
+};
+
 
 /**
 * Stream listener for adding/removing clients.

@@ -1,5 +1,5 @@
 /*
- * Subject.h
+ * StreamSink.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,42 +14,30 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 25, 2013
+ *  Created on: Oct 10, 2013
  *      Author: emo
  */
 
-#ifndef SUBJECT_H_
-#define SUBJECT_H_
+#ifndef STREAMSINK_H_
+#define STREAMSINK_H_
 
-#include <list>
+#include <string>
 
-// Part of the Observer - Subject pattern
-namespace blitz {
+class Buffer;
+class Stream;
+class Stream;
 
-class Subject;
-
-class Observer
+class StreamSink
 {
 public:
-    virtual ~Observer() {}
-    virtual void update(Subject* changed_subject) = 0;
-protected:
-    Observer() {}
+    /**
+    * Write data to sink.
+    * @param data - Buffer with data to be writen.
+    * @param s    - Stream this sink is associated with.
+    */
+    virtual void WriteData(Buffer* data, Stream* s) = 0;
+
+    virtual void Start(Stream& s) = 0;
 };
 
-class Subject
-{
-public:
-    Subject() {}
-    virtual ~Subject() {}
-
-    virtual void attach(Observer* ob);
-    virtual void detach(Observer* ob);
-    virtual void notify();
-private:
-    std::list<Observer*> m_observers;
-};
-
-} // blitz
-
-#endif /* SUBJECT_H_ */
+#endif /* STREAMSINK_H_ */

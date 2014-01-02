@@ -29,7 +29,7 @@ extern "C" {
 }
 
 #include "Daemon.h"
-#include "Log.h"
+#include "utils/Log.h"
 
 // TODO signal handler for caller
 // TODO port for windows

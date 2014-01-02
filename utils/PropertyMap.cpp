@@ -18,7 +18,7 @@
  *      Author: emo
  */
 
-#include "utils/PropertyMap.h"
+#include "PropertyMap.h"
 #include <sstream>
 #include <iostream>
 

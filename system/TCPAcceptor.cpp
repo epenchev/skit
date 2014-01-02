@@ -18,10 +18,10 @@
  *      Author: emo
  */
 
-#include "system/TCPAcceptor.h"
-#include "system/TaskThread.h"
-#include "system/Task.h"
-#include "Logger.h"
+#include "TCPAcceptor.h"
+#include "TaskThread.h"
+#include "Task.h"
+#include "utils/Logger.h"
 #include <boost/bind.hpp>
 
 using boost::asio::ip::tcp;

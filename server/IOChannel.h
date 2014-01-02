@@ -22,7 +22,7 @@
 #define IOCHANNEL_H_
 
 #include "system/Buffer.h"
-#include "ErrorCode.h"
+#include "utils/ErrorCode.h"
 #include "server/NetConnection.h"
 #include "system/SystemThread.h"
 

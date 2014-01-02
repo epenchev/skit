@@ -24,7 +24,7 @@
 #include <string>
 #include <boost/asio.hpp>
 #include "TCPSocket.h"
-#include "ErrorCode.h"
+#include "utils/ErrorCode.h"
 
 /**
 * Class interface for TCPAcceptor handler operations. All socket I/O operations are asynchronous,

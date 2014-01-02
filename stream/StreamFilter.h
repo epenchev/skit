@@ -23,6 +23,7 @@
 
 class Buffer;
 class StreamFilter;
+class Stream;
 
 #include <string>
 
@@ -63,6 +64,8 @@ public:
     * @param listener - pointer to listener to be removed.
     */
     virtual void RemoveListener(FilterObserver* listener) = 0;
+
+    virtual void Start(Stream& s) = 0;
 };
 
 #endif /* STREAMFILTER_H_ */

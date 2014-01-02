@@ -21,8 +21,8 @@
 #include "system/SystemLib.h"
 #include "server/PluginManager.h"
 #include "utils/IDGenerator.h"
-#include "ErrorCode.h"
-#include "Logger.h"
+#include "utils/ErrorCode.h"
+#include "utils/Logger.h"
 #include <map>
 
 /**< map association with plug-in module object and native library instance */

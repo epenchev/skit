@@ -18,7 +18,7 @@
  *      Author: emo
  */
 
-#include "system/SystemThread.h"
+#include "SystemThread.h"
 #include <exception>
 
 SystemThread::SystemThread()

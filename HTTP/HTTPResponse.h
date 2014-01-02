@@ -22,7 +22,7 @@
 #define HTTPRESPONSE_H_
 
 #include <string>
-#include "ErrorCode.h"
+#include "utils/ErrorCode.h"
 #include "HTTP/HTTPUtils.h"
 
 /**

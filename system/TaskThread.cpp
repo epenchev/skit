@@ -18,7 +18,7 @@
  *      Author: emo
  */
 
-#include "system/TaskThread.h"
+#include "TaskThread.h"
 
 void TaskThread::Entry()
 {

@@ -21,6 +21,8 @@
 #include <boost/asio/signal_set.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/bind.hpp>
+
+#if 0
 #include "DataPacket.h"
 #include "HttpSource.h"
 #include "HttpSink.h"
@@ -31,9 +33,9 @@
 #include "VODService.h"
 #include "ControlChannel.h"
 #include "WebService.h"
+#endif
 
 #include "HTTP/HTTPUtils.h"
-
 #include "server/HTTPServer.h"
 #include "system/TaskThread.h"
 #include "server/ServerController.h"
@@ -123,7 +125,7 @@ int main(int argc, char* argv[])
 
     std::cout << " Server starting ... \n";
 
-    HTTPServer server(80);
+    HTTPServer server(8080);
     server.Start();
 
     ServerController::SetHTTPServer(&server);

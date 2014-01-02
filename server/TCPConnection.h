@@ -22,7 +22,7 @@
 #define TCPCONNECTION_H_
 
 #include "NetConnection.h"
-#include "ErrorCode.h"
+#include "utils/ErrorCode.h"
 #include "system/TCPSocket.h"
 #include "system/SystemThread.h"
 #include "server/IOChannel.h"

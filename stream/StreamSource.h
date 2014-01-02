@@ -26,6 +26,7 @@
 class StreamSource;
 class Buffer;
 class ErrorCode;
+class Stream;
 
 /* #define BUILD_MOD */
 #ifdef BUILD_MOD
@@ -62,16 +63,18 @@ public:
     virtual void OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error) {}
 };
 
+
 /**
 * Source/reader for media streams implemented usually from plug-ins.
 */
 class EXPORT_PUB StreamSource
 {
 public:
-    /**
+
+	/**
     * Start the source.
     */
-    virtual void Start(/* Stream* s TODO for sink and filter also */) = 0;
+    virtual void Start(Stream& s) = 0;
 
     /**
     * Stop the source.
