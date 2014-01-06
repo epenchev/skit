@@ -8,12 +8,7 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
--include utils/subdir.mk
--include system/subdir.mk
--include stream/subdir.mk
--include server/subdir.mk
--include modules/subdir.mk
--include HTTP/subdir.mk
+-include main/subdir.mk
 -include subdir.mk
 -include objects.mk
 
@@ -49,7 +44,7 @@ all: blitz
 blitz: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -L/usr/local/boost/lib -L/home/emo/workspace/blitz/modules -Wl,-E -o "blitz" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -L/usr/local/boost/lib -L../Library -Wl,-E -o "blitz" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

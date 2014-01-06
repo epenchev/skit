@@ -19,16 +19,18 @@
  */
 
 #include <cstddef>
+#include <ctime>
 #include "stream/Stream.h"
 #include "stream/StreamFactory.h"
 #include "system/Buffer.h"
 #include "utils/ErrorCode.h"
 #include "utils/Logger.h"
+#include "utils/IDGenerator.h"
 #include "system/Task.h"
 #include "system/TaskThread.h"
 
 StreamClient::StreamClient()
- : m_clientID(1), m_creationTime(0), m_subscribedStreamID(0)
+ : m_clientID(IDGenerator::Instance().Next()), m_creationTime(time(NULL)), m_subscribedStream(NULL)
 {}
 
 StreamClient::~StreamClient()
@@ -39,40 +41,40 @@ unsigned long StreamClient::GetCreationTime()
     return m_creationTime;
 }
 
-void StreamClient::Subscribe(Stream* s)
+void StreamClient::Subscribe(Stream& s)
 {
-    if (s)
-    {
-        s->AddClient(this);
-        m_subscribedStreamID = s->GetStreamID();
-        //LOG(logINFO) << "Subscribed to stream:" << s->GetStreamID() << " " << s->GetName();
-    }
+	LOG(logDEBUG) << "Subscribe to " << StreamFactory::GetStreamName(s.GetStreamID());
+	if (!m_subscribedStream)
+	{
+		s.AddClient(this);
+		m_subscribedStream = &s;
+		LOG(logDEBUG) << "Subscribed to stream:" << s.GetStreamID()
+    		    	  << " Name:" << StreamFactory::GetStreamName(s.GetStreamID());
+	}
+	else
+	{
+		LOG(logWARNING) << "Client is already subscribed";
+	}
 }
 
 void StreamClient::UnSubscribe()
 {
-	if (IsSubscribed())
+	if (!m_subscribedStream)
 	{
-		/* TODO
-		StreamFactory::GetStream(m_subscribedStreamID);
-        if (s)
-        {
-            s->RemoveClient(this);
-            LOG(logINFO) << "remove from stream ";
-        }
-        */
+		m_subscribedStream->RemoveClient(this);
+        LOG(logDEBUG) << "Un-subscribe from stream";
     }
-	else
-	{
-		LOG(logINFO) << "Client is not subscribed";
-	}
 }
 
 void StreamClient::Register(NetConnection* conn)
 {
     if (conn)
     {
-        m_connections.insert(conn);
+    	if (m_connections.count(conn) == 0)
+    	{
+    		LOG(logDEBUG) << "Register connection to client";
+    		m_connections.insert(conn);
+    	}
     }
 }
 
@@ -81,9 +83,9 @@ std::set<NetConnection*>& StreamClient::GetConnections()
     return m_connections;
 }
 
-unsigned StreamClient::IsSubscribed()
+Stream* StreamClient::GetStream()
 {
-    return m_subscribedStreamID;
+    return m_subscribedStream;
 }
 
 unsigned StreamClient::GetID()
@@ -151,6 +153,11 @@ void Stream::Play()
 				m_filter->Start(*this);
 			}
 			LOG(logINFO) << "Stream: " << StreamFactory::GetStreamName(m_streamID) << " started";
+		}
+		else
+		{
+			LOG(logERROR) << "Stream:" << m_streamID << " "
+					      << StreamFactory::GetStreamName(m_streamID) << " missing source or sink, unable to play";
 		}
     }
 	else
@@ -240,17 +247,6 @@ void Stream::RemoveClient(StreamClient* client)
     }
 }
 
-void Stream::WriteSink(Buffer* data)
-{
-    if (data)
-    {
-        if (m_sink)
-        {
-            m_sink->WriteData(data, this);
-        }
-    }
-}
-
 void Stream::OnStart(StreamSource& source)
 {
     LOG(logINFO) << "Stream started";
@@ -263,18 +259,21 @@ void Stream::OnStop(StreamSource& source)
 
 void Stream::OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error)
 {
+	LOG(logDEBUG1) << " Stream " << StreamFactory::GetStreamName(m_streamID)
+	               << " OnDataReceive() event from source";
     if (!error)
     {
         if (data)
         {
             if (m_filter)
             {
-                // give filter work
-                m_filter->WriteData(data);
+            	LOG(logDEBUG1) << " Stream " << StreamFactory::GetStreamName(m_streamID) << " write to filter";
+            	m_filter->WriteData(data);
             }
             else
             {
-                WriteSink(data);
+            	LOG(logDEBUG1) << " Stream " << StreamFactory::GetStreamName(m_streamID) << " write to sink";
+            	m_sink->WriteData(data, this);
             }
         }
     }
@@ -286,9 +285,12 @@ void Stream::OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error)
 
 void Stream::OnDataReady(StreamFilter* filter, Buffer* data)
 {
+	LOG(logDEBUG1) << " Stream " << StreamFactory::GetStreamName(m_streamID)
+		               << " OnDataReady() event from filter";
     if (data)
     {
-        WriteSink(data);
+    	LOG(logDEBUG1) << " Stream " << StreamFactory::GetStreamName(m_streamID) << " write to sink";
+    	m_sink->WriteData(data, this);
     }
     else
     {

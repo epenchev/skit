@@ -126,6 +126,7 @@ void HTTPSession::NotifyOnHTTPRequestReply(bool& forceReply)
 void HTTPSession::NotifyOnHTTPResponseSend()
 {
     SystemMutexLocker lock(m_lockListeners);
+    LOG(logDEBUG) << "Response is send, notify listeners";
     for (std::set<HTTPSessionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
     {
         (*it)->OnReplySend(this);
@@ -208,11 +209,9 @@ void HTTPSession::OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode& 
 	delete m_buffer;
 	m_buffer = NULL;
 
-	//Disconnect();
-
 	if (!err)
     {
-        LOG(logINFO) << "bytes written " << bytesWritten;
+        LOG(logDEBUG) << "bytes written " << bytesWritten;
         NotifyOnHTTPResponseSend();
     }
     else
@@ -274,6 +273,19 @@ void HTTPServer::OnAccept(TCPSocket* inNewSocket, ErrorCode& inError)
         m_lockSessions.Lock();
         m_sessions.insert(session);
         m_lockSessions.Unlock();
+
+        /* testing only */
+        NetConnection* conn = dynamic_cast<NetConnection*>(session);
+        if (conn)
+        {
+        	LOG(logDEBUG) << "Add connection listener";
+        	conn->AddListener(this);
+        }
+        else
+        {
+        	LOG(logERROR) << "cast failed";
+        }
+        /* testing only*/
 
         // don't modify the listeners list while in use
         SystemMutexLocker lock(m_lockListeners);
@@ -382,6 +394,7 @@ void HTTPServer::RemoveServerListener(HTTPServerListener* listener)
 
 void HTTPServer::OnConnectionClose(NetConnection* conn)
 {
+	LOG(logDEBUG) << "Destroying connection";
     if (conn)
     {
         LOG(logINFO) << "Connection is closed";
@@ -399,6 +412,7 @@ void HTTPServer::OnConnectionClose(NetConnection* conn)
                 }
             }
             m_sessions.erase(it);
+            // TODO
             delete session;
         }
     }

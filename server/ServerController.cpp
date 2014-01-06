@@ -18,41 +18,66 @@
  *      Author: emo
  */
 
-#include <map>
 #include "server/ServerController.h"
 #include "server/PluginManager.h"
+#include "server/HTTPServer.h"
+#include "system/TaskThread.h"
 #include "utils/Logger.h"
 
-static IHTTPServer*                        m_httpServer = NULL;             /**< HTTP server instance */
-static std::map<unsigned, PluginModule*>   m_plugins;                       /**< plug-ins register */
+static IHTTPServer* m_httpServer = NULL;  /**< HTTP server instance */
+static PropertyMap  m_properties;         /**< server properties read from configuration file */
 
-
-
-void ServerController::LoadPlugin(const char* filePath)
+static void LoadPlugin(const char* filePath)
 {
     LOG(logDEBUG) << "Loading " << filePath;
     if (filePath)
     {
     	PluginModule* module = PluginManager::LoadModule(filePath);
-
-        /*
-    	else
-        {
-            LOG(logERROR) << "error loading " << filePath << std::endl;
-        }*/
     }
 }
 
-void ServerController::SetHTTPServer(IHTTPServer* server)
+void ServerController::StartServer()
 {
-    if (server)
-    {
-    	m_httpServer = server;
-    }
+	LOG(logINFO) << "Starting server";
+	if (!m_httpServer)
+	{
+		m_httpServer = new HTTPServer(8080);
+		m_httpServer->Start();
+		LOG(logINFO) << "Loading plugins";
+		LoadPlugin("/home/emo/workspace/blitz/modules/example/mod_http_example.so");
+		TaskThreadPool::AddThread();
+		/*
+		TaskThreadPool::AddThread();
+		TaskThreadPool::AddThread();
+		TaskThreadPool::AddThread();
+		*/
+		TaskThreadPool::StartThreads();
+	}
+	else
+	{
+		LOG(logWARNING) << "Server already started";
+	}
+}
+
+void ServerController::StopServer()
+{
+	LOG(logINFO) << "Stopping server";
+	if (m_httpServer)
+	{
+		m_httpServer->Stop();
+	}
+	else
+	{
+		LOG(logWARNING) << "Server is not started";
+	}
 }
 
 IHTTPServer* ServerController::GetHTTPServer()
 {
-    return m_httpServer;
+	return m_httpServer;
 }
 
+PropertyMap& ServerController::GetServerProperties()
+{
+	return m_properties;
+}

@@ -22,7 +22,6 @@
 #define HTTPRESPONSE_H_
 
 #include <string>
-#include "utils/ErrorCode.h"
 #include "HTTP/HTTPUtils.h"
 
 /**
@@ -98,10 +97,14 @@ public:
     */
     std::string Str();
 
+    // TODO
+    void SetData(const std::string& data) { m_data = data; }
+
 private:
     HTTPHeadersMap m_mapheaders;  /**< Map headers name->value */
     std::string m_textheaders;   /**< HTTP headers as text */
-    unsigned m_responseCode;          /**< HTTP response code */
+    std::string m_data;          /**< additional data */
+    unsigned m_responseCode;    /**< HTTP response code */
 };
 
 #endif /* HTTPRESPONSE_H_ */

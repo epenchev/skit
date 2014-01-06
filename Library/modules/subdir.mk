@@ -3,27 +3,30 @@
 ################################################################################
 
 # Add inputs and outputs from these tool invocations to the build variables 
+O_SRCS += \
+../modules/mod_source_example.o 
+
 CPP_SRCS += \
-../HTTP/HTTPRequest.cpp \
-../HTTP/HTTPResponse.cpp \
-../HTTP/HTTPUtils.cpp 
+../modules/http_module.cpp \
+../modules/mod_sink_http.cpp \
+../modules/mod_source_example.cpp 
 
 OBJS += \
-./HTTP/HTTPRequest.o \
-./HTTP/HTTPResponse.o \
-./HTTP/HTTPUtils.o 
+./modules/http_module.o \
+./modules/mod_sink_http.o \
+./modules/mod_source_example.o 
 
 CPP_DEPS += \
-./HTTP/HTTPRequest.d \
-./HTTP/HTTPResponse.d \
-./HTTP/HTTPUtils.d 
+./modules/http_module.d \
+./modules/mod_sink_http.d \
+./modules/mod_source_example.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-HTTP/%.o: ../HTTP/%.cpp
+modules/%.o: ../modules/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -I../ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

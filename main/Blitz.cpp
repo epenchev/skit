@@ -1,6 +1,5 @@
 /*
- * ServerController.h
- *
+ * Blitz.cpp
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
  * This program is free software: you can redistribute it and/or modify
@@ -14,30 +13,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Oct 14, 2013
+ *  Created on: Jan 6, 2013
  *      Author: emo
  */
 
-#ifndef SERVERCONTROLLER_H_
-#define SERVERCONTROLLER_H_
+#include "server/ServerController.h"
 
-#include "server/IHTTPServer.h"
-#include "utils/PropertyMap.h"
-
-/**
-* Main class for controlling the system and access all server subsystems.
-*/
-class ServerController
+int main(int argc, char* argv[])
 {
-public:
+#if 0
 
-	static void StartServer();
 
-	static void StopServer();
+    if (args.size() == 3)
+    {
+        if (args[1] == "-c")
+        {
+            config_filename = args[2];
+        }
+        else
+        {
+            printf("Usage: %s -c conf.xml \n", argv[0]);
+            return 1;
+        }
+    }
+    else
+    {
+        printf("Usage: %s -c conf.xml \n", argv[0]);
+        return 1;
+    }
+#endif
 
-	static IHTTPServer* GetHTTPServer();
+    ServerController::StartServer();
+    while(1) {} // block here
+    return 0;
+}
 
-	static PropertyMap& GetServerProperties();
-};
 
-#endif /* SERVERCONTROLLER_H_ */

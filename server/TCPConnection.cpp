@@ -166,9 +166,11 @@ void TCPConnection::Disconnect()
 {
     if (IsConnected())
     {
+    	LOG(logDEBUG) << "Disconnecting .. " << this->GetID();
         m_socket->Close();
         for (std::set<NetConnectionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
         {
+        	LOG(logDEBUG) << "Notify..";
             (*it)->OnConnectionClose(this);
         }
     }

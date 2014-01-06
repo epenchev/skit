@@ -8,7 +8,9 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include utils/subdir.mk
 -include system/subdir.mk
+-include stream/subdir.mk
 -include server/subdir.mk
 -include HTTP/subdir.mk
 -include subdir.mk
@@ -46,7 +48,7 @@ all: libblitz.so
 libblitz.so: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
-	g++ -shared -o "libblitz.so" $(OBJS) $(USER_OBJS) $(LIBS)
+	g++ -shared -Wl,-soname=libblitz.so -o "libblitz.so" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

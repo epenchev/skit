@@ -265,7 +265,7 @@ std::string HTTPUtils::HTTPResponseToString(unsigned code, HTTPHeadersMap& heade
     {
     	returnHeaders += "Connection: close" + http_crlf;
     }
-    returnHeaders += endHeaders;
+    returnHeaders += http_crlf; //endHeaders;
 
     return returnHeaders;
 }

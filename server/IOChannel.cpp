@@ -38,7 +38,7 @@ void IOChannel::Write(Buffer& data)
         }
         m_writelock.Lock();
         m_writebuff = &data;
-        LOG(logDEBUG) << "Notify connection IOWrite ID:" << GetID();
+        LOG(logDEBUG) << "Notify connection IOWrite ID:" << GetID() << "  " << m_connection->GetID();
         m_connection->Notify(IOWrite, m_writebuff, this);
         m_writelock.Unlock();
     }

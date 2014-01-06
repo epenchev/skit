@@ -44,10 +44,11 @@
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="boost_system"/>
 									<listOptionValue builtIn="false" value="boost_thread"/>
+									<listOptionValue builtIn="false" value="blitz"/>
 								</option>
 								<option id="gnu.cpp.link.option.paths.1543214099" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" valueType="libPaths">
 									<listOptionValue builtIn="false" value="/usr/local/boost/lib"/>
-									<listOptionValue builtIn="false" value="/home/emo/workspace/blitz/modules"/>
+									<listOptionValue builtIn="false" value="../Library"/>
 								</option>
 								<option id="gnu.cpp.link.option.flags.1739331193" name="Linker flags" superClass="gnu.cpp.link.option.flags" value="-Wl,-E" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.718339166" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
@@ -60,8 +61,29 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="cdt.managedbuild.config.gnu.exe.debug.1829978158.595254939" name="/" resourcePath="Debug/main">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.debug.373035924" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.debug" unusedChildren="">
+							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.debug" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.debug"/>
+							<tool id="cdt.managedbuild.tool.gnu.archiver.base.2026939065" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base.1708299921"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.584953185" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.602987010">
+								<option id="gnu.cpp.compiler.option.include.paths.197507437" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="/usr/local/boost/include"/>
+									<listOptionValue builtIn="false" value="../"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.655185223" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.89085726" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.2088613982">
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.2088814689" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.exe.debug.1611279278" name="GCC C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.exe.debug.734996305"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.2117517502" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.651814312"/>
+							<tool id="cdt.managedbuild.tool.gnu.assembler.exe.debug.401428252" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.exe.debug.1284455579">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.252511583" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
 					<sourceEntries>
-						<entry excluding="modules/mod_source_example.cpp|modules/mod_sink_http.cpp|modules/http_module.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="modules|utils|system|stream|server|HTTP|Blitz.cpp|modules/mod_source_example.cpp|modules/mod_sink_http.cpp|modules/http_module.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -121,6 +143,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="modules|Blitz.cpp|modules/mod_source_example.cpp|modules/mod_sink_http.cpp|modules/http_module.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -154,6 +179,10 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.so.debug.524703307" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.so.debug">
 								<option id="gnu.cpp.compiler.so.debug.option.optimization.level.125157057" name="Optimization Level" superClass="gnu.cpp.compiler.so.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.so.debug.option.debugging.level.1038525701" name="Debug Level" superClass="gnu.cpp.compiler.so.debug.option.debugging.level" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.include.paths.158235165" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="../"/>
+								</option>
+								<option id="gnu.cpp.compiler.option.other.pic.1354283749" name="Position Independent Code (-fPIC)" superClass="gnu.cpp.compiler.option.other.pic" value="true" valueType="boolean"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.17202806" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.c.compiler.so.debug.985832045" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.so.debug">
@@ -166,6 +195,13 @@
 							</tool>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.so.debug.888352332" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.so.debug">
 								<option defaultValue="true" id="gnu.cpp.link.so.debug.option.shared.88698015" name="Shared (-shared)" superClass="gnu.cpp.link.so.debug.option.shared" valueType="boolean"/>
+								<option id="gnu.cpp.link.option.soname.1927613559" name="Shared object name (-Wl,-soname=)" superClass="gnu.cpp.link.option.soname" value="libblitz.so" valueType="string"/>
+								<option id="gnu.cpp.link.option.libs.884516955" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
+									<listOptionValue builtIn="false" value="dl"/>
+									<listOptionValue builtIn="false" value="pthread"/>
+									<listOptionValue builtIn="false" value="boost_system"/>
+									<listOptionValue builtIn="false" value="boost_thread"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1693128265" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
@@ -176,6 +212,9 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<sourceEntries>
+						<entry excluding="modules|main|Blitz.cpp|modules/mod_source_example.cpp|modules/mod_sink_http.cpp|modules/http_module.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
 				</configuration>
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
@@ -209,4 +248,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>

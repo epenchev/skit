@@ -3,18 +3,30 @@
 ################################################################################
 
 # Add inputs and outputs from these tool invocations to the build variables 
-CPP_SRCS +=
+CPP_SRCS += \
+../utils/FileReader.cpp \
+../utils/IDGenerator.cpp \
+../utils/PropertyMap.cpp \
+../utils/XMLReader.cpp 
 
-OBJS += 
+OBJS += \
+./utils/FileReader.o \
+./utils/IDGenerator.o \
+./utils/PropertyMap.o \
+./utils/XMLReader.o 
 
-CPP_DEPS +=
+CPP_DEPS += \
+./utils/FileReader.d \
+./utils/IDGenerator.d \
+./utils/PropertyMap.d \
+./utils/XMLReader.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-%.o: ../%.cpp
+utils/%.o: ../utils/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
-	g++ -I/usr/local/boost/include -I./ -I../ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
+	g++ -I../ -O0 -g3 -Wall -c -fmessage-length=0 -fPIC -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

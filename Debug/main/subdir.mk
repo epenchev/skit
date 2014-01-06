@@ -3,15 +3,18 @@
 ################################################################################
 
 # Add inputs and outputs from these tool invocations to the build variables 
-CPP_SRCS +=
+CPP_SRCS += \
+../main/Blitz.cpp 
 
-OBJS += 
+OBJS += \
+./main/Blitz.o 
 
-CPP_DEPS +=
+CPP_DEPS += \
+./main/Blitz.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
-%.o: ../%.cpp
+main/%.o: ../main/%.cpp
 	@echo 'Building file: $<'
 	@echo 'Invoking: GCC C++ Compiler'
 	g++ -I/usr/local/boost/include -I./ -I../ -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -o "$@" "$<"

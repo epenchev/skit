@@ -82,7 +82,7 @@ private:
     SystemMutex m_lockchan;                      /**< I/O channel lock */
     SystemMutex m_lockListeners;                 /**< listeners lock */
     std::set<HTTPSessionListener*> m_listeners;  /**< listeners/observers for session events */
-    const static std::size_t m_recvsize = 100;   /**< receive buffer size bytes */
+    const static std::size_t m_recvsize = 100;  /**< receive buffer size bytes */
 };
 
 /**

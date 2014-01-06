@@ -56,12 +56,13 @@ void HTTPResponse::Init(const std::string& inHeader, ErrorCode& outError)
         offset pos = inHeader.find("HTTP/1.");
         if (std::string::npos != pos)
         {
+        	LOG(logDEBUG) << "Valid HTTP response";
             try
             {
-                std::string code = inHeader.substr(pos + 2, 3);
+                std::string code = inHeader.substr(pos + 9, 3);
                 if (!code.empty())
                 {
-                    m_responseCode = atoi(code.c_str());
+                	m_responseCode = atoi(code.c_str());
                 }
             }
             catch (std::exception& ex)
@@ -72,7 +73,10 @@ void HTTPResponse::Init(const std::string& inHeader, ErrorCode& outError)
                 return;
             }
         }
-        LOG(logERROR) << "Not a valid HTTP response";
+        else
+        {
+        	LOG(logERROR) << "Not a valid HTTP response";
+        }
     }
     else
     {
@@ -192,12 +196,17 @@ std::string HTTPResponse::Str()
 	if (m_responseCode)
 	{
 		ss << m_responseCode;
-		textheaders = ss.str() + " " + StatusCodeToStr(m_responseCode) + "\r\n";
-		for (HTTPHeadersMap::iterator it = m_mapheaders.begin(); it != m_mapheaders.end(); ++it)
+		textheaders = "HTTP/1.1 " + ss.str() + " " + StatusCodeToStr(m_responseCode) + "\r\n";
+		for (HTTPHeadersMap::reverse_iterator it = m_mapheaders.rbegin(); it != m_mapheaders.rend(); ++it)
 		{
 			textheaders += it->first + ": " + it->second + "\r\n";
 		}
-		textheaders += "\r\n\r\n";
+		textheaders += "\r\n";
+
+		if (!m_data.empty())
+		{
+			textheaders += m_data;
+		}
 	}
 
 	return textheaders;

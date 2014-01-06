@@ -57,7 +57,7 @@ public:
     * Subscribe client to a Stream.
     * @param s - Stream to subscribe to.
     */
-    void Subscribe(Stream* s);
+    void Subscribe(Stream& s);
 
     /**
     * Unsubscribe client from current stream.
@@ -65,10 +65,10 @@ public:
     void UnSubscribe();
 
     /**
-    * Is client subscribed to a Stream.
-    * @return stream ID - stream ID if client is subscribed or 0 otherwise.
+    * Return subscribed stream.
+    * @return Stream* - The stream client is subscribed to or NULL if client is not subscribed.
     */
-    unsigned IsSubscribed();
+    Stream* GetStream();
 
     /**
     *  Return set of connections for this client.
@@ -83,8 +83,8 @@ public:
 private:
     unsigned m_clientID;                     /**< Client identifier  */
     unsigned long m_creationTime;           /**< Creation time as time-stamp. */
-    unsigned m_subscribedStreamID;          /**< subscribed stream identifier */
-    std::set<NetConnection*> m_connections;  /**< connections associated with client */
+    Stream* m_subscribedStream;               /**< subscribed stream */
+    std::set<NetConnection*> m_connections;   /**< connections associated with client */
 };
 
 
@@ -203,12 +203,6 @@ public:
     void RemoveListener(StreamListener* listener);
 
 protected:
-    /**
-    * Write output data to sink.
-    * @param data - Buffer with output data.
-    */
-    void WriteSink(Buffer* data);
-
     /* from SourceObserver */
     void OnStart(StreamSource& source);
 
