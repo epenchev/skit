@@ -47,8 +47,11 @@ PluginModule* PluginManager::LoadModule(const char* inPath)
         if (createFunc)
         {
         	outmod = (PluginModule*)createFunc(IDGenerator::Instance().Next());
-        	m_libs.insert(std::pair<PluginModule*, SystemLib*>(outmod, lib));
-        	outmod->OnModuleLoad();
+        	if (outmod)
+        	{
+        		m_libs.insert(std::pair<PluginModule*, SystemLib*>(outmod, lib));
+        		outmod->OnModuleLoad();
+        	}
         }
         else if (err)
         {

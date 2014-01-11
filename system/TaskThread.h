@@ -58,6 +58,7 @@ public:
     unsigned GetTaskCount() { return mQueueTasks.GetLength(); }
 
 private:
+    // TODO low priority task queue and high priority task queue
     SynchronisedQueue<Task*> mQueueTasks; /**< container for the tasks */
 };
 

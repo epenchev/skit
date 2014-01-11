@@ -164,7 +164,7 @@ public:
     * Get the unique stream identifier.
     * @return unsigned - stream identifier.
     */
-    unsigned GetStreamID()    { return m_streamID; }
+    unsigned GetStreamID() { return m_streamID; }
 
     /**
     * Get the source/reader of the stream.
@@ -216,12 +216,12 @@ protected:
     void OnDataReady(StreamFilter* filter, Buffer* data);
 
 private:
-    unsigned      m_streamID;      /**< Stream unique identifier */
+    unsigned       m_streamID;      /**< Stream unique identifier */
     SystemMutex    m_lockClients;   /**< lock for the clients container, provides thread safety when adding/removing clients */
     SystemMutex    m_lockListeners; /**< lock listener container, provides thread safety when adding/removing listeners */
-    StreamSource*  m_source;  /**< Stream source/reader */
-    StreamFilter*  m_filter;  /**< Stream encoder/decoder */
-    StreamSink*    m_sink;    /**< Stream sink/writer */
+    StreamSource*  m_source;        /**< Stream source/reader */
+    StreamFilter*  m_filter;        /**< Stream encoder/decoder */
+    StreamSink*    m_sink;          /**< Stream sink/writer */
     std::set<StreamClient*>      m_clients;    /**< Clients subscribed to the stream */
     std::set<StreamListener*>    m_listeners;  /**< listeners for events */
     PropertyMap                  m_propetries; /**< Properties if the stream as well as properties of the source, filter and sink */

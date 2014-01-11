@@ -22,11 +22,10 @@
 #define FILEREADER_H_
 
 #include <fstream>
-
-namespace blitz {
+#include <string>
 
 /**
-* Class for opening and read from media files such as .avi .mov ..
+* Class for opening and read files.
 */
 class FileReader
 {
@@ -36,36 +35,58 @@ public:
 
     /**
     * Open file for reading
-    * @param filename.
-    * @return bool: true on success, false otherwise.
+    * @param filename - full path to the file.
+    * @return bool - true on success, false otherwise.
     */
-    bool open(const char* filename);
+    bool Open(const std::string& filename);
 
     /**
     * Close the associated file resource
     */
-    void close();
+    void Close();
 
     /*
-     * Read from file size bytes.
-     * @param buf: allocated buffer to store data.
-     * @param bytes: size bytes to read from file.
-     * @return size bytes read from file or -1 on error. If bytes read < length test for eof flag with is_eof()
-     */
-    int read(void* buf, int length);
+    * Read from file size bytes.
+    * @param buf -  allocated buffer to store data.
+    * @param bytes - size bytes to read from file.
+    * @return size bytes read from file or -1 on error. If bytes read < length test for eof flag with IsEof()
+    */
+    int Read(void* buf, int length);
 
-    void seekInFile(int bytes);
+    /*
+    * Seek in file to given position.
+    * @param position - position to seek in file.
+    * @return bool - true if seek is success or false on error.
+    */
+    bool Seek(unsigned position);
 
-    inline bool is_eof() { return  m_ifstream.eof(); }
-    inline bool is_open() { return m_ifstream.is_open(); }
-    inline long long getSize(void) { return static_cast<long long>(m_fsize); }
+    /**
+    * Return true if end of file is reached.
+    */
+    bool IsEof();
+
+    /**
+    * Return true if file is open.
+    */
+    bool IsOpen();
+
+    /**
+    * Return true if file is open.
+    */
+    long long GetSize();
+
+    /**
+    * Get the name of the file reader is associated with.
+    */
+    const std::string& GetFileName();
+
+    time_t LastWriteTime();
 
 private:
+    std::string m_filename;
     std::ifstream m_ifstream;
     std::ifstream::pos_type m_fsize;
 
 };
-
-} // blitz
 
 #endif /* FILEREADER_H_ */

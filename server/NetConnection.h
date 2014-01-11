@@ -42,26 +42,26 @@ public:
     * Return connection status.
     * @return bool - true if connected false otherwise.
     */
-    virtual bool IsConnected() = 0;
+    virtual bool IsConnected() const = 0;
 
     /**
     * Return the unique connection ID.
     * Each ID is allocated only from server.
     * @return unsigned - connection ID.
     */
-    virtual unsigned GetID() = 0;
+    virtual unsigned GetID() const = 0;
 
     /**
     * Get the IP addresses the client is connected from.
     * @return string - IP address.
     */
-    virtual std::string GetRemoteAddress() = 0;
+    virtual std::string GetRemoteAddress() const = 0;
 
     /**
     * Get the port the client is connected from.
     * @return unsigned - net port.
     */
-    virtual unsigned GetRemotePort() = 0;
+    virtual unsigned GetRemotePort() const = 0;
 
     /**
     * Disconnect from remote host.
@@ -117,10 +117,10 @@ class NetConnectionListener
 public:
 
     /* A new connection was established. */
-    virtual void OnConnectionOpen(NetConnection* conn) {}
+    virtual void OnConnectionOpen(NetConnection& conn) {}
 
     /* A connection was disconnected. */
-    virtual void OnConnectionClose(NetConnection* conn) {}
+    virtual void OnConnectionClose(NetConnection& conn) {}
 };
 
 #endif /* NETCONNECTION_H_ */

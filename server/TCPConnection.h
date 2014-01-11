@@ -37,6 +37,7 @@ struct ChannelEvent
     unsigned chanid;
 };
 
+// TODO add send/receive timeout
 /**
 * Class for TCP connection objects used in different TCP servers.
 */
@@ -47,16 +48,16 @@ public:
     virtual ~TCPConnection();
 
     /* From NetConnection */
-    bool IsConnected();
+    bool IsConnected() const;
 
     /* From NetConnection */
-    unsigned GetID() { return m_id; }
+    unsigned GetID() const { return m_id; }
 
     /* From NetConnection */
-    std::string GetRemoteAddress();
+    std::string GetRemoteAddress() const;
 
     /* From NetConnection */
-    unsigned GetRemotePort();
+    unsigned GetRemotePort() const;
 
     /* From NetConnection */
     void Disconnect();
@@ -95,6 +96,7 @@ protected:
     SystemMutex m_channelsLock;                   /**< lock when getting/adding channels from/to connection */
     SystemMutex m_writeLock;                      /**< lock from writing to socket */
     SystemMutex m_readLock;                       /**< lock for reading from socket */
+    SystemMutex m_lockListeners;                  /**< lock for the listeners */
     bool m_writeBusy;                             /**< socket busy writing */
     bool m_readBusy;                              /**< socket busy reading */
     std::set<NetConnectionListener*> m_listeners; /**< connection listeners/observers for connect and disconnect events */

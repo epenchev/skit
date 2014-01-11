@@ -32,52 +32,59 @@ static void LoadPlugin(const char* filePath)
     LOG(logDEBUG) << "Loading " << filePath;
     if (filePath)
     {
-    	PluginModule* module = PluginManager::LoadModule(filePath);
+        PluginModule* module = PluginManager::LoadModule(filePath);
+        if (!module)
+        {
+            LOG(logERROR) << "Error loading module " << filePath;
+        }
     }
 }
 
 void ServerController::StartServer()
 {
-	LOG(logINFO) << "Starting server";
-	if (!m_httpServer)
-	{
-		m_httpServer = new HTTPServer(8080);
-		m_httpServer->Start();
-		LOG(logINFO) << "Loading plugins";
-		LoadPlugin("/home/emo/workspace/blitz/modules/example/mod_http_example.so");
-		TaskThreadPool::AddThread();
-		/*
-		TaskThreadPool::AddThread();
-		TaskThreadPool::AddThread();
-		TaskThreadPool::AddThread();
-		*/
-		TaskThreadPool::StartThreads();
-	}
-	else
-	{
-		LOG(logWARNING) << "Server already started";
-	}
+    LOG(logINFO) << "Starting server";
+    if (!m_httpServer)
+    {
+        m_httpServer = new HTTPServer(8080);
+        m_httpServer->Start();
+        LOG(logINFO) << "Loading plugins";
+        LoadPlugin("/home/emo/workspace/blitz/modules/HTTPPseudoStreaming/HTTPPseudoStreamModule.so");
+        LoadPlugin("/home/emo/workspace/blitz/modules/FileSource/FileSourceModule.so");
+        LoadPlugin("/home/emo/workspace/blitz/modules/FileSource/FileSourceModule.so");
+        LoadPlugin("/home/emo/workspace/blitz/modules/FileSource/FileSourceModule.so");
+        TaskThreadPool::AddThread();
+        /*
+        TaskThreadPool::AddThread();
+        TaskThreadPool::AddThread();
+        TaskThreadPool::AddThread();
+        */
+        TaskThreadPool::StartThreads();
+    }
+    else
+    {
+        LOG(logWARNING) << "Server already started";
+    }
 }
 
 void ServerController::StopServer()
 {
-	LOG(logINFO) << "Stopping server";
-	if (m_httpServer)
-	{
-		m_httpServer->Stop();
-	}
-	else
-	{
-		LOG(logWARNING) << "Server is not started";
-	}
+    LOG(logINFO) << "Stopping server";
+    if (m_httpServer)
+    {
+        m_httpServer->Stop();
+    }
+    else
+    {
+        LOG(logWARNING) << "Server is not started";
+    }
 }
 
 IHTTPServer* ServerController::GetHTTPServer()
 {
-	return m_httpServer;
+    return m_httpServer;
 }
 
 PropertyMap& ServerController::GetServerProperties()
 {
-	return m_properties;
+    return m_properties;
 }

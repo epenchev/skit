@@ -63,7 +63,6 @@ public:
     virtual void OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error) {}
 };
 
-
 /**
 * Source/reader for media streams implemented usually from plug-ins.
 */
@@ -71,7 +70,7 @@ class EXPORT_PUB StreamSource
 {
 public:
 
-	/**
+    /**
     * Start the source.
     */
     virtual void Start(Stream& s) = 0;
@@ -82,10 +81,12 @@ public:
     virtual void Stop() = 0;
 
     /**
-    * Seek into a given position if source is seek-able.
+    * Seek into a given position into the stream and read length bytes if provided,
+    * otherwise will read until the end of the stream.
     * @param position - position to seek to.
+    * @param length - length bytes to read.
     */
-    virtual void Seek(int position) = 0;
+    virtual void Seek(unsigned position, unsigned length = 0) = 0;
 
     /**
     * Checks if source is seek-able.

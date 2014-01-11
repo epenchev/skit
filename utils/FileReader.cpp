@@ -19,68 +19,84 @@
  */
 
 #include "FileReader.h"
-#include "Log.h"
+#include "Logger.h"
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
+#include <cstring>
 #include <iostream>
-
-namespace blitz {
 
 FileReader::FileReader()
 {}
 
-bool FileReader::open(const char* filename)
+bool FileReader::Open(const std::string& filename)
 {
-    bool op_result = false;
-
-    if (filename)
+    bool result = false;
+    if (!filename.empty())
     {
-        BLITZ_LOG_INFO("Opening file for reading %s", filename);
-
-        m_ifstream.open(filename , std::ifstream::binary | std::ios_base::in);
+        m_filename = filename;
+        LOG(logDEBUG) << "Opening file for reading "<< m_filename;
+        m_ifstream.open(filename.c_str() , std::ifstream::binary | std::ios_base::in);
 
         if (!m_ifstream.good() || m_ifstream.eof() || !m_ifstream.is_open())
         {
-            BLITZ_LOG_ERROR("Error Opening file for reading %s", filename);
-            return op_result;
+            LOG(logERROR) << "Unable to open file for reading " << filename;
+            return result;
         }
-
         m_ifstream.seekg(0, std::ios_base::end);
         m_fsize = m_ifstream.tellg();
-
         m_ifstream.seekg(0, std::ios_base::beg);
 
-        op_result = true;
+        result = true;
     }
     else
     {
-        BLITZ_LOG_INFO("Error file name not set");
+        LOG(logERROR) << "Error file name not set";
     }
 
-    return op_result;
+    return result;
 }
 
-void FileReader::close()
+void FileReader::Close()
 {
+    LOG(logDEBUG) << "Closing file "<< m_filename;
     if (m_ifstream.is_open())
     {
         m_ifstream.close();
     }
 }
 
-void FileReader::seekInFile(int bytes)
+bool FileReader::Seek(unsigned position)
 {
-    // 247382610
-    m_ifstream.seekg(bytes, std::ios::beg);
-
-    if (m_ifstream.eof() || m_ifstream.bad())
+    bool result = false;
+    if (position)
     {
-        BLITZ_LOG_ERROR("Error seeking to position %d", bytes);
+        m_ifstream.seekg(position, std::ios::beg);
+        if (m_ifstream.eof() || m_ifstream.bad())
+        {
+            LOG(logERROR) << "Error seeking to position:"<< position;
+        }
     }
 
+    return result;
 }
 
-int FileReader::read(void* buf, int length)
+bool FileReader::IsEof()
+{
+    return  m_ifstream.eof();
+}
+
+bool FileReader::IsOpen()
+{
+    return m_ifstream.is_open();
+}
+
+long long FileReader::GetSize()
+{
+    return static_cast<long long>(m_fsize);
+}
+
+int FileReader::Read(void* buf, int length)
 {
     int bytes_read = -1;
     if (!buf || !length)
@@ -93,17 +109,33 @@ int FileReader::read(void* buf, int length)
         m_ifstream.read((char* )buf, length);
         if (m_ifstream.fail() || m_ifstream.bad())
         {
-            BLITZ_LOG_ERROR("Error reading from file");
+            LOG(logERROR) << "Error reading from file " << m_filename;
             return bytes_read;
         }
-
         bytes_read = m_ifstream.gcount();
     }
     else
     {
-        BLITZ_LOG_ERROR("Error reading from file");
+        LOG(logERROR) << "Error reading from file " << m_filename;
     }
+
     return bytes_read;
 }
 
-} // blitz
+time_t FileReader::LastWriteTime()
+{
+    struct stat statBuf;
+    memset(&statBuf, 0, sizeof(statBuf));
+    if (IsOpen())
+    {
+        int err = stat(m_filename.c_str(), &statBuf);
+        if (-1 == err)
+        {
+            LOG(logERROR) << "Unable to get file status " << m_filename
+                          << " " << strerror(errno);
+        }
+    }
+
+    return statBuf.st_mtime;
+}
+

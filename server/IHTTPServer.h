@@ -25,18 +25,19 @@ class HTTPRequest;
 class HTTPResponse;
 class IHTTPSession;
 class IHTTPServer;
+class ErrorCode;
 
 class HTTPSessionListener
 {
 public:
     // Get HTTP request
-    virtual void OnHTTPrequest(const IHTTPSession& session, HTTPRequest* inRequest) {}
+    virtual void OnHTTPrequest(const IHTTPSession& session, HTTPRequest& inRequest) {}
 
     // force sending response discard all other modules
-    virtual void OnHTTPRequestReply(const IHTTPSession& session, HTTPResponse* inResponse, bool& forceReply) {}
+    virtual void OnHTTPRequestReply(const IHTTPSession& session, HTTPResponse& inResponse, bool& forceReply) {}
 
     // Get send HTTP reply
-    virtual void OnReplySend(IHTTPSession* session) {}
+    virtual void OnReplySend(IHTTPSession& session, ErrorCode& err) {}
 };
 
 class HTTPServerListener
@@ -45,22 +46,22 @@ public:
     /**
     * Triggered when new HTTP session is created.
     */
-    virtual void OnHTTPSessionCreate(IHTTPSession* session) {}
+    virtual void OnHTTPSessionCreate(IHTTPSession& session) {}
 
     /**
     * Triggered when HTTP session is destroyed.
     */
-    virtual void OnHTTPSessionDestroy(IHTTPSession* session) {}
+    virtual void OnHTTPSessionDestroy(const IHTTPSession& session) {}
 
     /**
     * Triggered when server is starting.
     */
-    virtual void OnServerStart(IHTTPServer* server) {}
+    virtual void OnServerStart(IHTTPServer& server) {}
 
     /**
     * Triggered when server is shutting down.
     */
-    virtual void OnServerStop(IHTTPServer* server) {}
+    virtual void OnServerStop(const IHTTPServer& server) {}
 };
 
 class IHTTPSession

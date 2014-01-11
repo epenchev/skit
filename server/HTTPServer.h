@@ -31,6 +31,7 @@
 #include <set>
 #include <map>
 
+// TODO add send/receive timeout
 /**
 * HTTP network session.
 */
@@ -66,13 +67,11 @@ private:
     void SendResponse();
 
     // notify listeners for HTTP request
-    void NotifyOnHTTPrequest();
-
-    // process reply from listeners
-    void NotifyOnHTTPRequestReply(bool& replyOut);
+    void NotifyOnHTTPRequest();
 
     void NotifyOnHTTPResponseSend();
 
+    ErrorCode m_error;                           /**< error code of sending response */
     bool m_acceptRequest;                        /**< if can accept requests or still waiting for reply to be send  */
     IOChannel* m_channel;                        /**< Connection channel for I/O events */
     Buffer* m_buffer;                            /**< buffer for I/O operations */
@@ -82,13 +81,13 @@ private:
     SystemMutex m_lockchan;                      /**< I/O channel lock */
     SystemMutex m_lockListeners;                 /**< listeners lock */
     std::set<HTTPSessionListener*> m_listeners;  /**< listeners/observers for session events */
-    const static std::size_t m_recvsize = 100;  /**< receive buffer size bytes */
+    const static std::size_t m_recvsize = 100;   /**< receive buffer size bytes */
 };
 
 /**
 * HTTP server.
 * Accept HTTP connections on a given port.
-* Different plug-in modules can be attached to the server via the HTTPServerObserver interface.
+* plug-in modules can be attached to the server via the HTTPServerObserver interface.
 */
 class HTTPServer : public IHTTPServer, public TCPAcceptorHandler, public NetConnectionListener
 {
@@ -113,11 +112,19 @@ public:
     void RemoveServerListener(HTTPServerListener* listener);
 
     /* From NetConnectionListener */
-    void OnConnectionClose(NetConnection* conn);
+    void OnConnectionClose(NetConnection& conn);
 
 private:
     /* From TCPAcceptorHandler */
     void OnAccept(TCPSocket* inNewSocket, ErrorCode& inError);
+
+    void NotifyOnSessionCreate(HTTPSession* session);
+
+    void NotifySessionDestroy(HTTPSession* session);
+
+    void NotifyOnServerStart();
+
+    void NotifyOnServerStop();
 
     bool m_started;                                 /**< server started flag  */
     TCPAcceptor m_acceptor;                         /**< TCP acceptor object  */

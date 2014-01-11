@@ -33,7 +33,7 @@ public:
     /**
     * Load library file containing plug-in module code.
     * @param inPath - path to the file.
-    * @return PluginModule* - plug-in module object.
+    * @return PluginModule* - plug-in module object or NULL on error.
     */
     static PluginModule* LoadModule(const char* inPath);
 

@@ -46,13 +46,13 @@ TCPConnection::~TCPConnection()
     delete m_socket;
 }
 
-// TODO use shared_prt and weak_prt for listener pointer
 IOChannel* TCPConnection::OpenChannel(IOChannelListener* inListener)
 {
     SystemMutexLocker lock(m_channelsLock);
     IOChannel* chan = NULL;
     if (inListener)
     {
+        LOG(logDEBUG) << "Open channel and add listener";
         chan = new IOChannel(IDGenerator::Instance().Next(), inListener, this);
         m_channels.insert( std::pair<unsigned, IOChannel*>(chan->GetID(), chan) );
     }
@@ -105,6 +105,7 @@ IOChannel* TCPConnection::GetChannel(unsigned id)
     IOChannel* channel = NULL;
     if (id)
     {
+        SystemMutexLocker lock(m_channelsLock);
         if (m_channels.count(id) > 0)
         {
             channel = m_channels.at(id);
@@ -166,17 +167,18 @@ void TCPConnection::Disconnect()
 {
     if (IsConnected())
     {
-    	LOG(logDEBUG) << "Disconnecting .. " << this->GetID();
+        LOG(logDEBUG) << "Notify listeners for OnConnectionClose() event connection:" << m_id;
         m_socket->Close();
         for (std::set<NetConnectionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
         {
-        	LOG(logDEBUG) << "Notify..";
-            (*it)->OnConnectionClose(this);
+            Task* evtask = new Task();
+            evtask->Connect(&NetConnectionListener::OnConnectionClose, *it, boost::ref(*this));
+            TaskThreadPool::Signal(evtask);
         }
     }
 }
 
-bool TCPConnection::IsConnected()
+bool TCPConnection::IsConnected() const
 {
     if (m_socket)
     {
@@ -185,7 +187,7 @@ bool TCPConnection::IsConnected()
     return false;
 }
 
-std::string TCPConnection::GetRemoteAddress()
+std::string TCPConnection::GetRemoteAddress() const
 {
     std::string address;
     if (m_socket->IsOpen())
@@ -201,7 +203,7 @@ std::string TCPConnection::GetRemoteAddress()
 
 }
 
-unsigned TCPConnection::GetRemotePort()
+unsigned TCPConnection::GetRemotePort() const
 {
     unsigned port;
     if (m_socket->IsOpen())
@@ -293,12 +295,14 @@ void TCPConnection::AddListener(NetConnectionListener* listener)
 {
     if (listener)
     {
+        SystemMutexLocker lock(m_lockListeners);
         m_listeners.insert(listener);
     }
 }
 
 void TCPConnection::RemoveListener(NetConnectionListener* listener)
 {
+    SystemMutexLocker lock(m_lockListeners);
     std::set<NetConnectionListener*>::iterator it = m_listeners.find(listener);
     if (it != m_listeners.end())
     {
