@@ -1,18 +1,20 @@
 #include <server/PluginModule.h>
 #include <utils/Logger.h>
-#include "HTTPPseudoStream.h"
+#include <stream/StreamFactory.h>
+#include "HTTPPseudoStreamDispatcher.h"
+#include "HTTPPseudoStreamSink.h"
 
 /* module name */
-static const char* m_moduleName = "ExampleHTTPModule";
+static const char* m_moduleName = "HTTPPseudoStreaming";
 /* module description */
-static const char* m_moduleDescription = "Example HTTP module for educational purpose.";
+static const char* m_moduleDescription = "HTTP pseudo streaming module.";
 /* module author */
 static const char* m_moduleAuthor = "Emil Penchev";
 
 class HTTPPseudoStreamModule : public PluginModule
 {
 public:
-    HTTPPseudoStreamModule(unsigned id) : m_moduleID(id) {}
+    HTTPPseudoStreamModule(unsigned id) : m_moduleID(id), m_dispatcher(NULL) {}
     virtual ~HTTPPseudoStreamModule() {}
 
     /* from PluginModule */
@@ -41,12 +43,19 @@ public:
 
 private:
     unsigned m_moduleID;
+    HTTPPseudoStreamDispatcher* m_dispatcher;
 };
 
 void HTTPPseudoStreamModule::OnModuleLoad()
 {
-    LOG(logINFO) << "ExampleHTTPModule loaded";
-    CreateInstance();
+    // create dispatcher singleton
+    m_dispatcher = new HTTPPseudoStreamDispatcher();
+
+    HTTPPseudoStreamSink* sink = new HTTPPseudoStreamSink();
+    StreamFactory::RegisterStreamItem(this, Sink, sink->GetClassID());
+    delete sink;
+    LOG(logINFO) << "HTTPPseudoStreamModule loaded";
+
 }
 
 void HTTPPseudoStreamModule::OnModuleUnLoad()
@@ -56,12 +65,22 @@ void HTTPPseudoStreamModule::OnModuleUnLoad()
 
 PluginObject* HTTPPseudoStreamModule::CreateInstance()
 {
-    return new HTTPPseudoStream();
+    LOG(logDEBUG) << "{} enter";
+    HTTPPseudoStreamSink* sink = new HTTPPseudoStreamSink();
+
+    if (m_dispatcher)
+    {
+        LOG(logDEBUG) << m_dispatcher->GetClassID();
+        //m_dispatcher->NotifyCreateSink(sink);
+    }
+
+    LOG(logDEBUG) << "{} exit";
+    return sink;
 }
 
 void HTTPPseudoStreamModule::DestroyInstance(PluginObject* obj)
 {
-    HTTPPseudoStream* p_obj = dynamic_cast<HTTPPseudoStream*>(obj);
+    HTTPPseudoStreamDispatcher* p_obj = dynamic_cast<HTTPPseudoStreamDispatcher*>(obj);
     if (p_obj)
     {
         delete p_obj;

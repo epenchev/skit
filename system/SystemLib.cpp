@@ -20,6 +20,7 @@
 
 #include <cstdio>
 #include "system/SystemLib.h"
+#include "utils/Logger.h"
 
 extern "C" {
 #include <dlfcn.h>
@@ -32,9 +33,11 @@ void SystemLib::LoadFile(const char* filePath)
 {
     if (filePath)
     {
+        LOG(logDEBUG) << "loading file " << filePath;
         mLibHandler = dlopen(filePath, RTLD_LAZY | RTLD_GLOBAL);
         if (NULL == mLibHandler)
         {
+            LOG(logERROR) << "Error: " << dlerror();
             ErrorCode err(errno);
             throw SystemException(err);
         }
@@ -61,6 +64,7 @@ void* SystemLib::GetSymbol(const char* inSymbolName, ErrorCode& outErr)
             if ((errorStr = dlerror()) != NULL)
             {
                 /* custom error */
+                LOG(logERROR) << errorStr;
                 outErr.SetValue(-1);
                 outErr.SetMessage(errorStr);
                 return NULL;

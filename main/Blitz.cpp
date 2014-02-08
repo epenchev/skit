@@ -18,6 +18,7 @@
  */
 
 #include "server/ServerController.h"
+#include <string>
 
 int main(int argc, char* argv[])
 {
@@ -44,7 +45,7 @@ int main(int argc, char* argv[])
 #endif
 
     ServerController::StartServer();
-    while(1) {} // block here
+    while(1) { sleep(10); } // block here
     return 0;
 }
 

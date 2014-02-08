@@ -68,13 +68,14 @@ void FileReader::Close()
 
 bool FileReader::Seek(unsigned position)
 {
-    bool result = false;
-    if (position)
+    bool result = true;
+    //if (position)
     {
         m_ifstream.seekg(position, std::ios::beg);
         if (m_ifstream.eof() || m_ifstream.bad())
         {
             LOG(logERROR) << "Error seeking to position:"<< position;
+            result = false;
         }
     }
 
@@ -104,7 +105,7 @@ int FileReader::Read(void* buf, int length)
         return bytes_read;
     }
 
-    if (m_ifstream.good() || !m_ifstream.eof())
+    if (m_ifstream.good()/* || m_ifstream.eof()*/)
     {
         m_ifstream.read((char* )buf, length);
         if (m_ifstream.fail() || m_ifstream.bad())
@@ -137,5 +138,10 @@ time_t FileReader::LastWriteTime()
     }
 
     return statBuf.st_mtime;
+}
+
+const std::string& FileReader::GetFileName()
+{
+    return m_filename;
 }
 

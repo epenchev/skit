@@ -91,6 +91,8 @@ protected:
     /* From TCPSocketHandler */
     void OnConnect(TCPSocket* inSocket, ErrorCode& inError) {}
 
+    void NotifyDisconnected();
+
     unsigned m_id;                                /**< unique connection ID  */
     TCPSocket* m_socket;                          /**< socket used with this connection */
     SystemMutex m_channelsLock;                   /**< lock when getting/adding channels from/to connection */
@@ -105,6 +107,5 @@ protected:
     std::list<ChannelEvent> m_readChanEvents;     /**< Pending read channel events */
     std::list<ChannelEvent> m_writeChanEvents;    /**< Pending write channel events */
 };
-
 
 #endif /* TCPCONNECTION_H_ */

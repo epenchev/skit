@@ -263,7 +263,7 @@ std::string HTTPUtils::HTTPResponseToString(unsigned code, HTTPHeadersMap& heade
     }
     if (headers.end() == headers.find("Connection"))
     {
-    	returnHeaders += "Connection: close" + http_crlf;
+    	//returnHeaders += "Connection: close" + http_crlf;
     }
     returnHeaders += http_crlf; //endHeaders;
 

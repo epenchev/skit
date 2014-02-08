@@ -21,7 +21,7 @@
 #ifndef SERVERCONTROLLER_H_
 #define SERVERCONTROLLER_H_
 
-#include "server/IHTTPServer.h"
+#include "server/HTTPServer.h"
 #include "utils/PropertyMap.h"
 
 /**
@@ -35,7 +35,7 @@ public:
 
 	static void StopServer();
 
-	static IHTTPServer* GetHTTPServer();
+	static HTTPServer* GetHTTPServer();
 
 	static PropertyMap& GetServerProperties();
 };

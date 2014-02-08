@@ -69,7 +69,10 @@ void FileSourceModule::OnModuleUnLoad()
 
 PluginObject* FileSourceModule::CreateInstance()
 {
-    return new FileSource();
+    LOG(logDEBUG) << "Create FileSource";
+    FileSource* source = new FileSource();
+
+    return source;
 }
 
 void FileSourceModule::DestroyInstance(PluginObject* obj)
@@ -85,9 +88,11 @@ extern "C" PluginModule* CreateModuleObject(unsigned id)
 {
     if (!m_isLoaded)
     {
+        LOG(logINFO) << "loading FileSourceModule";
         return new FileSourceModule(id);
     }
 
+    LOG(logINFO) << "not loading FileSourceModule !!!";
     return NULL;
 }
 

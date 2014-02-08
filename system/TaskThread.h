@@ -29,6 +29,8 @@
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
+#include <iostream>
+
 #define EventTaskThreadIndex 0
 #define MainTaskThreadIndex 1
 
@@ -74,7 +76,7 @@ public:
     /**
     * Inherit from SystemThread, thread entry point.
     */
-    void Entry() { mIOServiceLoop.run(); }
+    void Entry() { mIOServiceLoop.run(); std::cout << "Error exit from io_loop \n"; }
 
 private:
     boost::asio::io_service mIOServiceLoop;
@@ -122,6 +124,49 @@ public:
     * The Task is added to thread in the pool for execution.
     */
     static void Signal(Task* inTask);
+
+    template <class Operation, class ObjectT, class T1>
+        static void AutoSignalTask(Operation op, ObjectT obj, T1 param_1)
+        {
+        	Task* t = new Task();
+            t->Connect(op, obj, param_1);
+            TaskThreadPool::Signal(t);
+        }
+
+        template <class Operation, class ObjectT, class T1, class T2>
+        static void AutoSignal(Operation op, ObjectT obj, T1 param_1, T2 param_2)
+        {
+        	Task* t = new Task();
+            t->Connect(op, obj, param_1, param_2);
+            TaskThreadPool::Signal(t);
+        }
+
+
+        template <class Operation, class ObjectT, class T1, class T2, class T3>
+        static void AutoSignal(Operation op, ObjectT obj, T1 param_1, T2 param_2, T2 param_3)
+        {
+        	Task* t = new Task();
+            t->Connect(op, obj, param_1, param_2);
+            TaskThreadPool::Signal(t);
+        }
+
+        /*
+        template <class Operation, class ObjectT, class T1>
+        static void AutoSignal(Operation op, ObjectT obj, T1 param_1)
+        {
+            	Task* t = new Task();
+                t->Connect(op, obj, param_1);
+                TaskThreadPool::Signal(t);
+            }
+
+        template <class Operation, class ObjectT, class T1>
+            static void AutoSignal(Operation op, ObjectT obj, T1 param_1)
+            {
+            	Task* t = new Task();
+                t->Connect(op, obj, param_1);
+                TaskThreadPool::Signal(t);
+            }
+    	*/
 
 protected:
     TaskThreadPool();

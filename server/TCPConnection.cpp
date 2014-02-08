@@ -23,9 +23,9 @@
 #include "system/Task.h"
 #include "system/TaskThread.h"
 #include "utils/IDGenerator.h"
-#include "utils/Logger.h"
 
-#define LOG_DISABLE
+//#define LOG_DISABLE
+#include "utils/Logger.h"
 
 TCPConnection::TCPConnection(unsigned id, TCPSocket* inSocket)
  : m_id(id), m_socket(inSocket)
@@ -167,15 +167,22 @@ void TCPConnection::Disconnect()
 {
     if (IsConnected())
     {
-        LOG(logDEBUG) << "Notify listeners for OnConnectionClose() event connection:" << m_id;
         m_socket->Close();
-        for (std::set<NetConnectionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
-        {
-            Task* evtask = new Task();
-            evtask->Connect(&NetConnectionListener::OnConnectionClose, *it, boost::ref(*this));
-            TaskThreadPool::Signal(evtask);
-        }
+
+        Task* evtask = new Task();
+        evtask->Connect(&TCPConnection::NotifyDisconnected, this );
+        TaskThreadPool::Signal(evtask);
     }
+}
+
+void TCPConnection::NotifyDisconnected()
+{
+	LOG(logDEBUG) << "Notify listeners for OnConnectionClose() event connection:" << m_id;
+	std::set<NetConnectionListener*> listeners = m_listeners;
+	for (std::set<NetConnectionListener*>::iterator it = m_listeners.begin(); it != m_listeners.end(); ++it)
+	{
+		(*it)->OnConnectionClose(*this);
+	}
 }
 
 bool TCPConnection::IsConnected() const

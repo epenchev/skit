@@ -18,4 +18,4 @@ FileSourceModule.o: FileSourceModule.cpp
 
 FileSource.o : FileSource.cpp FileSource.h
 	@echo 'Building target: $@'
-	g++ -Wall -I/usr/local/boost/include -I../../ -O0 -g3 -Wall -fPIC -c FileSource.cpp -o FileSource.o 
+	g++ -Wall -I/usr/local/boost/include -I../../ -O0 -g3 -Wall -fPIC -c FileSource.cpp -o FileSource.o

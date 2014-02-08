@@ -1,5 +1,5 @@
 /*
- * PropertyMap.cpp
+ * StreamPacketRec.cpp
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,29 +14,34 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Dec 19, 2013
+ *  Created on: Jan 27, 2014
  *      Author: emo
  */
 
-#include "PropertyMap.h"
+#include "stream/StreamPacketRec.h"
 
-void PropertyMap::SetProperty(const std::string& name, const std::string& value)
+StreamPacketRec::StreamPacketRec(Buffer& data, StreamPlayItem& playItem)
 {
-    this->SetProperty<std::string>(name, value);
+	m_data = &data;
+	m_playItem = playItem;
 }
 
-std::string PropertyMap::GetProperty(const std::string& name) const
+StreamPacketRec::~StreamPacketRec()
 {
-    std::string propertyVal;
-    if (!name.empty())
-    {
-        if (m_propertymap.count(name) > 0)
-        {
-            std::map<std::string, std::string>::const_iterator it = m_propertymap.find(name);
-            propertyVal = it->second;
-        }
-    }
-
-    return propertyVal;
+	delete m_data;
 }
 
+Buffer& StreamPacketRec::GetData()
+{
+	return *m_data;
+}
+
+unsigned StreamPacketRec::GetTimeStamp()
+{
+	return 0;
+}
+
+const StreamPlayItem& StreamPacketRec::GetPlayItem()
+{
+	return m_playItem;
+}

@@ -60,7 +60,7 @@ public:
     * Returns the HTTP path element of the request no query params .
     * @return string - string with path or empty string on error.
     */
-    std::string GetPath();
+    std::string GetPath() const;
 
     /**
     * Get the request content type.
@@ -78,13 +78,13 @@ public:
     * Get the header as text.
     * @return string - header text or empty string on error.
     */
-    std::string GetRawHeader();
+    std::string GetRawHeader() const;
 
     /**
     * Get the HTTP method : GET, POST, HEAD
     * @return string - method name or empty string on error.
     */
-    std::string GetMethod();
+    std::string GetMethod() const;
 
     /**
     * Get the request protocol (example: HTTP/1.1)
@@ -133,7 +133,7 @@ public:
     * @param name - header name.
     * @return string - header value or empty string on error.
     */
-    std::string GetHeader(const char* name);
+    std::string GetHeader(const char* name) const;
 
     /**
     * Get the HTTP request header map.

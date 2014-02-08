@@ -13,7 +13,7 @@ clean:
 	rm -f $(objects) lib/libblitz.so main/blitz
 
 libblitz.so: $(objects)
-	g++ -shared  -Wl,-soname=libblitz.so -o lib/$@ $(objects) $(LDLIBS)
+	g++ -shared -L/usr/local/boost/lib -Wl,-soname=libblitz.so -o lib/$@ $(objects) $(LDLIBS)
 
 blitz: libblitz.so main/Blitz.cpp
-	g++ -I./ -Llib/ -O0 -g3 -Wall main/Blitz.cpp -o main/$@ -lblitz
+	g++ -I./ -I/usr/local/boost/include -Llib/ -O0 -g3 -Wall main/Blitz.cpp -o main/$@ -lblitz -lboost_system

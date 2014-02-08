@@ -23,6 +23,8 @@
 
 #include <string>
 #include <map>
+#include <sstream>
+#include <iostream>
 
 class PropertyMap
 {
@@ -37,17 +39,26 @@ public:
     * @param value - value of the property.
     */
     template <class T>
-    void SetProperty(const std::string& name, T value);
-
-    /**
-    * Set property as string value. If not present insert new.
-    * @param name - name of the property.
-    * @param value - value of the property.
-    */
-    inline void SetProperty(const std::string& name, const std::string& value)
+    void SetProperty(const std::string& name, T value)
     {
-        SetProperty<std::string>(name, value);
+        if (!name.empty())
+        {
+            std::stringstream ss;
+            ss << value;
+            if (m_propertymap.count(name) > 0)
+            {
+                // change value of property
+                std::map<std::string, std::string>::iterator it = m_propertymap.find(name);
+                it->second = ss.str();
+            }
+            else
+            {
+                // insert new property
+                m_propertymap.insert( std::pair<std::string, std::string>(name, ss.str()) );
+            }
+        }
     }
+
 
     /**
     * Get property as POD value (bool, short, int, unsigned, long, float, double, void* ..)
@@ -56,7 +67,28 @@ public:
     * @return property value.
     */
     template <class T>
-    T GetProperty(const std::string& name, T defaultVal) const;
+    T GetProperty(const std::string& name, T defaultVal) const
+    {
+        T propertyVal = defaultVal;
+        if (!name.empty())
+        {
+            if (m_propertymap.count(name) > 0)
+            {
+                std::map<std::string, std::string>::const_iterator it = m_propertymap.find(name);
+                std::stringstream ss(it->second);
+                ss >> propertyVal;
+            }
+        }
+        return propertyVal;
+    }
+
+
+    /**
+    * Set property as string value. If not present insert new.
+    * @param name - name of the property.
+    * @param value - value of the property.
+    */
+    void SetProperty(const std::string& name, const std::string& value);
 
     /**
     * Get property as string, if property is not present empty string is returned.

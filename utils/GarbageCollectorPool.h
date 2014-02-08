@@ -1,5 +1,5 @@
 /*
- * PropertyMap.cpp
+ * GarbageCollectorPool.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,29 +14,23 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Dec 19, 2013
+ *  Created on: Jan 29, 2014
  *      Author: emo
  */
 
-#include "PropertyMap.h"
+#ifndef GARBAGECOLLECTORPOOL_H_
+#define GARBAGECOLLECTORPOOL_H_
 
-void PropertyMap::SetProperty(const std::string& name, const std::string& value)
+#include <deque>
+
+template <typename T>
+class GarbageCollectorPool
 {
-    this->SetProperty<std::string>(name, value);
-}
+public:
+	GarbageCollectorPool() {}
+	virtual ~GarbageCollectorPool() {}
+private:
 
-std::string PropertyMap::GetProperty(const std::string& name) const
-{
-    std::string propertyVal;
-    if (!name.empty())
-    {
-        if (m_propertymap.count(name) > 0)
-        {
-            std::map<std::string, std::string>::const_iterator it = m_propertymap.find(name);
-            propertyVal = it->second;
-        }
-    }
+};
 
-    return propertyVal;
-}
-
+#endif /* GARBAGECOLLECTORPOOL_H_ */

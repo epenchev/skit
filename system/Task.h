@@ -60,6 +60,13 @@ public:
         Run = boost::bind(op, obj_ref);
     }
 
+    // test only
+    template <class Operation, class ObjectT>
+    inline void Connect(Operation op, ObjectT obj_copy)
+    {
+    	Run = boost::bind(op, obj_copy);
+    }
+
     // one argument
     template <class Operation, class ObjectT, class T1>
     inline void Connect(Operation op, ObjectT* obj_ptr, T1 param_1)

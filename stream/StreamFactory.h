@@ -68,7 +68,7 @@ public:
     * Creates a media stream and registers it to the server.
     * @param sourceClassID - ClassID for the source must be a valid object representing a real type.
     * @param filterClassID - ClassID for the filter can be NULL.
-    * @param sinkClassID   - ClassID for the sink can be NULL.
+    * @param sinkClassID   -
     * @return Stream* - pointer to Stream object or NULL on error.
     */
     static Stream* CreateStream(const char* sourceClassID, const char* filterClassID, const char* sinkClassID);

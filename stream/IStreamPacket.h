@@ -1,5 +1,5 @@
 /*
- * PropertyMap.cpp
+ * IStreamPacket.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,29 +14,31 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Dec 19, 2013
+ *  Created on: Jan 27, 2014
  *      Author: emo
  */
 
-#include "PropertyMap.h"
+#ifndef ISTREAMPACKET_H_
+#define ISTREAMPACKET_H_
 
-void PropertyMap::SetProperty(const std::string& name, const std::string& value)
+#include "system/Buffer.h"
+
+/**
+* Pure virtual class interface for creating different StreamPacket types for a specific stream.
+*/
+class IStreamPacket
 {
-    this->SetProperty<std::string>(name, value);
-}
+public:
+	/**
+	* Get Packet contents.
+	* @return Buffer& - reference to Buffer to get the real data.
+	*/
+	virtual Buffer& GetData() = 0;
 
-std::string PropertyMap::GetProperty(const std::string& name) const
-{
-    std::string propertyVal;
-    if (!name.empty())
-    {
-        if (m_propertymap.count(name) > 0)
-        {
-            std::map<std::string, std::string>::const_iterator it = m_propertymap.find(name);
-            propertyVal = it->second;
-        }
-    }
+	/**
+	* Get the timestamp of this packet.
+	*/
+	virtual unsigned GetTimeStamp() = 0;
+};
 
-    return propertyVal;
-}
-
+#endif /* STREAMPACKET_H_ */

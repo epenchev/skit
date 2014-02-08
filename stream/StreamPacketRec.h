@@ -1,5 +1,5 @@
 /*
- * StreamSink.h
+ * StreamPacketRec.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,33 +14,41 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Oct 10, 2013
+ *  Created on: Jan 27, 2014
  *      Author: emo
  */
 
-#ifndef STREAMSINK_H_
-#define STREAMSINK_H_
+#ifndef STREAMPACKETREC_H_
+#define STREAMPACKETREC_H_
 
-class Buffer;
-class Stream;
-class Stream;
-class IStreamPacket;
+#include "stream/IStreamPacket.h"
+#include "stream/StreamPlayItem.h"
 
-class StreamSink
+/**
+* IStreamPacket type for data from recorded media streams such as files.
+*/
+class StreamPacketRec : public IStreamPacket
 {
 public:
+	StreamPacketRec(Buffer& data, StreamPlayItem& playItem);
+	virtual ~StreamPacketRec();
 
-    /**
-    * Write data to sink.
-    * @param packet - IStreamPacket holding the data and additional information.
-    */
-    virtual void WriteData(IStreamPacket& packet) = 0;
+	/* from IStreamPacket */
+	Buffer& GetData();
 
-    /**
-    * Start sink, before any operation could be performed sink must be started first.
-    * @param s - Stream reference this sink is associated with.
-    */
-    virtual void Start(Stream& s) = 0;
+	/* from IStreamPacket */
+	unsigned GetTimeStamp();
+
+	/**
+	* Get the PlayItem associated with this packet.
+	* @return StreamPlayItem& - reference to PlayItem.
+	*/
+	const StreamPlayItem& GetPlayItem();
+
+protected:
+	Buffer* m_data;
+	StreamPlayItem m_playItem;
+
 };
 
-#endif /* STREAMSINK_H_ */
+#endif /* STREAMPACKETREC_H_ */

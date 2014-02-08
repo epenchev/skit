@@ -24,69 +24,13 @@
 #include "stream/StreamSource.h"
 #include "stream/StreamFilter.h"
 #include "stream/StreamSink.h"
+#include "stream/StreamClient.h"
 #include "system/SystemThread.h"
+#include "stream/StreamPlayItem.h"
 #include "utils/PropertyMap.h"
-#include "server/NetConnection.h"
 #include <set>
 
 class Stream; // forward
-
-/**
-* Client is an abstraction representing user connected to Blitz media server.
-* Clients are tied to connections and subscribed to Streams.
-*/
-class StreamClient
-{
-public:
-    StreamClient();
-    virtual ~StreamClient();
-
-    /**
-    * Associate connection with client.
-    * No thread safety provided for this call.
-    * @param conn - pointer to NetConnection object.
-    */
-    void Register(NetConnection* conn);
-
-    /**
-    * Returns the time at which the client was created.
-    */
-    unsigned long GetCreationTime();
-
-    /**
-    * Subscribe client to a Stream.
-    * @param s - Stream to subscribe to.
-    */
-    void Subscribe(Stream& s);
-
-    /**
-    * Unsubscribe client from current stream.
-    */
-    void UnSubscribe();
-
-    /**
-    * Return subscribed stream.
-    * @return Stream* - The stream client is subscribed to or NULL if client is not subscribed.
-    */
-    Stream* GetStream();
-
-    /**
-    *  Return set of connections for this client.
-    */
-    std::set<NetConnection*>& GetConnections();
-
-    /**
-    * Returns the client id.
-    */
-    unsigned GetID();
-
-private:
-    unsigned m_clientID;                     /**< Client identifier  */
-    unsigned long m_creationTime;           /**< Creation time as time-stamp. */
-    Stream* m_subscribedStream;               /**< subscribed stream */
-    std::set<NetConnection*> m_connections;   /**< connections associated with client */
-};
-
 
 /**
 * Stream listener for adding/removing clients.
@@ -100,14 +44,14 @@ public:
     * @param s - Stream reference.
     * @param client - client added.
     */
-    virtual void OnClientSubscribed(Stream& s, StreamClient& client) {}
+    virtual void OnClientAccepted(Stream& s, StreamClientPtr client) {}
 
     /**
-    * Triggered when a client is removed/unsubscribed from a stream.
+    * Triggered when a client is removed from a stream.
     * @param s - Stream reference.
     * @param client - client removed.
     */
-    virtual void OnClientUnSubscribed(Stream& s, StreamClient& client) {}
+    virtual void OnClientRemoved(Stream& s, StreamClientPtr client) {}
 };
 
 /**
@@ -117,6 +61,7 @@ class Stream : public SourceObserver, public FilterObserver
 {
 public:
     Stream(unsigned streamID, StreamSource* source, StreamFilter* filter, StreamSink* sink);
+
     /* When stream gets deleted all clients will be removed automatically
      * without notification to StreamListeners from the stream. */
     virtual ~Stream();
@@ -138,21 +83,21 @@ public:
 
     /**
     * Seek into the stream to the given position.
-    * @param pos - position stream will be moved to.
+    * @param playItem - playItem to start.
     */
-    void Seek(unsigned pos);
+    void Seek(StreamPlayItem& playItem);
 
     /**
     * Add a client to the stream.
     * @param client - StreamClient.
     */
-    void AddClient(StreamClient* client);
+    void AddClient(StreamClientPtr client);
 
     /**
     * Remove client from stream.
     * @param client - client to be removed.
     */
-    void RemoveClient(StreamClient* client);
+    void RemoveClient(StreamClientPtr client);
 
     /**
     * Get the properties of the stream items/units. Can do get/set operations for various properties.
@@ -188,7 +133,7 @@ public:
     * Get a copy of the clients list, when you are accessing the list some clients may become invalid in the time.
     * @return std::set - copy of the container holding the clients.
     */
-    std::set<StreamClient*> GetClientList() { return m_clients; }
+    std::set<StreamClientPtr> GetClientList() { return m_clients; }
 
     /**
     * Add a listener/observer object to be notified on stream events.
@@ -204,25 +149,42 @@ public:
 
 protected:
     /* from SourceObserver */
-    void OnStart(StreamSource& source);
+    void OnStart(StreamSource& source, ErrorCode& error);
 
     /* from SourceObserver */
     void OnStop(StreamSource& source);
 
     /* from SourceObserver */
-    void OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error);
+    void OnDataReceive(StreamSource& source, IStreamPacket& packet, ErrorCode& error);
 
     /* from FilterObserver */
-    void OnDataReady(StreamFilter* filter, Buffer* data);
+    void OnDataReady(StreamFilter& filter, IStreamPacket& data);
+
+    /**
+    * Signals all listeners a client has been added and accepted to the stream.
+    * @param client - StreamClient
+    */
+    void NotifyOnClientAccepted(StreamClientPtr client);
+
+    /**
+    * Signals all listeners a client has been removed from the stream.
+    * @param client - StreamClient
+    */
+    void NotifyOnClientRemoved(StreamClientPtr client);
 
 private:
     unsigned       m_streamID;      /**< Stream unique identifier */
     SystemMutex    m_lockClients;   /**< lock for the clients container, provides thread safety when adding/removing clients */
     SystemMutex    m_lockListeners; /**< lock listener container, provides thread safety when adding/removing listeners */
+
+    // Testing only
+    SystemMutex    m_lockSource;
+
     StreamSource*  m_source;        /**< Stream source/reader */
     StreamFilter*  m_filter;        /**< Stream encoder/decoder */
     StreamSink*    m_sink;          /**< Stream sink/writer */
-    std::set<StreamClient*>      m_clients;    /**< Clients subscribed to the stream */
+    std::string    m_streamName;    /**< name of the string (published name) */
+    std::set<StreamClientPtr>    m_clients;    /**< Clients subscribed to the stream */
     std::set<StreamListener*>    m_listeners;  /**< listeners for events */
     PropertyMap                  m_propetries; /**< Properties if the stream as well as properties of the source, filter and sink */
 };

@@ -27,7 +27,10 @@ class StreamSource;
 class Buffer;
 class ErrorCode;
 class Stream;
+class StreamPlayItem;
+class IStreamPacket;
 
+#define BUILD_MOD
 /* #define BUILD_MOD */
 #ifdef BUILD_MOD
 #define EXPORT_PUB __attribute__ ((visibility ("default")))
@@ -46,7 +49,7 @@ public:
     * Triggered when the source is started.
     * @param source - the source itself
     */
-    virtual void OnStart(StreamSource& source) {}
+    virtual void OnStart(StreamSource& source, ErrorCode& error) {}
 
     /**
     * Triggered when the source is stopped.
@@ -60,7 +63,7 @@ public:
     * @param data - pointer to Buffer with data from source.
     * @param error - error code if present when reading the source.
     */
-    virtual void OnDataReceive(StreamSource& source, Buffer* data, ErrorCode& error) {}
+    virtual void OnDataReceive(StreamSource& source, IStreamPacket& packet, ErrorCode& error) {}
 };
 
 /**
@@ -83,10 +86,9 @@ public:
     /**
     * Seek into a given position into the stream and read length bytes if provided,
     * otherwise will read until the end of the stream.
-    * @param position - position to seek to.
-    * @param length - length bytes to read.
+    * @param playItem - StreamPlayItem to seek to.
     */
-    virtual void Seek(unsigned position, unsigned length = 0) = 0;
+    virtual void Seek(StreamPlayItem& playItem) = 0;
 
     /**
     * Checks if source is seek-able.

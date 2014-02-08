@@ -170,6 +170,9 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName, ErrorCode& outError)
 void HTTPRequest::Init(const std::string& inHeader, ErrorCode& outError)
 {
     mMapHeaders.clear();
+
+    mHeaderText = inHeader;
+
     outError = HTTPUtils::ReadHeader(inHeader, mMapHeaders);
     if (!outError)
     {
@@ -226,12 +229,12 @@ std::string HTTPRequest::GetContentType()
     return "";
 }
 
-std::string HTTPRequest::GetRawHeader()
+std::string HTTPRequest::GetRawHeader() const
 {
-    return "";
+    return mHeaderText;
 }
 
-std::string HTTPRequest::GetMethod()
+std::string HTTPRequest::GetMethod() const
 {
     int i = 0;
 
@@ -278,7 +281,7 @@ std::string HTTPRequest::GetQueryString()
     return mQueryString;
 }
 
-std::string HTTPRequest::GetPath()
+std::string HTTPRequest::GetPath() const
 {
     offset pathStartPos = 0;
     offset pathEndPos = 0;
@@ -387,11 +390,11 @@ std::string HTTPRequest::GetRemoteAddr()
     return GetRemoteHost();
 }
 
-std::string HTTPRequest::GetHeader(const char* name)
+std::string HTTPRequest::GetHeader(const char* name) const
 {
     if (!mMapHeaders.empty() && name)
     {
-        HTTPHeadersMap::iterator it = mMapHeaders.find(name);
+        HTTPHeadersMap::const_iterator it = mMapHeaders.find(name);
         if (mMapHeaders.end() != it)
                 return it->second;
         else

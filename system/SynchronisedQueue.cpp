@@ -47,8 +47,11 @@ T SynchronisedQueue<T>::DeQueue()
     return result;
 }
 
+/*This instantiates the template with Type=int and places the instantiated code in the shared library.
+Add as many explicit instantiations as you need, for all the types you need.
+*/
 template class SynchronisedQueue<Task*>;
-/*
+/* example
 template void SynchronisedQueue::EnQueue<Task*>(Task* data);
 template Task* SynchronisedQueue::DeQueue<Task*>();
 */

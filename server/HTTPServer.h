@@ -27,111 +27,177 @@
 #include "TCPConnection.h"
 #include "HTTP/HTTPRequest.h"
 #include "HTTP/HTTPResponse.h"
-#include "IHTTPServer.h"
 #include <set>
-#include <map>
+#include <boost/enable_shared_from_this.hpp>
 
-// TODO add send/receive timeout
+class HTTPSessionListener;
+class HTTPServerListener;
+
 /**
 * HTTP network session.
 */
-class HTTPSession : public IHTTPSession, public TCPConnection, public IOChannelListener
+class HTTPSession : public boost::enable_shared_from_this<HTTPSession>,
+                    public TCPConnection, public IOChannelListener
 {
 public:
     HTTPSession(unsigned id, TCPSocket* inSocket);
     virtual ~HTTPSession();
 
-    /* From IHTTPSession */
+    /**
+    * Add a listener/observer object to be notified for incoming HTTP requests.
+    * @param listener - listener/observer object
+    */
     void AddHTTPSessionListener(HTTPSessionListener* listener);
 
-    /* From IHTTPSession */
+    /**
+    * Remove a listener/observer object.
+    * @param listener - listener/observer object
+    */
     void RemoveHTTPSessionListener(HTTPSessionListener* listener);
 
-    /* From IHTTPSession */
+    /**
+    * Start accepting HTTP requests.
+    */
     void AcceptRequest();
 
-    /* From IHTTPSession */
+    /**
+    * Get the request object representing the current accepted HTTP request.
+    * @return const HTTPRequest&  - constant reference to HTTPRequest object.
+    */
     const HTTPRequest& GetRequest() const { return m_request; }
 
     /* From IOChannelListener */
     void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode& err);
 
-    /* From IOChannelListener */
-    void OnWrite(IOChannel* chan, std::size_t bytesWritten, ErrorCode& err);
-
-private:
+protected:
 
     /**
-    * Send the HTTP response.
+    * Notify listeners for incoming HTTP request.
     */
-    void SendResponse();
-
-    // notify listeners for HTTP request
     void NotifyOnHTTPRequest();
 
-    void NotifyOnHTTPResponseSend();
-
-    ErrorCode m_error;                           /**< error code of sending response */
-    bool m_acceptRequest;                        /**< if can accept requests or still waiting for reply to be send  */
     IOChannel* m_channel;                        /**< Connection channel for I/O events */
     Buffer* m_buffer;                            /**< buffer for I/O operations */
     std::string m_reqheaders;                    /**< string with full or part HTTP request headers */
     HTTPRequest m_request;                       /**< HTTP request object */
-    HTTPResponse m_response;                     /**< HTTP response object */
-    SystemMutex m_lockchan;                      /**< I/O channel lock */
     SystemMutex m_lockListeners;                 /**< listeners lock */
     std::set<HTTPSessionListener*> m_listeners;  /**< listeners/observers for session events */
     const static std::size_t m_recvsize = 100;   /**< receive buffer size bytes */
 };
+
+typedef boost::shared_ptr<HTTPSession> HTTPSessionPtr;
 
 /**
 * HTTP server.
 * Accept HTTP connections on a given port.
 * plug-in modules can be attached to the server via the HTTPServerObserver interface.
 */
-class HTTPServer : public IHTTPServer, public TCPAcceptorHandler, public NetConnectionListener
+class HTTPServer : public TCPAcceptorHandler,
+                   public NetConnectionListener
 {
 public:
     HTTPServer(unsigned short port);
     HTTPServer(std::string localAdress, unsigned short port);
     virtual ~HTTPServer();
 
-    /* From IHTTPServer */
+    /**
+    * Start HTTPServer
+    */
     void Start();
 
-    /* From IHTTPServer */
+    /**
+    * Stop HTTPServer
+    */
     void Stop();
 
-    /* From IHTTPServer */
+    /**
+    * Get accepted sessions count.
+    * @return unsigned - session count.
+    */
     unsigned GetConnectionCount();
 
-    /* From IHTTPServer */
+    /**
+    * Add a listener/observer object to be notified for server events.
+    * @param listener - listener/observer object
+    */
     void AddServerListener(HTTPServerListener* listener);
 
-    /* From IHTTPServer */
+    /**
+    * Remove a listener/observer object.
+    * @param listener - listener/observer object
+    */
     void RemoveServerListener(HTTPServerListener* listener);
-
-    /* From NetConnectionListener */
-    void OnConnectionClose(NetConnection& conn);
 
 private:
     /* From TCPAcceptorHandler */
     void OnAccept(TCPSocket* inNewSocket, ErrorCode& inError);
 
-    void NotifyOnSessionCreate(HTTPSession* session);
+    /**
+    * Notify listeners for accepted HTTP session.
+    * @param session - instance to HTTPSession
+    */
+    void NotifyOnSessionCreate(HTTPSessionPtr session);
 
-    void NotifySessionDestroy(HTTPSession* session);
-
+    /**
+    * Notify listeners for server start event.
+    */
     void NotifyOnServerStart();
 
+    /**
+    * Notify listeners for server stop event.
+    */
     void NotifyOnServerStop();
+
+    /* From NetConnectionListener */
+    void OnConnectionClose(NetConnection& conn);
 
     bool m_started;                                 /**< server started flag  */
     TCPAcceptor m_acceptor;                         /**< TCP acceptor object  */
     SystemMutex m_lockListeners;                    /**< listeners lock */
     SystemMutex m_lockSessions;                     /**< sessions lock */
-    std::set<HTTPSession*> m_sessions;              /**< HTTP sessions/connections */
+    std::set<HTTPSessionPtr> m_sessions;            /**< HTTP sessions/connections */
     std::set<HTTPServerListener*> m_listeners;      /**< listeners/observers for server events */
 };
+
+/**
+* HTTPServer listener/observer to be notified on events from server.
+*/
+class HTTPServerListener
+{
+public:
+    /**
+    * Triggered when new HTTP session is accepted.
+    * @param session - object instance of accepted HTTPSession
+    */
+    virtual void OnHTTPSessionAccept(HTTPSessionPtr session) {}
+
+    /**
+    * Triggered when server is started.
+    * @param server - reference to server.
+    */
+    virtual void OnServerStart(HTTPServer& server) {}
+
+    /**
+    * Triggered when server is stopped.
+    * @param server - reference to server.
+    */
+    virtual void OnServerStop(HTTPServer& server) {}
+};
+
+/**
+* HTTPSession listener/observer to be notified on events from session.
+*/
+class HTTPSessionListener
+{
+public:
+
+	/**
+	* Triggered when HTTP request is received.
+	* @param session - reference to HTTP session object.
+	* @param inRequest - HTTP request received.
+	*/
+    virtual void OnHTTPrequest(HTTPSessionPtr session, const HTTPRequest& inRequest) {}
+};
+
 
 #endif /* HTTPSERVER_H_ */

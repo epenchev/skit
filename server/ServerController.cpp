@@ -23,8 +23,11 @@
 #include "server/HTTPServer.h"
 #include "system/TaskThread.h"
 #include "utils/Logger.h"
+#include "utils/PropertyMap.h"
+#include "stream/StreamFactory.h"
+#include <string>
 
-static IHTTPServer* m_httpServer = NULL;  /**< HTTP server instance */
+static HTTPServer* m_httpServer = NULL;  /**< HTTP server instance */
 static PropertyMap  m_properties;         /**< server properties read from configuration file */
 
 static void LoadPlugin(const char* filePath)
@@ -42,7 +45,8 @@ static void LoadPlugin(const char* filePath)
 
 void ServerController::StartServer()
 {
-    LOG(logINFO) << "Starting server";
+	Log::ReportingLevel() = logINFO;
+	LOG(logINFO) << "Starting server";
     if (!m_httpServer)
     {
         m_httpServer = new HTTPServer(8080);
@@ -50,14 +54,22 @@ void ServerController::StartServer()
         LOG(logINFO) << "Loading plugins";
         LoadPlugin("/home/emo/workspace/blitz/modules/HTTPPseudoStreaming/HTTPPseudoStreamModule.so");
         LoadPlugin("/home/emo/workspace/blitz/modules/FileSource/FileSourceModule.so");
-        LoadPlugin("/home/emo/workspace/blitz/modules/FileSource/FileSourceModule.so");
-        LoadPlugin("/home/emo/workspace/blitz/modules/FileSource/FileSourceModule.so");
-        TaskThreadPool::AddThread();
-        /*
-        TaskThreadPool::AddThread();
-        TaskThreadPool::AddThread();
-        TaskThreadPool::AddThread();
-        */
+
+        Stream* s = StreamFactory::CreateStream("FileSource", NULL, "HTTPPseudoStreamSink");
+        if (s)
+        {
+            PropertyMap& pmap = s->GetProperties();
+            pmap.SetProperty("filename", "/var/www/oceans-clip.mp4");
+            LOG(logDEBUG) << "Stream is created";
+            StreamFactory::PublishStream(*s, "ocean");
+            s->Play();
+        }
+
+        LOG(logDEBUG) << "Starting 1 threads";
+        for (int i = 0; i < 1; i++)
+        {
+            TaskThreadPool::AddThread();
+        }
         TaskThreadPool::StartThreads();
     }
     else
@@ -79,7 +91,7 @@ void ServerController::StopServer()
     }
 }
 
-IHTTPServer* ServerController::GetHTTPServer()
+HTTPServer* ServerController::GetHTTPServer()
 {
     return m_httpServer;
 }

@@ -24,6 +24,7 @@
 class Buffer;
 class StreamFilter;
 class Stream;
+class IStreamPacket;
 
 #include <string>
 
@@ -36,9 +37,9 @@ public:
     /**
     * Triggered when there is data ready encoded/decoded from the filter.
     * @param filter - the filter itself.
-    * @param data - Buffer object with the data.
+    * @param data - object with the data and additional information.
     */
-    virtual void OnDataReady(StreamFilter* filter, Buffer* data) = 0;
+    virtual void OnDataReady(StreamFilter& filter, IStreamPacket& data) = 0;
 };
 
 /**
@@ -49,9 +50,9 @@ class StreamFilter
 public:
     /**
     * Give work (data) to filter.
-    * @param data - Buffer with data filter will be encoding/decoding.
+    * @param data - object with the data filter will be encoding/decoding.
     */
-    virtual void WriteData(Buffer* data) = 0;
+    virtual void WriteData(IStreamPacket& data) = 0;
 
     /**
     * Add a listener/observer for filter events.
@@ -65,6 +66,10 @@ public:
     */
     virtual void RemoveListener(FilterObserver* listener) = 0;
 
+    /**
+    * Start filter, before any operation could be performed filter must be started first.
+    * @param s - Stream reference this filter is associated with.
+    */
     virtual void Start(Stream& s) = 0;
 };
 
