@@ -22,7 +22,7 @@
 #define TCPSOCKET_H_
 
 #include <boost/asio.hpp>
-#include "Buffer.h"
+#include "utils/Buffer.h"
 #include "utils/ErrorCode.h"
 
 class TCPSocket;
@@ -40,7 +40,7 @@ public:
     * @param sendBytes - count bytes send.
     * @param inErr - error code of the operation.
     */
-    virtual void OnSend(TCPSocket* inSocket, std::size_t sendBytes, ErrorCode& inError) = 0;
+    virtual void OnSend(TCPSocket* inSocket, std::size_t sendBytes, ErrorCode& inError) {}
 
     /**
     * Triggered when a Receive() or ReceiveSome() operation/s is complete on a Socket object.
@@ -48,14 +48,14 @@ public:
     * @param receivedBytes - count bytes received.
     * @param inErr - error code of the operation.
     */
-    virtual void OnReceive(TCPSocket* inSocket, std::size_t receivedBytes, ErrorCode& inError) = 0;
+    virtual void OnReceive(TCPSocket* inSocket, std::size_t receivedBytes, ErrorCode& inError) {}
 
     /**
     * Triggered when a Connect() operation is complete on a Socket object.
     * @param inSocket - pointer to socket object.
     * @param inErr - error code of the operation.
     */
-    virtual void OnConnect(TCPSocket* inSocket, ErrorCode& inError) = 0;
+    virtual void OnConnect(TCPSocket* inSocket, ErrorCode& inError) {}
 };
 
 /**
@@ -123,9 +123,17 @@ public:
     */
     void Close();
 
+    /* Total number of bytes send */
+    unsigned long GetSendBytes();
+
+    /* Total number of bytes received. */
+    unsigned long GetRecvBytes();
+
 private:
     boost::asio::ip::tcp::socket m_socket;     /**< boost socket object */
     ErrorCode                    m_error;      /**< error code of last socket operation */
+    unsigned long                m_recvbytes;  /**< total receive bytes counter */
+    unsigned long                m_sendbytes;  /**< total send bytes counter */
 
     /* boost socket IO handlers */
     void HandleWrite(const boost::system::error_code& error, std::size_t bytes_transferred, TCPSocketHandler* handler);

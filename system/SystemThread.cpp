@@ -42,7 +42,7 @@ void SystemThread::Join()
 {
     if (!mpThread)
     {
-        mErrCode.SetValue(EFAULT);
+        mErrCode.SetMessage("Invalid thread member");
         throw SystemException(mErrCode);
     }
 
@@ -56,7 +56,7 @@ void SystemThread::Join()
         catch (const boost::system::system_error& err)
         {
             mJoined = false;
-            mErrCode.SetValue(err.code().value());
+            //mErrCode.SetMessage(err.);
             throw SystemException(mErrCode);
         };
     }
@@ -89,7 +89,6 @@ void SystemThread::Yield()
 
 void SystemMutex::Lock()
 {
-    mErrCode.Clear();
     try
     {
         mRecursiveMutex.lock();
@@ -109,7 +108,6 @@ void SystemMutex::Unlock()
 
 bool SystemMutex::TryLock()
 {
-    mErrCode.Clear();
     bool returnCode = false;
 
     try

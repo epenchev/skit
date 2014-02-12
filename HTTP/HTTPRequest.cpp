@@ -137,8 +137,8 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName, ErrorCode& outError)
 
     if (!fileName)
     {
-        outError.SetValue(EINVAL);
-        LOG(logDEBUG) << outError.GetErrorMessage();
+        outError.SetMessage("Invalid parameter");
+        LOG(logDEBUG) << outError.Message();
         return;
     }
 
@@ -146,9 +146,8 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName, ErrorCode& outError)
     if (!fileStream.good() || !fileStream.is_open())
     {
         std::string errMsg = "Error opening file "; errMsg += fileName;
-        outError.SetValue(-1);
         outError.SetMessage(errMsg);
-        LOG(logDEBUG) << outError.GetErrorMessage();
+        LOG(logDEBUG) << outError.Message();
         return;
     }
 
@@ -162,8 +161,9 @@ void HTTPRequest::ReadHeaderFromFile(const char* fileName, ErrorCode& outError)
 
     fileStream.close();
     outError = HTTPUtils::ReadHeader(header, mMapHeaders);
-    if (outError) {
-        LOG(logDEBUG) << outError.GetErrorMessage();
+    if (outError)
+    {
+        LOG(logDEBUG) << outError.Message();
     }
 }
 
@@ -183,13 +183,13 @@ void HTTPRequest::Init(const std::string& inHeader, ErrorCode& outError)
         }
         else
         {
-            outError.SetValue(-1);
             outError.SetMessage("No valid request line found");
-            LOG(logDEBUG) << outError.GetErrorMessage();
+            LOG(logDEBUG) << outError.Message();
         }
     }
-    else {
-        LOG(logDEBUG) << outError.GetErrorMessage();
+    else
+    {
+        LOG(logDEBUG) << outError.Message();
     }
 
 }

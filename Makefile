@@ -16,4 +16,4 @@ libblitz.so: $(objects)
 	g++ -shared -L/usr/local/boost/lib -Wl,-soname=libblitz.so -o lib/$@ $(objects) $(LDLIBS)
 
 blitz: libblitz.so main/Blitz.cpp
-	g++ -I./ -I/usr/local/boost/include -Llib/ -O0 -g3 -Wall main/Blitz.cpp -o main/$@ -lblitz -lboost_system
+	g++ -I./ -I/usr/local/boost/include -Llib/ -O0 -g3 -Wall main/Blitz.cpp -o main/$@ -lblitz

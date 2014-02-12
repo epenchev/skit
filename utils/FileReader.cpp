@@ -69,7 +69,7 @@ void FileReader::Close()
 bool FileReader::Seek(unsigned position)
 {
     bool result = true;
-    //if (position)
+    if (position)
     {
         m_ifstream.seekg(position, std::ios::beg);
         if (m_ifstream.eof() || m_ifstream.bad())

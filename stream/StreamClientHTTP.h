@@ -1,5 +1,5 @@
 /*
- * IStreamPacket.h
+ * StreamClientHTTP.h
  *
  * Copyright (C) 2013  Emil Penchev, Bulgaria
  *
@@ -14,32 +14,35 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>
  *
- *  Created on: Jan 27, 2014
+ *  Created on: Feb 11, 2014
  *      Author: emo
  */
 
-#ifndef ISTREAMPACKET_H_
-#define ISTREAMPACKET_H_
+#ifndef STREAMCLIENTHTTP_H_
+#define STREAMCLIENTHTTP_H_
 
-#include "utils/Buffer.h"
+#include "stream/StreamClient.h"
+#include "server/HTTPServer.h"
 
-/**
-* Pure virtual class interface for creating different StreamPacket types for a specific stream.
-*/
-class IStreamPacket
+class StreamClientHTTP : public StreamClient
 {
 public:
+	virtual ~StreamClientHTTP();
 
-	/**
-	* Get Packet contents.
-	* @return Buffer& - reference to Buffer to get the real data.
-	*/
-	virtual Buffer& GetData() = 0;
+	/* from StreamClient */
+	unsigned long GetReadBytes();
 
-	/**
-	* Get the timestamp of this packet.
-	*/
-	virtual unsigned GetTimeStamp() = 0;
+	/* from StreamClient */
+	unsigned long GetWrittenBytes();
+
+	/* from StreamClient */
+	void SetBandwidth(int mbits);
+
+	HTTPConnectionPtr GetHTTPConn();
+protected:
+	StreamClientHTTP(HTTPConnectionPtr conn);
+
+	HTTPConnectionPtr m_conn;  /**< HTTP session */
 };
 
-#endif /* STREAMPACKET_H_ */
+#endif /* STREAMCLIENTHTTP_H_ */

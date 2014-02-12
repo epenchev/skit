@@ -22,119 +22,49 @@
 #define ERRORCODE_H_
 
 #include <string>
-#include <cerrno>
-#include <cstring>
-#include <iostream>
-#include <exception>
 
 class ErrorCode
 {
 public:
-    ErrorCode() : mErrCodeValue(0) { errMessage.clear(); }
-    ErrorCode(int errv) : mErrCodeValue(errv) { errMessage.clear(); }
-    ErrorCode(const char* message) : mErrCodeValue(0), errMessage(message) {}
-    ErrorCode(std::string& message) : mErrCodeValue(0), errMessage(message) {}
+    ErrorCode();
+    ErrorCode(const ErrorCode& err);
 
-    ErrorCode(const ErrorCode& err)
-    {
-        this->errMessage = err.errMessage;
-        this->mErrCodeValue = err.mErrCodeValue;
-    }
+    virtual ~ErrorCode();
 
-    virtual ~ErrorCode() {}
+    /**
+    * Get the error message if error is set.
+    */
+    const char* Message() const;
 
-    std::string& GetMessage() { return errMessage; }
-    void SetValue(int errv)
-    {
-        this->mErrCodeValue = errv;
-    }
+    /**
+    * Set error message, also sets the error if message string is not empty.
+    */
+    void SetMessage(const std::string& message);
 
-    const char* GetErrorMessage()
-    {
-        /* custom error */
-        if ((-1 == mErrCodeValue) && (NULL != errMessage.c_str()))
-        {
-            return errMessage.c_str();
-        }
+    void operator = (bool iset);
 
-        const char* errorMsg = std::strerror(mErrCodeValue);
-        if (!errorMsg)
-        {
-            return "Unknown error";
-        }
-        return errorMsg;
-    }
+    ErrorCode& operator = (const ErrorCode& err);
 
-    void SetMessage(std::string& errMsg) { errMessage = errMsg; }
-    void SetMessage(const char* errMsg) { errMessage = errMsg; }
+    operator bool() const;
 
-    //inline operator bool() const { return !errMessage.empty(); }
-    inline operator bool() const { return (mErrCodeValue != 0); }
+    bool operator!() const;
 
-    //inline bool operator!() const { return errMessage.empty(); }
-    inline bool operator!() const { return !(mErrCodeValue != 0); }
-
-    void Clear()
-    {
-        errMessage.clear();
-        mErrCodeValue = 0;
-    }
-
-    inline ErrorCode& operator = (ErrorCode& err)
-    {
-        this->errMessage = err.errMessage;
-        this->mErrCodeValue = err.mErrCodeValue;
-
-        return *this;
-    }
-
-    inline ErrorCode& operator = (int errCodeValue)
-    {
-        this->mErrCodeValue = errCodeValue;
-        return *this;
-    }
-
-    inline bool operator == (ErrorCode& err) const
-    {
-        return (this->mErrCodeValue == err.mErrCodeValue ? true : false);
-    }
-
-
-/*
-    bool operator == (ErrorCode& err) const
-    {
-        if (0 == this->errMessage.compare(err.errMessage))
-            return true;
-        else
-            return false;
-    }
-
-
-
-    template <typename T>
-    bool operator == (T errMessage) const
-    {
-        if (0 == this->errMessage.compare(errMessage))
-            return true;
-        else
-            return false;
-    }
-*/
-
-private:
-    int mErrCodeValue;
-    std::string errMessage;
+protected:
+    bool m_iset;             /**< error set/unset flag */
+    std::string m_message;   /**< error message */
 };
+
+#include <exception>
 
 class SystemException : public std::exception
 {
 public:
-    SystemException(ErrorCode& err) { this->mErrCode = err; }
+    SystemException(ErrorCode& err) { m_errcode = err; }
     ~SystemException() throw() {}
-    virtual const char* what() throw() { return mErrCode.GetErrorMessage(); }
-    ErrorCode& Code() { return mErrCode; }
-private:
-    ErrorCode mErrCode;
+    virtual const char* what() throw() { return m_errcode.Message(); }
+    ErrorCode& Code() { return m_errcode; }
+protected:
+    ErrorCode m_errcode;
 };
 
 

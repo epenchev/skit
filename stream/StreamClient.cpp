@@ -22,8 +22,7 @@
 #include "utils/IDGenerator.h"
 #include "stream/StreamClient.h"
 
-StreamClient::StreamClient()
- : m_clientID(IDGenerator::Instance().Next()), m_creationTime(time(NULL))
+StreamClient::StreamClient() : m_creationTime(time(NULL))
 {}
 
 StreamClient::~StreamClient()
@@ -37,37 +36,6 @@ unsigned long StreamClient::GetCreationTime()
 PropertyMap& StreamClient::GetProperties()
 {
     return m_propetries;
-}
-
-void StreamClient::Register(NetConnection* conn)
-{
-    if (conn)
-    {
-        SystemMutexLocker lock(m_lockConnections);
-        if (m_connections.count(conn) == 0)
-        {
-            LOG(logDEBUG) << "Register connection to client";
-            m_connections.insert(conn);
-        }
-    }
-}
-
-void StreamClient::UnRegister(NetConnection* conn)
-{
-    if (conn)
-    {
-        SystemMutexLocker lock(m_lockConnections);
-        if (m_connections.count(conn) != 0)
-        {
-            LOG(logDEBUG) << "Remove connection from client";
-            m_connections.erase(conn);
-        }
-    }
-}
-
-std::set<NetConnection*>& StreamClient::GetConnections()
-{
-    return m_connections;
 }
 
 unsigned StreamClient::GetID()

@@ -35,7 +35,8 @@ void SystemTimer::ExpiresSec(unsigned int seconds)
     }
     else
     {
-        ErrorCode errCode(EFAULT);
+        ErrorCode errCode;
+        errCode.SetMessage("Invalid listener");
         throw SystemException(errCode);
     }
 }
@@ -48,7 +49,8 @@ void SystemTimer::ExpiresUsec(unsigned int useconds)
     }
     else
     {
-        ErrorCode errCode(EFAULT);
+    	ErrorCode errCode;
+    	errCode.SetMessage("Invalid listener");
         throw SystemException(errCode);
     }
 }
@@ -61,7 +63,8 @@ void SystemTimer::AddTimerListener(TimerObserver* inListener)
     }
     else
     {
-        ErrorCode errCode(EINVAL);
+    	ErrorCode errCode;
+    	errCode.SetMessage("Invalid listener");
         throw SystemException(errCode);
     }
 }
@@ -75,7 +78,8 @@ void SystemTimer::Wait()
     }
     else
     {
-        ErrorCode errCode(EFAULT);
+    	ErrorCode errCode;
+    	errCode.SetMessage("Invalid listener");
         throw SystemException(errCode);
     }
 }
@@ -86,7 +90,8 @@ void SystemTimer::Cancel()
     mtimerImpl.cancel(err);
     if (err)
     {
-        ErrorCode errCode(err.value());
+        ErrorCode errCode;
+        errCode.SetMessage(err.message());
         throw SystemException(errCode);
     }
 }

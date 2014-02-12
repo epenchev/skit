@@ -37,8 +37,9 @@ void SystemLib::LoadFile(const char* filePath)
         mLibHandler = dlopen(filePath, RTLD_LAZY | RTLD_GLOBAL);
         if (NULL == mLibHandler)
         {
-            LOG(logERROR) << "Error: " << dlerror();
-            ErrorCode err(errno);
+        	ErrorCode err;
+        	LOG(logERROR) << "Error: " << dlerror();
+            err.SetMessage(dlerror());
             throw SystemException(err);
         }
     }
@@ -65,15 +66,14 @@ void* SystemLib::GetSymbol(const char* inSymbolName, ErrorCode& outErr)
             {
                 /* custom error */
                 LOG(logERROR) << errorStr;
-                outErr.SetValue(-1);
                 outErr.SetMessage(errorStr);
                 return NULL;
             }
             return dlSymbol;
         }
-        outErr.SetValue(EFAULT);
+        outErr.SetMessage("Invalid lib handler");
+        LOG(logERROR) << outErr.Message();
     }
-    outErr.SetValue(EINVAL);
 
     return NULL;
 }

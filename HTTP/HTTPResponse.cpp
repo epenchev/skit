@@ -49,7 +49,7 @@ HTTPResponse::HTTPResponse() : m_responseCode(0)
 
 void HTTPResponse::Init(const std::string& inHeader, ErrorCode& outError)
 {
-    outError.Clear();
+    outError = false;
 	ErrorCode err = HTTPUtils::ReadHeader(inHeader, m_mapheaders);
     if (!err)
     {
@@ -68,7 +68,6 @@ void HTTPResponse::Init(const std::string& inHeader, ErrorCode& outError)
             catch (std::exception& ex)
             {
                 LOG(logERROR) << ex.what();
-                outError.SetValue(-1);
                 outError.SetMessage(ex.what());
                 return;
             }
@@ -80,7 +79,7 @@ void HTTPResponse::Init(const std::string& inHeader, ErrorCode& outError)
     }
     else
     {
-    	LOG(logERROR) << err.GetErrorMessage();
+    	LOG(logERROR) << err.Message();
     	outError = err;
     }
 

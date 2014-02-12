@@ -81,9 +81,9 @@ public:
 private:
 
     boost::asio::ip::tcp::acceptor m_acceptor;       /**< boost listener object */
-    unsigned short               m_localPort;      /**< listening port number */
+    unsigned short                 m_localPort;      /**< listening port number */
     std::string                    m_localAddress;   /**< listening IP address as string */
-    bool                          m_isListening;    /**< is socket in listening state */
+    bool                           m_isListening;    /**< is socket in listening state */
     TCPAcceptorHandler*            m_iohandler;      /**< I/O handler */
     ErrorCode                      m_error;          /**< error code of accept operation */
 

@@ -27,16 +27,16 @@ void PropertyMap::SetProperty(const std::string& name, const std::string& value)
 
 std::string PropertyMap::GetProperty(const std::string& name) const
 {
-    std::string propertyVal;
+    std::string propertyValue;
     if (!name.empty())
     {
         if (m_propertymap.count(name) > 0)
         {
             std::map<std::string, std::string>::const_iterator it = m_propertymap.find(name);
-            propertyVal = it->second;
+            propertyValue = it->second;
         }
     }
 
-    return propertyVal;
+    return propertyValue;
 }
 

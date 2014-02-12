@@ -24,36 +24,38 @@
 #include "system/TCPSocket.h"
 #include "system/TCPAcceptor.h"
 #include "system/SystemThread.h"
-#include "TCPConnection.h"
 #include "HTTP/HTTPRequest.h"
 #include "HTTP/HTTPResponse.h"
+#include "utils/ErrorCode.h"
+#include "utils/Buffer.h"
 #include <set>
 #include <boost/enable_shared_from_this.hpp>
 
-class HTTPSessionListener;
+class HTTPConnectionListener;
 class HTTPServerListener;
 
 /**
 * HTTP network session.
 */
-class HTTPSession : public boost::enable_shared_from_this<HTTPSession>,
-                    public TCPConnection, public IOChannelListener
+class HTTPConnection
+ : public boost::enable_shared_from_this<HTTPConnection>,
+   public TCPSocketHandler
 {
 public:
-    HTTPSession(unsigned id, TCPSocket* inSocket);
-    virtual ~HTTPSession();
+    HTTPConnection(unsigned id, TCPSocket* inSocket);
+    virtual ~HTTPConnection();
 
     /**
     * Add a listener/observer object to be notified for incoming HTTP requests.
     * @param listener - listener/observer object
     */
-    void AddHTTPSessionListener(HTTPSessionListener* listener);
+    void AddHTTPConnectionListener(HTTPConnectionListener* listener);
 
     /**
     * Remove a listener/observer object.
     * @param listener - listener/observer object
     */
-    void RemoveHTTPSessionListener(HTTPSessionListener* listener);
+    void RemoveHTTPConnectionListener(HTTPConnectionListener* listener);
 
     /**
     * Start accepting HTTP requests.
@@ -66,55 +68,47 @@ public:
     */
     const HTTPRequest& GetRequest() const { return m_request; }
 
-    /* From IOChannelListener */
-    void OnRead(IOChannel* chan, std::size_t bytesRead, ErrorCode& err);
+    /* compare connections if they are identical */
+    bool operator == (const HTTPConnection& conn) const
+    { return (this->m_connID == conn.m_connID ? true : false); }
 
 protected:
 
-    /**
-    * Notify listeners for incoming HTTP request.
-    */
+    /* From TCPSocketHandler */
+    void OnReceive(TCPSocket* inSocket, std::size_t bytesRead, ErrorCode& err);
+
+    /* Notify listeners for incoming HTTP request. */
     void NotifyOnHTTPRequest();
 
-    IOChannel* m_channel;                        /**< Connection channel for I/O events */
-    Buffer* m_buffer;                            /**< buffer for I/O operations */
-    std::string m_reqheaders;                    /**< string with full or part HTTP request headers */
-    HTTPRequest m_request;                       /**< HTTP request object */
-    SystemMutex m_lockListeners;                 /**< listeners lock */
-    std::set<HTTPSessionListener*> m_listeners;  /**< listeners/observers for session events */
-    const static std::size_t m_recvsize = 100;   /**< receive buffer size bytes */
+    unsigned                          m_connID;           /**< unique connection identifier */
+    TCPSocket*                        m_socket;           /**< socket object for IO */
+    Buffer                            m_buffer;           /**< buffer for I/O operations */
+    std::string                       m_reqheaders;       /**< string with full or part HTTP request headers */
+    HTTPRequest                       m_request;          /**< HTTP request object */
+    SystemMutex                       m_lockListeners;    /**< listeners lock */
+    std::set<HTTPConnectionListener*> m_listeners;        /**< listeners/observers for connection events */
+    const static std::size_t          m_recvsize = 100;   /**< receive buffer size bytes */
 };
 
-typedef boost::shared_ptr<HTTPSession> HTTPSessionPtr;
+typedef boost::shared_ptr<HTTPConnection> HTTPConnectionPtr;
 
 /**
 * HTTP server.
 * Accept HTTP connections on a given port.
 * plug-in modules can be attached to the server via the HTTPServerObserver interface.
 */
-class HTTPServer : public TCPAcceptorHandler,
-                   public NetConnectionListener
+class HTTPServer : public TCPAcceptorHandler
 {
 public:
     HTTPServer(unsigned short port);
     HTTPServer(std::string localAdress, unsigned short port);
     virtual ~HTTPServer();
 
-    /**
-    * Start HTTPServer
-    */
+    /* Start HTTPServer */
     void Start();
 
-    /**
-    * Stop HTTPServer
-    */
+    /* Stop HTTPServer */
     void Stop();
-
-    /**
-    * Get accepted sessions count.
-    * @return unsigned - session count.
-    */
-    unsigned GetConnectionCount();
 
     /**
     * Add a listener/observer object to be notified for server events.
@@ -134,9 +128,9 @@ private:
 
     /**
     * Notify listeners for accepted HTTP session.
-    * @param session - instance to HTTPSession
+    * @param session - instance to HTTPConnection
     */
-    void NotifyOnSessionCreate(HTTPSessionPtr session);
+    void NotifyOnConnectionCreate(HTTPConnectionPtr session);
 
     /**
     * Notify listeners for server start event.
@@ -148,14 +142,9 @@ private:
     */
     void NotifyOnServerStop();
 
-    /* From NetConnectionListener */
-    void OnConnectionClose(NetConnection& conn);
-
     bool m_started;                                 /**< server started flag  */
     TCPAcceptor m_acceptor;                         /**< TCP acceptor object  */
     SystemMutex m_lockListeners;                    /**< listeners lock */
-    SystemMutex m_lockSessions;                     /**< sessions lock */
-    std::set<HTTPSessionPtr> m_sessions;            /**< HTTP sessions/connections */
     std::set<HTTPServerListener*> m_listeners;      /**< listeners/observers for server events */
 };
 
@@ -167,9 +156,9 @@ class HTTPServerListener
 public:
     /**
     * Triggered when new HTTP session is accepted.
-    * @param session - object instance of accepted HTTPSession
+    * @param session - object instance of accepted HTTPConnection
     */
-    virtual void OnHTTPSessionAccept(HTTPSessionPtr session) {}
+    virtual void OnHTTPConnectionAccept(HTTPConnectionPtr session) {}
 
     /**
     * Triggered when server is started.
@@ -185,9 +174,9 @@ public:
 };
 
 /**
-* HTTPSession listener/observer to be notified on events from session.
+* HTTPConnection listener/observer to be notified on events from session.
 */
-class HTTPSessionListener
+class HTTPConnectionListener
 {
 public:
 
@@ -196,7 +185,7 @@ public:
 	* @param session - reference to HTTP session object.
 	* @param inRequest - HTTP request received.
 	*/
-    virtual void OnHTTPrequest(HTTPSessionPtr session, const HTTPRequest& inRequest) {}
+    virtual void OnHTTPrequest(HTTPConnectionPtr session, const HTTPRequest& inRequest) {}
 };
 
 

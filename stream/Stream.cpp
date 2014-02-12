@@ -24,7 +24,6 @@
 #include "stream/StreamPlayItem.h"
 #include "stream/StreamPacketRec.h"
 #include "stream/StreamFactory.h"
-#include "system/Buffer.h"
 #include "utils/ErrorCode.h"
 
 //#define LOG_DISABLE
@@ -198,7 +197,7 @@ void Stream::OnStart(StreamSource& source, ErrorCode& error)
     LOG(logDEBUG) << "{}";
     if (error)
     {
-        LOG(logERROR) << "Error starting source: " << error.GetErrorMessage();
+        LOG(logERROR) << "Error starting source: " << error.Message();
     }
 }
 
@@ -227,7 +226,7 @@ void Stream::OnDataReceive(StreamSource& source, IStreamPacket& packet, ErrorCod
     }
     else
     {
-        LOG(logERROR) << "Got error from source " << error.GetErrorMessage();
+        LOG(logERROR) << "Got error from source " << error.Message();
     }
 }
 

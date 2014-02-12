@@ -26,7 +26,7 @@
 using boost::asio::ip::tcp;
 
 TCPSocket::TCPSocket()
- : m_socket(TaskThreadPool::GetEventThread().mIOServiceLoop)
+ : m_socket(TaskThreadPool::GetEventThread().mIOServiceLoop), m_recvbytes(0), m_sendbytes(0)
 {}
 
 TCPSocket::~TCPSocket()
@@ -41,12 +41,16 @@ void TCPSocket::Send(Buffer& inData, TCPSocketHandler* handler)
 {
     if (m_socket.is_open())
     {
-        const char* data = inData.BufferCast<const char*>();
-
+        char* data = inData.get();
         if (data)
         {
-            boost::asio::async_write(m_socket, boost::asio::buffer(data, inData.Size()), boost::bind(&TCPSocket::HandleWrite,
-                                     this, boost::asio::placeholders::error,  boost::asio::placeholders::bytes_transferred, handler));
+            boost::asio::async_write(m_socket,
+            						 boost::asio::buffer(data, inData.size()),
+            		                 boost::bind(&TCPSocket::HandleWrite,
+                                     this,
+                                     boost::asio::placeholders::error,
+                                     boost::asio::placeholders::bytes_transferred,
+                                     handler));
         }
     }
 }
@@ -55,11 +59,16 @@ void TCPSocket::Receive(Buffer& outData, TCPSocketHandler* handler)
 {
     if (m_socket.is_open())
     {
-        char* data = outData.BufferCast<char*>();
+    	char* data = outData.get();
         if (data)
         {
-           boost::asio::async_read(m_socket, boost::asio::buffer(data, outData.Size()), boost::bind(&TCPSocket::HandleRead,
-                                   this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, handler));
+           boost::asio::async_read(m_socket,
+        		                   boost::asio::buffer(data, outData.size()),
+        		                   boost::bind(&TCPSocket::HandleRead,
+                                   this,
+                                   boost::asio::placeholders::error,
+                                   boost::asio::placeholders::bytes_transferred,
+                                   handler));
         }
     }
 }
@@ -68,11 +77,15 @@ void TCPSocket::ReceiveSome(Buffer& outData, TCPSocketHandler* handler)
 {
     if (m_socket.is_open())
     {
-        char* data = outData.BufferCast<char*>();
+        char* data = outData.get();
         if (data)
         {
-            m_socket.async_read_some(boost::asio::buffer(data, outData.Size()), boost::bind(&TCPSocket::HandleRead,
-                                     this, boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred, handler));
+            m_socket.async_read_some(boost::asio::buffer(data, outData.size()),
+            		                 boost::bind(&TCPSocket::HandleRead,
+                                     this,
+                                     boost::asio::placeholders::error,
+                                     boost::asio::placeholders::bytes_transferred,
+                                     handler));
         }
     }
 }
@@ -88,20 +101,20 @@ std::string TCPSocket::GetRemoteIP(ErrorCode& outError) const
         boost::asio::ip::tcp::endpoint endpoint = m_socket.remote_endpoint(error);
         if (error)
         {
-            outError.SetValue(error.value());
+            outError = true;
         }
         else
         {
             peer = endpoint.address().to_string(error);
             if (error)
             {
-                outError.SetValue(error.value());
+            	outError = true;
             }
         }
     }
     else
     {
-        outError.SetValue(ENOTCONN);
+    	outError = true;
     }
     return peer;
 }
@@ -116,7 +129,7 @@ unsigned short TCPSocket::GetRemotePort(ErrorCode& outError) const
         boost::asio::ip::tcp::endpoint endpoint = m_socket.remote_endpoint(error);
         if (error)
         {
-            outError.SetValue(error.value());
+            outError = true;
         }
         else
         {
@@ -125,7 +138,7 @@ unsigned short TCPSocket::GetRemotePort(ErrorCode& outError) const
     }
     else
     {
-        outError.SetValue(ENOTCONN);
+    	outError = true;
     }
     return netPort;
 }
@@ -141,15 +154,23 @@ void TCPSocket::Connect(std::string host, std::string netService, TCPSocketHandl
         tcp::resolver resolver(m_socket.get_io_service());
         tcp::resolver::query query(host, netService);
 
-        resolver.async_resolve(query, boost::bind(&TCPSocket::HandleResolve,
-                               this, boost::asio::placeholders::error, boost::asio::placeholders::iterator, handler));
+        resolver.async_resolve(query,
+        		               boost::bind(&TCPSocket::HandleResolve,
+                               this,
+                               boost::asio::placeholders::error,
+                               boost::asio::placeholders::iterator,
+                               handler));
     }
     else
     {
         if (!netService.empty())
         {
             boost::asio::ip::tcp::endpoint endpoint(hostIP, atoi(netService.c_str()));
-            m_socket.async_connect(endpoint, boost::bind(&TCPSocket::HandleConnect, this, boost::asio::placeholders::error, handler));
+            m_socket.async_connect(endpoint,
+            		               boost::bind(&TCPSocket::HandleConnect,
+            		               this,
+            		               boost::asio::placeholders::error,
+            		               handler));
         }
     }
 }
@@ -165,16 +186,23 @@ void TCPSocket::Close()
     }
 }
 
-void TCPSocket::HandleWrite(const boost::system::error_code& error, std::size_t bytes_transferred, TCPSocketHandler* handler)
+void TCPSocket::HandleWrite(const boost::system::error_code& error,
+		                    std::size_t bytes_transferred,
+		                    TCPSocketHandler* handler)
 {
-    m_error.Clear();
+    m_error = false;
     if (error)
     {
-        m_error.SetValue(error.value());
+        m_error = true;
         if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted
         }
+    }
+
+    if (!error && bytes_transferred)
+    {
+    	m_sendbytes = bytes_transferred;
     }
 
     if (handler)
@@ -185,33 +213,42 @@ void TCPSocket::HandleWrite(const boost::system::error_code& error, std::size_t 
     }
 }
 
-void TCPSocket::HandleRead(const boost::system::error_code& error, std::size_t bytes_transferred, TCPSocketHandler* handler)
+void TCPSocket::HandleRead(const boost::system::error_code& error,
+		                   std::size_t bytes_transferred,
+		                   TCPSocketHandler* handler)
 {
-    m_error.Clear();
+    m_error = false;
 
     if (error)
     {
-        m_error.SetValue(error.value());
-        if (boost::asio::error::operation_aborted == error)
+    	m_error = true;
+    	if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted, don't signal
         }
     }
 
-   if (handler)
-   {
-       Task* readTask = new Task();
-       readTask->Connect(&TCPSocketHandler::OnReceive, handler, this, bytes_transferred, m_error);
-       TaskThreadPool::Signal(readTask);
-   }
+    if (!error && bytes_transferred)
+    {
+    	m_recvbytes = bytes_transferred;
+    }
+
+    if (handler)
+    {
+    	Task* readTask = new Task();
+    	readTask->Connect(&TCPSocketHandler::OnReceive, handler, this, bytes_transferred, m_error);
+    	TaskThreadPool::Signal(readTask);
+    }
 }
 
-void TCPSocket::HandleResolve(const boost::system::error_code& error, tcp::resolver::iterator endpoint_iterator, TCPSocketHandler* handler)
+void TCPSocket::HandleResolve(const boost::system::error_code& error,
+		                      tcp::resolver::iterator endpoint_iterator,
+		                      TCPSocketHandler* handler)
 {
-    m_error.Clear();
+	m_error = false;
     if (error)
     {
-        m_error.SetValue(error.value());
+    	m_error = true;
         if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted, don't signal
@@ -227,17 +264,21 @@ void TCPSocket::HandleResolve(const boost::system::error_code& error, tcp::resol
     }
     else
     {
-        boost::asio::async_connect(m_socket, endpoint_iterator,
-                                   boost::bind(&TCPSocket::HandleConnect, this, boost::asio::placeholders::error, handler));
+        boost::asio::async_connect(m_socket,
+        		                   endpoint_iterator,
+                                   boost::bind(&TCPSocket::HandleConnect,
+                                		       this,
+                                		       boost::asio::placeholders::error,
+                                		       handler));
     }
 }
 
 void TCPSocket::HandleConnect(const boost::system::error_code& error, TCPSocketHandler* handler)
 {
-    m_error.Clear();
+	m_error = false;
     if (error)
     {
-        m_error.SetValue(error.value());
+    	m_error = true;
         if (boost::asio::error::operation_aborted == error)
         {
             return; // operation aborted, don't signal

@@ -52,14 +52,14 @@ void ServerController::StartServer()
         m_httpServer = new HTTPServer(8080);
         m_httpServer->Start();
         LOG(logINFO) << "Loading plugins";
-        LoadPlugin("/home/emo/workspace/blitz/modules/HTTPPseudoStreaming/HTTPPseudoStreamModule.so");
-        LoadPlugin("/home/emo/workspace/blitz/modules/FileSource/FileSourceModule.so");
+        LoadPlugin("/home/emo/cpp/workspace/blitz/modules/HTTPPseudoStreaming/HTTPPseudoStreamModule.so");
+        LoadPlugin("/home/emo/cpp/workspace/blitz/modules/FileSource/FileSourceModule.so");
 
         Stream* s = StreamFactory::CreateStream("FileSource", NULL, "HTTPPseudoStreamSink");
         if (s)
         {
             PropertyMap& pmap = s->GetProperties();
-            pmap.SetProperty("filename", "/var/www/oceans-clip.mp4");
+            pmap.SetProperty("filename", "/var/www/htdocs/oceans-clip.mp4");
             LOG(logDEBUG) << "Stream is created";
             StreamFactory::PublishStream(*s, "ocean");
             s->Play();

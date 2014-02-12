@@ -23,11 +23,13 @@
 bool XMLReader::ReadXMLFile(const std::string& fileName)
 {
     bool returnCode = true;
-    mErrCode.Clear();
+    mErrCode = false;
     try
     {
         if (!fileName.empty())
-                read_xml(fileName, mTree);
+        {
+        	read_xml(fileName, mTree);
+        }
     }
     catch (std::exception& exceptionErr)
     {
@@ -39,11 +41,13 @@ bool XMLReader::ReadXMLFile(const std::string& fileName)
 
 XMLTree& XMLReader::GetSubTree(XMLTree& tree, const char* xmlTag)
 {
-    mErrCode.Clear();
+	mErrCode = false;
     try
     {
         if (xmlTag)
-                return tree.get_child(xmlTag);
+        {
+        	return tree.get_child(xmlTag);
+        }
     }
     catch (std::exception& exceptionErr)
     {
@@ -56,7 +60,7 @@ XMLTree& XMLReader::GetSubTree(XMLTree& tree, const char* xmlTag)
 std::string XMLReader::GetData(XMLTree& tree, const char* xmlTag)
 {
     std::string data;
-    mErrCode.Clear();
+    mErrCode = false;
     if (xmlTag)
     {
         try

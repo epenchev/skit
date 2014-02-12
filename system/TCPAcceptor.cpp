@@ -64,7 +64,7 @@ void TCPAcceptor::Listen()
     }
     catch(boost::system::system_error& ex)
     {
-        outError.SetValue(ex.code().value());
+        outError.SetMessage(ex.code().message());
         throw SystemException(outError);
 
     };
@@ -76,7 +76,7 @@ void TCPAcceptor::Start()
     ErrorCode outError;
     if (!m_iohandler || !m_isListening)
     {
-        outError.SetValue(EFAULT);
+    	outError = true;
         throw SystemException(outError);
     }
     Accept();
@@ -97,8 +97,11 @@ void TCPAcceptor::Stop()
 void TCPAcceptor::Accept()
 {
     TCPSocket* clientSocket = new TCPSocket();
-    m_acceptor.async_accept(clientSocket->m_socket, boost::bind(&TCPAcceptor::HandleAccept, this,
-                            clientSocket, boost::asio::placeholders::error));
+    m_acceptor.async_accept(clientSocket->m_socket,
+                            boost::bind(&TCPAcceptor::HandleAccept,
+                            this,
+                            clientSocket,
+                            boost::asio::placeholders::error));
 }
 
 unsigned short TCPAcceptor::GetListeningPort() const
@@ -113,11 +116,11 @@ void TCPAcceptor::SetHandler(TCPAcceptorHandler* handler)
 
 void TCPAcceptor::HandleAccept(TCPSocket* outSocket, const boost::system::error_code& error)
 {
-    m_error.Clear();
+    m_error = false;
     LOG(logDEBUG) << "Accepted connection";
     if (error)
     {
-        m_error.SetValue(error.value());
+    	m_error.SetMessage(error.message());
         delete outSocket;
         outSocket = NULL;
         if (boost::asio::error::operation_aborted == error)

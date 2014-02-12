@@ -21,10 +21,7 @@
 #ifndef STREAMCLIENT_H_
 #define STREAMCLIENT_H_
 
-#include "system/SystemThread.h"
 #include "utils/PropertyMap.h"
-#include "server/NetConnection.h"
-#include <set>
 #include <boost/shared_ptr.hpp>
 
 /**
@@ -34,20 +31,7 @@
 class StreamClient
 {
 public:
-    StreamClient();
     virtual ~StreamClient();
-
-    /**
-    * Associate connection with client.
-    * @param conn - pointer to NetConnection object.
-    */
-    void Register(NetConnection* conn);
-
-    /**
-    * Remove connection from client associated with this client.
-    * @param conn - pointer to NetConnection object.
-    */
-    void UnRegister(NetConnection* conn);
 
     /**
     * Returns the time at which the client was created.
@@ -55,26 +39,33 @@ public:
     unsigned long GetCreationTime();
 
     /**
-    *  Return set of connections for this client.
-    */
-    std::set<NetConnection*>& GetConnections();
-
-    /**
     *  Get the properties if the client.
     */
     PropertyMap& GetProperties();
 
-    /**
-    * Returns the client id.
-    */
+    /*  Returns the client id. */
     unsigned GetID();
 
-private:
+    /* Total number of bytes read from the client connection. */
+    virtual unsigned long GetReadBytes() = 0;
+
+    /**
+    * Total number of bytes written to the client connection.
+    */
+    virtual unsigned long GetWrittenBytes() = 0;
+
+    /**
+    * Sets the bandwidth using a mbit/s value.
+    * @param mbits - Mega bits per second limit.
+    */
+    virtual void SetBandwidth(int mbits) = 0;
+
+protected:
+    StreamClient();
+
     unsigned m_clientID;                    /**< Client identifier  */
     unsigned long m_creationTime;           /**< Creation time as time-stamp. */
     PropertyMap  m_propetries;              /**< Client properties. */
-    SystemMutex  m_lockConnections;
-    std::set<NetConnection*> m_connections; /**< connections associated with client */
 };
 
 typedef boost::shared_ptr<StreamClient> StreamClientPtr;

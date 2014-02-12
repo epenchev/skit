@@ -71,7 +71,6 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
 
     if (inHeader.empty())
     {
-        errCode.SetValue(-1);
         errCode.SetMessage("Empty header");
         return errCode;
     }
@@ -79,7 +78,6 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
     if (std::string::npos == inHeader.find(endHeaders) &&
         std::string::npos == inHeader.find(endHeaders1))
     {
-        errCode.SetValue(-1);
         errCode.SetMessage("Error, end of headers not found");
         return errCode;
     }
@@ -102,7 +100,6 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
             }
             catch(std::exception& ex)
             {
-                errCode.SetValue(-1);
                 errCode.SetMessage(ex.what());
                 return errCode;
             }
@@ -115,7 +112,6 @@ ErrorCode HTTPUtils::ReadHeader( const std::string& inHeader, HTTPHeadersMap& ou
     }
     else
     {
-        errCode.SetValue(-1);
         errCode.SetMessage("Error parsing header, no proper formating found");
     }
 
@@ -140,20 +136,17 @@ ErrorCode HTTPUtils::SplitHeaderLine(const std::string& line, HTTPParam& outPara
             }
             catch(std::exception& ex)
             {
-                errCode.SetValue(-1);
                 errCode.SetMessage(ex.what());
                 return errCode;
             }
         }
         else
         {
-            errCode.SetValue(-1);
             errCode.SetMessage("Error splitting, control char ':' missing");
         }
     }
     else
     {
-        errCode.SetValue(-1);
         errCode.SetMessage("Line is empty");
     }
 

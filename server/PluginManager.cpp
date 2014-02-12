@@ -55,13 +55,13 @@ PluginModule* PluginManager::LoadModule(const char* inPath)
         }
         else if (err)
         {
-        	LOG(logERROR) << err.GetErrorMessage();
+        	LOG(logERROR) << err.Message();
         	delete lib;
         }
     }
     catch(SystemException& ex)
     {
-    	LOG(logERROR) << ex.Code().GetErrorMessage();
+    	LOG(logERROR) << ex.Code().Message();
         delete lib;
     }
     return outmod;
@@ -87,7 +87,7 @@ void PluginManager::UnloadModule(PluginModule* module)
 			}
 			else if (err)
 			{
-				LOG(logERROR) << err.GetErrorMessage();
+				LOG(logERROR) << err.Message();
 			}
 			delete lib;
 			m_libs.erase(it);
