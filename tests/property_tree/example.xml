@@ -1,0 +1,19 @@
+<ExampleData>data</ExampleData>
+<Staff>
+    <Wokrer>
+        <Name>AAA</Name>
+        <Age>34</Age>
+    </Worker>
+    <Wokrer>
+        <Name>BBBB</Name>
+        <Age>21</Age>
+    </Worker>
+    <Wokrer>
+        <Name>Joe</Name>
+        <Age>43</Age>
+            <Skills>
+                <driling>yes</driling>
+                <driving>yes</driving>
+            </Skills>
+    </Worker>
+</Staff>
