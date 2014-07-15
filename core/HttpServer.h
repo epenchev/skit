@@ -19,15 +19,11 @@
 #include <boost/enable_shared_from_this.hpp>
 
 class HttpServer; // forward
-class HttpSession : /*public TcpSocketListener,*/
-					public boost::enable_shared_from_this<HttpSession>
+class HttpSession : public boost::enable_shared_from_this<HttpSession>
 {
 public:
 	HttpSession(HttpServer& server, TcpSocketPtr socket);
     virtual ~HttpSession() {}
-
-    // from TcpSocketListener
-    //void OnReceive(TcpSocket* socket, const BoostErrCode& error, std::size_t bytes_transferred);
 
     // start reading HTTP request
     void AcceptRequest();
@@ -39,7 +35,7 @@ public:
 
 private:
     void OnReceive(const BoostErrCode& error, std::size_t bytes_transferred);
-    HttpServer&  m_server;
+    HttpServer&         m_server;
     TcpSocketPtr        m_socket;
     Buffer              m_buffer;
     std::string         m_reqdata;
@@ -54,33 +50,40 @@ class HttpServer : public Skit::ServerHandler
 public:
 	static ServerHandler* CreateItem() { return new HttpServer; }
 
-	HttpServer() {}
+	HttpServer();
     virtual ~HttpServer() {}
 
     // listener/observer to be notified for every HTTP request
     class ReqListener
     {
     public:
+    	static ReqListener* CreateListener() { return NULL; }
         virtual void OnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request) = 0;
     };
 
-    typedef boost::shared_ptr<HttpServer::ReqListener> ReqListenerPtr;
-    typedef boost::weak_ptr<HttpServer::ReqListener> ReqListenerWeakPtr;
+    typedef ReqListener* (*CreateListenerFunc)();
+
+    // register listeners
+    static void Register(CreateListenerFunc func) { GetRegistry().insert(func); }
 
     // from ServerHandler
     void AcceptConnection(TcpSocketPtr socket);
 
-    // add listener to be notified on HTTP request
-    static void AddRequestListener(ReqListenerPtr listener);
-
     // Notify HttpServer listeners for incoming HTTP request
-    static void NotifyOnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request);
+    void NotifyOnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request);
 
     // Notify HttpServer for session close, will destroy the session
     void NotifyOnHttpSessionClose(HttpSessionPtr session);
 
 private:
     std::set<HttpSessionPtr> m_sessions;
+    std::set<ReqListener*>   m_listeners;
+
+    static std::set<CreateListenerFunc>& GetRegistry()
+    {
+    	static std::set<CreateListenerFunc> s_registryListeners;
+        return s_registryListeners;
+    }
 };
 
 #endif // HTTP_SERVER_H_

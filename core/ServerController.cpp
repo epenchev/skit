@@ -4,7 +4,6 @@
 
 #include "Logger.h"
 #include "ServerController.h"
-#include "JsonHttpHandler.h"
 
 using namespace Skit;
 
@@ -90,10 +89,6 @@ void ServerController::Load(const std::string& filename)
 		LOG(logERROR) << ex.what();
 		return;
 	}
-
-	//for test only
-	HttpServer::ReqListenerPtr ptr(new JSON_RequestHandler);
-	HttpServer::AddRequestListener(ptr);
 
 	// run the machine
 	m_io_service.run();

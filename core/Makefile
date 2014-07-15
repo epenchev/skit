@@ -1,15 +1,14 @@
-CPPFLAGS = -I./ -O0 -g3 -Wall -fPIC
-LDLIBS = -ldl -lpthread -lboost_system -lboost_thread
+CPPFLAGS = -O0 -g3 -Wall
+LDLIBS = -lpthread -lboost_system -lboost_thread
 
-all: libskit.so Skit
+all: Skit
 
 objects += $(patsubst %.cpp, %.o, $(filter-out Skit.cpp, $(wildcard *.cpp)))
+object_modules = $(wildcard ../modules/*/*.o)
 
 clean:
-	rm -f $(objects) libskit.so Skit *~
+	rm -f $(objects) Skit *~
 
-libskit.so: $(objects)
-	g++ -shared -Wl,-soname=libskit.so -o $@ $(objects)
+Skit: $(objects) Skit.cpp
+	g++ -O0 -g3 -Wall Skit.cpp $(objects) $(object_modules) -o $@ $(LDLIBS)
 
-Skit: libskit.so Skit.cpp
-	g++ -I./ -L./ -O0 -g3 -Wall Skit.cpp -o $@ -lskit $(LDLIBS)

@@ -3,6 +3,8 @@
 #include "Logger.h"
 #include "Buffer.h"
 
+ListenerRegistrator<JSON_RequestHandler, HttpServer> regJsonListener;
+
 void JSON_RequestHandler::OnSendHandler(HttpSessionPtr session, const boost::system::error_code& error, std::size_t sendBytes)
 {
 	LOG(logDEBUG) << "Send " << sendBytes <<  " bytes";

@@ -5,17 +5,21 @@
 #include "HttpServer.h"
 #include "Logger.h"
 
-#include <boost/thread/locks.hpp>
-
 #include <iostream>
 #include <cstring>
-
-static boost::mutex s_listenersMutex;
-static std::list<HttpServer::ReqListenerWeakPtr> s_listeners;
 
 // register HttpServerHandler to ServerController::ServerHandlerFactory for later use
 Skit::ServerController::HandlerFactory::Registrator<HttpServer> reg_http("http");
 
+HttpServer::HttpServer()
+{
+	std::set<CreateListenerFunc>::iterator it  = HttpServer::GetRegistry().begin();
+	for (; it != HttpServer::GetRegistry().end(); it++)
+	{
+		ReqListener* listener = (*it)();
+		m_listeners.insert(listener);
+	}
+}
 
 void HttpServer::AcceptConnection(TcpSocketPtr socket)
 {
@@ -24,28 +28,12 @@ void HttpServer::AcceptConnection(TcpSocketPtr socket)
     session->AcceptRequest();
 }
 
-void HttpServer::AddRequestListener(ReqListenerPtr listener)
-{
-	boost::unique_lock<boost::mutex> lock(s_listenersMutex);
-    s_listeners.push_back(listener);
-}
-
 void HttpServer::NotifyOnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request)
 {
-    std::list<ReqListenerWeakPtr>::iterator iter = s_listeners.begin();
-    while (iter != s_listeners.end())
+	std::set<ReqListener*>::iterator iter = m_listeners.begin();
+    for (; iter != m_listeners.end(); iter++)
     {
-        if ((*iter).expired())
-        {
-        	boost::unique_lock<boost::mutex> lock(s_listenersMutex);
-        	iter = s_listeners.erase(iter);
-        }
-        else
-        {
-            ReqListenerPtr listener = (*iter).lock();
-            listener->OnHttpRequest(session, request);
-            ++iter;
-        }
+    	(*iter)->OnHttpRequest(session, request);
     }
 }
 
@@ -87,7 +75,7 @@ void HttpSession::OnReceive(const BoostErrCode& error, std::size_t bytes_transfe
         else
         {
             m_request.Init(m_reqdata);
-            HttpServer::NotifyOnHttpRequest(this->shared_from_this(), m_request);
+            m_server.NotifyOnHttpRequest(this->shared_from_this(), m_request);
             m_reqdata.clear();
         }
     }

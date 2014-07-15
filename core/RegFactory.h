@@ -2,12 +2,12 @@
 // RegFactory.h
 // Copyright (C) 2014  Emil Penchev, Bulgaria
 
+#ifndef REG_FACTORY_TMPL_H_
+#define REG_FACTORY_TMPL_H_
+
 #include <map>
 #include <set>
 #include <string>
-
-#ifndef REG_FACTORY_TMPL_H_
-#define REG_FACTORY_TMPL_H_
 
 // Abstract factory from template, register classes at runtime.
 template <typename T>
@@ -58,6 +58,18 @@ protected:
         static std::map<std::string, RegFactory::CreateFunc> s_registry;
         return s_registry;
     }
+};
+
+template <class Listener, class Reg>
+struct ListenerRegistrator
+{
+	ListenerRegistrator()
+    {
+		Reg::Register(Listener::CreateListener);
+    };
+private: // non-copyable
+	ListenerRegistrator(const ListenerRegistrator&);
+    void operator=(const ListenerRegistrator&);
 };
 
 #endif // REG_FACTORY_TMPL_H_
