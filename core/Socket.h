@@ -14,11 +14,12 @@
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 
-#define SocketHandler(func, ...) \
+// bind handler functions with objects to be called on socket I/O completion
+#define BIND_HANDLER(func, ...) \
 			boost::bind(func, this, ##__VA_ARGS__, \
 				boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
 
-typedef boost::system::error_code BoostErrCode;
+typedef boost::system::error_code SysError;
 
 // Class for I/O operations over TCP network link
 class TcpSocket : public boost::asio::ip::tcp::socket
@@ -82,8 +83,8 @@ private:
     Skit::ThreadID m_threadID;                 // socket's io_service thread
 
     // boost socket IO handlers for connect
-    void HandleConnect(ConnectListener* listener, const BoostErrCode& err);
-    void HandleResolve(ConnectListener* listener, const BoostErrCode& err,
+    void HandleConnect(ConnectListener* listener, const SysError& err);
+    void HandleResolve(ConnectListener* listener, const SysError& err,
     						boost::asio::ip::tcp::resolver::iterator endpoint_iterator);
 
 };
@@ -129,7 +130,7 @@ private:
     void Accept();
 
     // boost tcp::acceptor handler callback function
-    void HandleAccept(TcpSocket* socket, const BoostErrCode& error);
+    void HandleAccept(TcpSocket* socket, const SysError& error);
 };
 
 #endif /* SOCKET_H_ */

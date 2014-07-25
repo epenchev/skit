@@ -23,6 +23,6 @@ void JSON_RequestHandler::OnHttpRequest(HttpSessionPtr session, Skit::HTTP::Requ
 
 
 	TcpSocketPtr socket = session->GetSocket();
-	socket->Send(CreateBufferSequence(buf), SocketHandler(&JSON_RequestHandler::OnSendHandler, session));
+	socket->Send(CreateBufferSequence(buf), BIND_HANDLER(&JSON_RequestHandler::OnSendHandler, session));
 }
 

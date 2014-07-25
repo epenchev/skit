@@ -22,7 +22,7 @@ std::string TcpSocket::GetRemoteIP() const
 
     if (is_open())
     {
-    	BoostErrCode error;
+    	SysError error;
         boost::asio::ip::tcp::endpoint endpoint = remote_endpoint(error);
         if (error)
         {
@@ -46,7 +46,7 @@ unsigned short TcpSocket::GetRemotePort() const
 {
     if (is_open())
     {
-    	BoostErrCode error;
+    	SysError error;
         boost::asio::ip::tcp::endpoint endpoint = remote_endpoint(error);
         if (!error)
         {
@@ -66,7 +66,7 @@ unsigned short TcpSocket::GetLocalPort() const
 {
     if (is_open())
     {
-    	BoostErrCode error;
+    	SysError error;
         boost::asio::ip::tcp::endpoint endpoint = local_endpoint(error);
         if (!error)
         {
@@ -84,7 +84,7 @@ unsigned short TcpSocket::GetLocalPort() const
 
 void TcpSocket::Connect(std::string host, std::string netService, ConnectListener* listener)
 {
-	BoostErrCode error;
+	SysError error;
     boost::asio::ip::address hostIP = boost::asio::ip::address::from_string(host, error);
 
     if (error)
@@ -119,7 +119,7 @@ void TcpSocket::Close()
 }
 
 void TcpSocket::HandleResolve(ConnectListener* listener,
-                              const BoostErrCode& error,
+                              const SysError& error,
 		                      tcp::resolver::iterator endpoint_iterator)
 {
 	ErrorCode outErr;
@@ -141,7 +141,7 @@ void TcpSocket::HandleResolve(ConnectListener* listener,
     }
 }
 
-void TcpSocket::HandleConnect(ConnectListener* listener, const BoostErrCode& error)
+void TcpSocket::HandleConnect(ConnectListener* listener, const SysError& error)
 {
     ErrorCode outErr;
     if (error)
@@ -240,7 +240,7 @@ unsigned short SocketAcceptor::GetListeningPort() const
     unsigned short socketPort = 0;
     if (m_isListening)
     {
-        boost::system::error_code err;
+        SysError err;
         tcp::endpoint epoint = m_acceptorImpl.local_endpoint(err);
         if (!err)
         {

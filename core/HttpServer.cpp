@@ -89,7 +89,7 @@ void HttpSession::OnReceive(const BoostErrCode& error, std::size_t bytes_transfe
 void HttpSession::AcceptRequest()
 {
 	memset(m_buffer.Get<char*>(), 0, m_buffer.Size());
-	m_socket->ReceiveSome(CreateBufferSequence(m_buffer), SocketHandler(&HttpSession::OnReceive));
+	m_socket->ReceiveSome(CreateBufferSequence(m_buffer), BIND_HANDLER(&HttpSession::OnReceive));
 }
 
 void HttpSession::Disconnect()
