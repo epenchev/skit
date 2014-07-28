@@ -34,7 +34,7 @@ public:
     TcpSocketPtr GetSocket() { return m_socket; }
 
 private:
-    void OnReceive(const BoostErrCode& error, std::size_t bytes_transferred);
+    void OnReceive(const SysError& error, std::size_t bytes_transferred);
     HttpServer&         m_server;
     TcpSocketPtr        m_socket;
     Buffer              m_buffer;

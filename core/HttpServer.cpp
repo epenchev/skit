@@ -48,7 +48,7 @@ HttpSession::HttpSession(HttpServer& server, TcpSocketPtr socket)
     m_reqdata.clear();
 }
 
-void HttpSession::OnReceive(const BoostErrCode& error, std::size_t bytes_transferred)
+void HttpSession::OnReceive(const SysError& error, std::size_t bytes_transferred)
 {
     if (error)
     {

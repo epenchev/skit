@@ -21,7 +21,7 @@ public:
 	void OnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request);
 
 private:
-	void OnSendHandler(HttpSessionPtr session, const BoostErrCode& error, std::size_t sendBytes);
+	void OnSendHandler(HttpSessionPtr session, const SysError& error, std::size_t sendBytes);
 	std::string m_data;
 };
 
