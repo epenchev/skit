@@ -9,6 +9,8 @@
 #include <set>
 #include <string>
 
+using namespace std;
+
 // Abstract factory from template, register classes at runtime.
 template <typename T>
 class RegFactory
@@ -16,7 +18,7 @@ class RegFactory
 public:
     typedef T* (*CreateFunc)();
     
-    static void Registrate(const std::string& name, RegFactory::CreateFunc func)
+    static void Registrate(const string& name, RegFactory::CreateFunc func)
     {
         if ( GetRegistry().end() == GetRegistry().find(name) )
         {
@@ -24,16 +26,16 @@ public:
         }
     }
     
-    static T* CreateInstance(const std::string& name)
+    static T* CreateInstance(const string& name)
     {
-        typename std::map<std::string, RegFactory::CreateFunc>::iterator it = GetRegistry().find(name);
+        typename map<string, RegFactory::CreateFunc>::iterator it = GetRegistry().find(name);
         return it == GetRegistry().end() ? NULL : (it->second)();
     }
 
-    static void GetRegList(std::set<std::string>& outlist)
+    static void GetRegList(set<string>& outlist)
     {
         outlist.clear();
-        typename std::map<std::string, RegFactory::CreateFunc>::iterator it;
+        typename map<string, RegFactory::CreateFunc>::iterator it;
         for ( it = GetRegistry().begin(); it != GetRegistry().end(); it++ )
         {
             outlist.insert(it->first);
@@ -43,7 +45,7 @@ public:
     template <typename D>
     struct Registrator
     {
-        Registrator(const std::string& name)
+        Registrator(const string& name)
         {
             RegFactory::Registrate(name, D::CreateItem);
         }
@@ -53,9 +55,9 @@ public:
     };
 
 protected:    
-    static std::map<std::string, RegFactory::CreateFunc>& GetRegistry()
+    static map<string, RegFactory::CreateFunc>& GetRegistry()
     {
-        static std::map<std::string, RegFactory::CreateFunc> s_registry;
+        static map<string, RegFactory::CreateFunc> s_registry;
         return s_registry;
     }
 };

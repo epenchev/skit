@@ -5,24 +5,43 @@
 
 ListenerRegistrator<JSON_RequestHandler, HttpServer> regJsonListener;
 
-void JSON_RequestHandler::OnSendHandler(HttpSessionPtr session, const boost::system::error_code& error, std::size_t sendBytes)
+void JSON_RequestHandler::OnSendHandler( HttpSessionPtr session,
+                                         const SysError& error,
+                                         size_t bytesWriten )
 {
-	LOG(logDEBUG) << "Send " << sendBytes <<  " bytes";
-	session->Disconnect();
+	LOG(logDEBUG) << "Send " << bytesWriten <<  " bytes";
 
 }
 
-void JSON_RequestHandler::OnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request)
+bool JSON_RequestHandler::OnHttpSession( HttpSessionPtr session, Skit::HTTP::Request& request )
+{
+    LOG(logDEBUG) << request.GetURL();
+
+    SendResponse(session);
+
+    return true;
+}
+
+void JSON_RequestHandler::OnHttpRequest( HttpSessionPtr session,
+                                         Skit::HTTP::Request& request,
+                                         const SysError& error)
 {
 	LOG(logDEBUG) << request.GetURL();
-	Skit::HTTP::Response response;
-	m_data = response.BuildResponse("200", "OK");
-	m_data += "Hello World";
 
-	Buffer buf((void*)m_data.c_str(), m_data.size());
-
-
-	TcpSocketPtr socket = session->GetSocket();
-	socket->Send(CreateBufferSequence(buf), BIND_HANDLER(&JSON_RequestHandler::OnSendHandler, session));
+	SendResponse(session);
 }
 
+void JSON_RequestHandler::SendResponse( HttpSessionPtr session )
+{
+    Skit::HTTP::Response response;
+    _data = response.BuildResponse("200", "OK");
+    _data += "Hello World";
+
+    Buffer buf((void*)_data.c_str(), _data.size());
+
+    TcpSocketPtr socket = session->GetSocket();
+
+    socket->Send( CreateBufferSequence(buf),
+                  BIND_HANDLER(&JSON_RequestHandler::OnSendHandler,
+                  session) );
+}

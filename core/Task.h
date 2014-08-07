@@ -30,6 +30,7 @@ class Task
 public:
 	Task(const Task& task);
 
+/*
 	template <class Func>
 	static Task Connect(Func f)
 	{
@@ -65,6 +66,7 @@ public:
     {
         return Task(boost::bind(f, p1, p2, p3, p4, p5));
     }
+*/
 
     static Task ConnectNew(Runnable r)
     {

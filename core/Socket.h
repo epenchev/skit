@@ -19,6 +19,11 @@
 			boost::bind(func, this, ##__VA_ARGS__, \
 				boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
 
+#define BIND_SHARED_HANDLER(func, ...) \
+            boost::bind(func, shared_from_this(), ##__VA_ARGS__, \
+                boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
+
+
 typedef boost::system::error_code SysError;
 
 // Class for I/O operations over TCP network link

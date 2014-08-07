@@ -18,71 +18,89 @@
 #include <boost/weak_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 
-class HttpServer; // forward
+using namespace std;
+
+class HttpSession;
+typedef boost::shared_ptr<HttpSession> HttpSessionPtr;
+
 class HttpSession : public boost::enable_shared_from_this<HttpSession>
 {
 public:
-	HttpSession(HttpServer& server, TcpSocketPtr socket);
-    virtual ~HttpSession() {}
+	HttpSession( TcpSocketPtr socket );
+    virtual ~HttpSession();
 
-    // start reading HTTP request
+    // wait for HTTP request and notify listener
     void AcceptRequest();
 
-    // terminate HTTP session, will close socket and destroy object
-    void Disconnect();
+    // used for writing or custom handling of the incoming data
+    TcpSocketPtr GetSocket() { return _socketObj; }
 
-    TcpSocketPtr GetSocket() { return m_socket; }
+    // listener/observer to be notified for a HTTP request event
+    class Listener
+    {
+    public:
+        virtual void OnHttpRequest( HttpSessionPtr session,
+                                    Skit::HTTP::Request& request,
+                                    const SysError& error ) = 0;
+    };
+
+    // Attach a listener/observer object to the session
+    void SetListener( HttpSession::Listener& listener );
 
 private:
-    void OnReceive(const SysError& error, std::size_t bytes_transferred);
-    HttpServer&         m_server;
-    TcpSocketPtr        m_socket;
-    Buffer              m_buffer;
-    std::string         m_reqdata;
-    Skit::HTTP::Request m_request;
+    // socket callback
+    void OnReceive( const SysError& error, size_t bytesRead );
+
+    SysError               _error;
+    TcpSocketPtr           _socketObj;
+    Buffer                 _bufferObj;
+    string                 _reqdata;
+    Skit::HTTP::Request    _requestObj;
+    HttpSession::Listener* _listener;
 };
 
-typedef boost::shared_ptr<HttpSession> HttpSessionPtr;
-
 // default HTTP server
-class HttpServer : public Skit::ServerHandler
+class HttpServer : public Skit::ServerHandler,
+                   public HttpSession::Listener
 {
 public:
+    // For the ServerController::ServerHandlerFactory
 	static ServerHandler* CreateItem() { return new HttpServer; }
 
 	HttpServer();
     virtual ~HttpServer() {}
 
-    // listener/observer to be notified for every HTTP request
-    class ReqListener
+    // listener/observer to be notified for incoming HTTP session
+    class Listener
     {
     public:
-    	static ReqListener* CreateListener() { return NULL; }
-        virtual void OnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request) = 0;
+    	static HttpServer::Listener* CreateListener() { return NULL; }
+    	// true if session is to be handled false otherwise
+        virtual bool OnHttpSession( HttpSessionPtr session, Skit::HTTP::Request& request ) = 0;
     };
 
-    typedef ReqListener* (*CreateListenerFunc)();
-
-    // register listeners
-    static void Register(CreateListenerFunc func) { GetRegistry().insert(func); }
+    typedef HttpServer::Listener* (*CreateListenerFunc)();
+    // register listeners to the server
+    static void Register( CreateListenerFunc func ) { GetRegistry().insert(func); }
 
     // from ServerHandler
-    void AcceptConnection(TcpSocketPtr socket);
-
-    // Notify HttpServer listeners for incoming HTTP request
-    void NotifyOnHttpRequest(HttpSessionPtr session, Skit::HTTP::Request& request);
-
-    // Notify HttpServer for session close, will destroy the session
-    void NotifyOnHttpSessionClose(HttpSessionPtr session);
+    void AcceptConnection( TcpSocketPtr socket );
+    // from HttpSession::Listener
+    void OnHttpRequest( HttpSessionPtr session,
+                        Skit::HTTP::Request& request,
+                        const SysError& error );
 
 private:
-    std::set<HttpSessionPtr> m_sessions;
-    std::set<ReqListener*>   m_listeners;
+    // socket callback
+    void OnSend( const SysError& error, size_t bytesWriten );
 
-    static std::set<CreateListenerFunc>& GetRegistry()
+    string _defaultResponse;
+    set<HttpServer::Listener*> _listeners;
+
+    static inline set<CreateListenerFunc>& GetRegistry()
     {
-    	static std::set<CreateListenerFunc> s_registryListeners;
-        return s_registryListeners;
+    	static set<CreateListenerFunc> s_registry;
+        return s_registry;
     }
 };
 
