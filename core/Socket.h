@@ -23,14 +23,13 @@
             boost::bind(func, shared_from_this(), ##__VA_ARGS__, \
                 boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)
 
-
 typedef boost::system::error_code SysError;
 
 // Class for I/O operations over TCP network link
 class TcpSocket : public boost::asio::ip::tcp::socket
 {
 public:
-    TcpSocket(boost::asio::io_service& io_service, Skit::ThreadID threadID);
+    TcpSocket(boost::asio::io_service& io_service, ThreadID threadID);
     virtual ~TcpSocket();
 
     // Send data from buffer asynchronously, handler will be called on operation complete.
@@ -72,7 +71,7 @@ public:
     void Close();
     
     // Get socket's io_service thread
-    Skit::ThreadID GetThreadID() const { return m_threadID; }
+    ThreadID GetThreadID() const { return _threadID; }
 
     class ConnectListener
     {
@@ -85,7 +84,7 @@ public:
     void Connect(std::string host, std::string netService, ConnectListener* listener);
 
 private:
-    Skit::ThreadID m_threadID;                 // socket's io_service thread
+    ThreadID _threadID;                 // socket's io_service thread
 
     // boost socket IO handlers for connect
     void HandleConnect(ConnectListener* listener, const SysError& err);

@@ -30,8 +30,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    Skit::ServerController& g_server = Skit::ServerController::Instance();
-    g_server.Load(filename);
+    ServerController::Instance().Load(filename);
 	
     return 0;
 }

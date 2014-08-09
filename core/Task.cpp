@@ -2,8 +2,6 @@
 #include "Logger.h"
 #include "IDGenerator.h"
 
-using namespace Skit;
-
 void TaskScheduler::TaskQueue::Load()
 {
     boost::asio::io_service::work work(m_io_service);
@@ -212,7 +210,7 @@ void TimerTask::operator()( const boost::system::error_code& error )
 {
 	if (!error)
     {
-    	m_runObject();
+    	_runObject();
     }
     else if ( boost::asio::error::operation_aborted == error )
     {
@@ -222,18 +220,18 @@ void TimerTask::operator()( const boost::system::error_code& error )
 }
 
 Task::Task(Runnable func, TaskPriority prio)
- : m_runObject(func), m_priority(prio)
+ : _runObject(func), _priority(prio)
 {}
 
 Task::Task(const Task& task)
 {
-	this->m_runObject = task.m_runObject;
-	this->m_priority = task.m_priority;
+	this->_runObject = task._runObject;
+	this->_priority = task._priority;
 }
 
 void Task::Execute()
 {
-	m_runObject();
+	_runObject();
 }
 
 

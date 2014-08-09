@@ -26,14 +26,14 @@ typedef boost::shared_ptr<HttpSession> HttpSessionPtr;
 class HttpSession : public boost::enable_shared_from_this<HttpSession>
 {
 public:
-	HttpSession( TcpSocketPtr socket );
+	HttpSession( TcpSocket* socket );
     virtual ~HttpSession();
 
     // wait for HTTP request and notify listener
     void AcceptRequest();
 
     // used for writing or custom handling of the incoming data
-    TcpSocketPtr GetSocket() { return _socketObj; }
+    TcpSocket* GetSocket() { return _socketObj; }
 
     // listener/observer to be notified for a HTTP request event
     class Listener
@@ -52,7 +52,7 @@ private:
     void OnReceive( const SysError& error, size_t bytesRead );
 
     SysError               _error;
-    TcpSocketPtr           _socketObj;
+    TcpSocket*             _socketObj;
     Buffer                 _bufferObj;
     string                 _reqdata;
     Skit::HTTP::Request    _requestObj;
@@ -60,7 +60,7 @@ private:
 };
 
 // default HTTP server
-class HttpServer : public Skit::ServerHandler,
+class HttpServer : public ServerHandler,
                    public HttpSession::Listener
 {
 public:
@@ -84,7 +84,7 @@ public:
     static void Register( CreateListenerFunc func ) { GetRegistry().insert(func); }
 
     // from ServerHandler
-    void AcceptConnection( TcpSocketPtr socket );
+    void AcceptConnection( TcpSocket* socket );
     // from HttpSession::Listener
     void OnHttpRequest( HttpSessionPtr session,
                         Skit::HTTP::Request& request,

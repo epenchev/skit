@@ -7,17 +7,17 @@ static void handle_timer();
 static void sample_handler()
 {
 	static int timerid = 0;
-	Skit::TaskScheduler* sheduler = &Skit::TaskScheduler::Instance();
+	TaskScheduler* scheduler = &TaskScheduler::Instance();
 
 	bool cancelTimer = ((timerid % 2) == 0);
 	if (cancelTimer)
 	{
 	    LOG(logINFO) << "Will cancel timer with id: " << timerid;
-		sheduler->ClearTimer(timerid);
+		scheduler->ClearTimer(timerid);
 	}
 
 	LOG(logINFO) <<  "sample_handler";
-	timerid = sheduler->QueueTimer( Skit::Task::Connect(handle_timer), 5000 );
+	timerid = scheduler->QueueTimer( Task::Connect(handle_timer), 5000 );
 	if (!timerid)
 	{
 		LOG(logWARNING) << "Invalid timer ID";
@@ -27,8 +27,8 @@ static void sample_handler()
 static void handle_timer()
 {
 	LOG(logINFO) << "handle_timer";
-	Skit::TaskScheduler* sheduler = &Skit::TaskScheduler::Instance();
-	sheduler->QueueTask( Skit::Task::Connect(sample_handler) );
+	TaskScheduler* scheduler = &TaskScheduler::Instance();
+	scheduler->QueueTask( Task::Connect(sample_handler) );
 }
 
 class Sample
@@ -40,39 +40,39 @@ public:
 int main()
 {
     Sample sampleObj;
-	Skit::TaskScheduler* sheduler = &Skit::TaskScheduler::Instance();
+	TaskScheduler* scheduler = &TaskScheduler::Instance();
 
 	try
 	{
-		sheduler->Run(10);
+		scheduler->Run(10);
 	}
-	catch(Skit::TaskSchedulerException& ex)
+	catch ( TaskSchedulerException& ex )
 	{
-		LOG(logERROR) << "Exception caught in sheduler->Run() :" << ex.what();
+		LOG(logERROR) << "Exception caught in scheduler->Run() :" << ex.what();
 		return 0;
 	}
 
 	try
 	{
-	    Skit::ThreadID id = sheduler->GetNextThread();
+	    ThreadID id = scheduler->GetNextThread();
 	    LOG(logINFO) << "QueueTask on thread: " << id;
-		//sheduler->QueueTask( Skit::Task::Connect(&Sample::Func, Ref(sampleObj)), id );
+
+		scheduler->QueueTask( Task::Connect( &Sample::Func, REF(sampleObj) ), id );
+		scheduler->QueueTask( Task::Connect( &Sample::Func, REF(sampleObj) ), id );
 		
-		Skit::Runnable r = BindRunnable(&Sample::Func, Ref(sampleObj));
-		sheduler->QueueTask( Skit::Task::ConnectNew(BindRunnable(&Sample::Func, Ref(sampleObj))), id );
-		
-		int timerid = sheduler->QueueTimer( Skit::Task::Connect(handle_timer), 5000, sheduler->GetNextThread() );
+		int timerid = scheduler->QueueTimer( Task::Connect(handle_timer), 5000, scheduler->GetNextThread() );
 		if (!timerid)
 		{
-			LOG(logERROR) << "Invalid timer ID from sheduler->QueueTimer() ";
+			LOG(logERROR) << "Invalid timer ID from scheduler->QueueTimer() ";
 		}
-		id = sheduler->GetNextThread();
+
+		id = scheduler->GetNextThread();
 		LOG(logINFO) << "QueueTask on thread: " << id;
-		sheduler->QueueTask( Skit::Task::Connect(sample_handler), id );
+		scheduler->QueueTask( Task::Connect(sample_handler), id );
 	}
-	catch(Skit::TaskSchedulerException& ex)
+	catch ( TaskSchedulerException& ex )
 	{
-		LOG(logERROR) << "Exception caught from sheduler->GetNextThread() :" << ex.what();
+		LOG(logERROR) << "Exception caught from scheduler->GetNextThread() :" << ex.what();
 	}
 
 	while (1)
@@ -82,15 +82,15 @@ int main()
         try
         {
         	LOG(logINFO) << "QueueTimer";
-        	timerid = sheduler->QueueTimer( Skit::Task::Connect(handle_timer), 5000, sheduler->GetNextThread() );
+        	timerid = scheduler->QueueTimer( Task::Connect(handle_timer), 5000, scheduler->GetNextThread() );
         	if (!timerid)
         	{
-        		LOG(logERROR) << "Invalid timer ID from sheduler->QueueTimer() ";
+        		LOG(logERROR) << "Invalid timer ID from scheduler->QueueTimer() ";
         	}
         }
-        catch(Skit::TaskSchedulerException& ex)
+        catch( TaskSchedulerException& ex )
         {
-        	LOG(logERROR) << "Exception caught from sheduler->GetNextThread() :" << ex.what();
+        	LOG(logERROR) << "Exception caught from scheduler->GetNextThread() :" << ex.what();
         }
         boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
 
@@ -98,23 +98,23 @@ int main()
         if (cancelTimer)
         {
             LOG(logINFO) << "Will cancel timer with id: " << timerid;
-        	sheduler->ClearTimer(timerid);
+        	scheduler->ClearTimer(timerid);
         }
 
         try
         {
-        	Skit::ThreadID id = sheduler->GetNextThread();
+        	ThreadID id = scheduler->GetNextThread();
  	        LOG(logINFO) << "QueueTask on thread: " << id;
-        	sheduler->QueueTask( Skit::Task::Connect(sample_handler), id );
+        	scheduler->QueueTask( Task::Connect(sample_handler), id );
         	        	
-        	id = sheduler->GetNextThread();        	
+        	id = scheduler->GetNextThread();
         	LOG(logINFO) << "QueueTask on thread: " << id;
-        	sheduler->QueueTask( Skit::Task::Connect(&Sample::Func, Ref(sampleObj)), id );
+        	scheduler->QueueTask( Task::Connect( &Sample::Func, REF(sampleObj) ), id );
         	
         }
-        catch(Skit::TaskSchedulerException& ex)
+        catch( TaskSchedulerException& ex )
         {
-        	LOG(logERROR) << "Exception caught from sheduler->GetNextThread() :" << ex.what();
+        	LOG(logERROR) << "Exception caught from scheduler->GetNextThread() :" << ex.what();
         }
     }
 

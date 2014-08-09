@@ -15,13 +15,10 @@
 #include <map>
 #include <vector>
 
-namespace Skit {
-
-#define Ref(obj) boost::ref(obj)    // reference
-#define Cref(obj) boost::cref(obj)  // const reference
+#define REF(obj) boost::ref(obj)    // reference
+#define CONST_REF(obj) boost::cref(obj)  // const reference
 
 typedef boost::function<void()> Runnable;
-#define BindRunnable(func, ...) boost::bind(func, ##__VA_ARGS__)
 
 enum TaskPriority { PriorityNormal = 0, PriorityHigh };
 
@@ -30,56 +27,51 @@ class Task
 public:
 	Task(const Task& task);
 
-/*
 	template <class Func>
-	static Task Connect(Func f)
+	static inline Task Connect(Func f)
 	{
-		return Task(boost::bind(f), PriorityNormal);
+		return Task( boost::bind(f), PriorityNormal );
 	}
 
     template <class Func, class T1>
-    static Task Connect(Func f, T1 p1)
+    static inline Task Connect(Func f, T1 p1)
     {
-        return Task(boost::bind(f, p1), PriorityNormal);   
+        return Task( boost::bind(f, p1), PriorityNormal );
     }
 
     template <class Func, class T1, class T2>
-    static Task Connect(Func f, T1 p1, T2 p2)
+    static inline Task Connect(Func f, T1 p1, T2 p2)
     {
-        return Task(boost::bind(f, p1, p2, PriorityNormal));
+        return Task( boost::bind(f, p1, p2, PriorityNormal) );
     }
 
     template <class Func, class T1, class T2, class T3>
-    static Task Connect(Func f, T1 p1, T2 p2, T3 p3)
+    static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3)
     {
-        return Task(boost::bind(f, p1, p2, p3, PriorityNormal));
+        return Task( boost::bind(f, p1, p2, p3, PriorityNormal) );
     }
 
     template <class Func, class T1, class T2, class T3, class T4>
-    static Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4)
+    static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4)
     {
-        return Task(boost::bind(f, p1, p2, p3, p4, PriorityNormal));
+        return Task( boost::bind(f, p1, p2, p3, p4, PriorityNormal) );
     }
     
     template <class Func, class T1, class T2, class T3, class T4, class T5>
-    static Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4, T5 p5)
+    static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4, T5 p5)
     {
-        return Task(boost::bind(f, p1, p2, p3, p4, p5));
-    }
-*/
-
-    static Task ConnectNew(Runnable r)
-    {
-    	return Task(r, PriorityNormal);
+        return Task( boost::bind(f, p1, p2, p3, p4, p5) );
     }
 
+    // Run the task
     void Execute();
+
     // std::priority_queue compare
-    friend bool operator < (const Task& a, const Task& b) { return a.m_priority < b.m_priority; }
+    friend bool operator < (const Task& a, const Task& b) { return a._priority < b._priority; }
     
 protected:
-    Runnable m_runObject;     /**< boost functor object */
-    TaskPriority m_priority;  /**< task priority */
+    Runnable     _runObject;     /**< boost functor object */
+    TaskPriority _priority;  /**< task priority */
 
     Task(Runnable func, TaskPriority prio);
 };
@@ -160,8 +152,6 @@ public:
 protected:
     std::string m_msg;
 };
-
-}; // namespace Skit
 
 #endif // TASK_H_
 

@@ -10,7 +10,7 @@
 #include <cstring>
 
 // register HttpServer to the ServerController::ServerHandlerFactory
-Skit::ServerController::HandlerFactory::Registrator<HttpServer> reg("http");
+ServerController::HandlerFactory::Registrator<HttpServer> reg("http");
 
 HttpServer::HttpServer()
 {
@@ -28,7 +28,7 @@ HttpServer::HttpServer()
 	_defaultResponse = response404.BuildResponse("404", "Not Found");
 }
 
-void HttpServer::AcceptConnection(TcpSocketPtr socket)
+void HttpServer::AcceptConnection(TcpSocket* socket)
 {
 	HttpSessionPtr session( new HttpSession( socket ) );
 	session->SetListener( *this );
@@ -76,7 +76,7 @@ void HttpServer::OnHttpRequest( HttpSessionPtr session,
     {
         static Buffer responseBuff( (void*)_defaultResponse.data(), _defaultResponse.size() );
 
-        TcpSocketPtr sock = session->GetSocket();
+        TcpSocket* sock = session->GetSocket();
         sock->Send( CreateBufferSequence(responseBuff),
                     BIND_HANDLER(&HttpServer::OnSend) );
     }
@@ -95,7 +95,7 @@ void HttpServer::OnSend( const SysError& error, size_t bytesWriten )
     }
 }
 
-HttpSession::HttpSession( TcpSocketPtr socket )
+HttpSession::HttpSession( TcpSocket* socket )
  : _socketObj(socket), _bufferObj(1024), _listener(NULL)
 {
     _reqdata.clear();

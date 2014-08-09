@@ -7,8 +7,8 @@
 
 using boost::asio::ip::tcp;
 
-TcpSocket::TcpSocket(boost::asio::io_service& io_service, Skit::ThreadID threadID)
- : boost::asio::ip::tcp::socket(io_service), m_threadID(threadID)
+TcpSocket::TcpSocket(boost::asio::io_service& io_service, ThreadID threadID)
+ : boost::asio::ip::tcp::socket(io_service), _threadID(threadID)
 {}
 
 TcpSocket::~TcpSocket()
@@ -222,14 +222,15 @@ void SocketAcceptor::Stop()
 
 void SocketAcceptor::Accept()
 {
-    Skit::TaskScheduler& scheduler = Skit::TaskScheduler::Instance();
-    Skit::ThreadID id = scheduler.GetNextThread();
+    TaskScheduler& scheduler = TaskScheduler::Instance();
+    ThreadID id = scheduler.GetNextThread();
+
     try
     {
         TcpSocket* sock = new TcpSocket(scheduler.GetThreadIOService(id), id);
         m_acceptorImpl.async_accept(*sock, boost::bind(&SocketAcceptor::HandleAccept, this, sock, boost::asio::placeholders::error));
     }
-    catch(Skit::TaskSchedulerException& ex)
+    catch ( TaskSchedulerException& ex )
     {
         LOG(logERROR) << "exception caught: " << ex.what();
     }

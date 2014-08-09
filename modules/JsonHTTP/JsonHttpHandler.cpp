@@ -24,7 +24,7 @@ bool JSON_RequestHandler::OnHttpSession( HttpSessionPtr session, Skit::HTTP::Req
 
 void JSON_RequestHandler::OnHttpRequest( HttpSessionPtr session,
                                          Skit::HTTP::Request& request,
-                                         const SysError& error)
+                                         const SysError& error )
 {
 	LOG(logDEBUG) << request.GetURL();
 
@@ -39,7 +39,7 @@ void JSON_RequestHandler::SendResponse( HttpSessionPtr session )
 
     Buffer buf((void*)_data.c_str(), _data.size());
 
-    TcpSocketPtr socket = session->GetSocket();
+    TcpSocket* socket = session->GetSocket();
 
     socket->Send( CreateBufferSequence(buf),
                   BIND_HANDLER(&JSON_RequestHandler::OnSendHandler,
