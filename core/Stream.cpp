@@ -10,25 +10,60 @@
 using namespace std;
 
 Stream::Stream( PropertyTree::Iterator conf )
+: fLiveSource(NULL)
 {
-    fStreamConfig = conf;
+    fConfig = conf;
 }
 
 Stream::~Stream()
 {}
 
-IStreamReader* Stream::GetReader()
+IStreamSource* Stream::GetSource()
 {
-    return NULL;
+    string sourceClass;
+    IStreamSource* theSource = NULL;
+
+    if (fConfig.GetData<bool>("live", false))
+    {
+        if (!fLiveSource)
+        {
+            /* for live streams source must be always present in the configuration */
+            sourceClass = fConfig.GetData("source");
+            if (sourceClass.empty())
+                return theSource;
+        }
+        else
+            return fLiveSource;
+    }
+
+    /*
+     * FileReader class is always the default IStreamSource implementation used for a source
+     * when no such is specified in the stream configuration.
+     */
+    if (sourceClass.empty())
+        theSource = Stream::SourceFactory::CreateInstance("FileReader");
+    else
+        theSource = Stream::SourceFactory::CreateInstance(sourceClass);
+    //theSource->Open(fConfig.GetData("location")); // TODO consider using Init() method here
+
+    return theSource;
 }
 
 IStreamFilter* Stream::GetFilter()
 {
-    return NULL;
+    IStreamFilter* theFilter = NULL;
+    string filterClass = fConfig.GetData("filter");
+    if (!filterClass.empty())
+    {
+        theFilter = Stream::FilterFactory::CreateInstance(filterClass);
+        theFilter->Init(fConfig);
+    }
+
+    return theFilter;
 }
 
 Player::Player(ThreadID tid)
- : fThreadId(tid), fStream(NULL), fSize(0)
+ : fThreadId(tid), fStream(NULL), fSource(NULL)
 {}
 
 void Player::PushQueueBuffer(Buffer* data)
@@ -75,33 +110,16 @@ void Player::Play(Stream* inStream)
     if (inStream)
     {
         fStream = inStream;
-        if (!fStream->GetReader())
+        fSource = fStream->GetSource();
+        bool islive = fStream->GetConfig().GetData<bool>("live", false);
+        if (islive)
+        {
+            //theSource->AddListener(this);
+        }
+        else
         {
             string theLocation = fStream->GetConfig().GetData("location");
-            if (!theLocation.empty())
-            {
-                fFileReader.open(theLocation.c_str(), ifstream::binary | ifstream::in);
-                fFileReader.seekg(0, ios_base::end);
-                fSize = fFileReader.tellg();
-                fFileReader.seekg(0, ios_base::beg);
-
-                //Buffer* outPacket = new Buffer(500);
-                //fFileReader.read(outPacket->Get<char*>(), outPacket->Size());
-                //PushQueueBuffer(outPacket);
-
-#if 0
-                for (int idx = 0; idx < 10; idx++)
-                {
-                    /*
-                     * Do some pre buffering before play.
-                     */
-                    Buffer* outPacket = new Buffer(500);
-                    fFileReader.read(outPacket->Get<char*>(), outPacket->Size());
-                    PushQueueBuffer(outPacket);
-                }
-#endif
-            }
-
+            fSource->Open(theLocation);
         }
     }
 }
@@ -114,39 +132,38 @@ void Player::Pause()
 void Player::SeekTo(int inOffset)
 {
     LOG(logDEBUG) << "Here : inOffset:" << inOffset;
-    if (fFileReader.is_open())
+    fSource->Seek(inOffset);
+    // TODO log error
+    // TODO flush remaining data and free memory before pushing to queue
+    //fPacketQueue.clear();
+    for (int idx = 0; idx < 3; idx++)
     {
-        //Buffer* outPacket = new Buffer(5000);
-        fFileReader.seekg(inOffset, ios_base::beg);
-        //fFileReader.read(outPacket->Get<char*>(), outPacket->Size());
-        // TODO log error
-        // LOG(logERROR) << "Error reading packet from file: "<< fStreamConfig.GetData("location");
-        // TODO flush remaining data and free memory before pushing to queue
-        //fPacketQueue.clear();
-        for (int idx = 0; idx < 3; idx++)
-        {
-             /*
-              * Do some pre buffering before play.
-              */
-             Buffer* outPacket = new Buffer(5000);
-             fFileReader.read(outPacket->Get<char*>(), outPacket->Size());
-             PushQueueBuffer(outPacket);
-         }
+        /*
+        * Do some pre buffering before play.
+        */
+        Buffer* outPacket = new Buffer(5000);
+        unsigned long bytesRead;
+        fSource->DoRead(*outPacket, bytesRead);
+        PushQueueBuffer(outPacket);
     }
 }
 
 Buffer* Player::Get()
 {
+    unsigned long bytesRead;
+
     Buffer* outPacket = new Buffer(5000);
-    fFileReader.read(outPacket->Get<char*>(), outPacket->Size());
+    fSource->DoRead(*outPacket, bytesRead);
     PushQueueBuffer(outPacket);
     return PopQueueBuffer();
-    //return outPacket;
 }
 
 size_t Player::GetSize()
 {
-    return fSize;
+    unsigned long int theSize;
+    fSource->GetSize(theSize);
+
+    return theSize;
 }
 
 void Player::SeekTo(float timeStamp)

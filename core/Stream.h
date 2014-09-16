@@ -12,6 +12,7 @@
 #include "PropertyTree.h"
 #include "Buffer.h"
 #include "Task.h"
+#include "RegFactory.h"
 
 #include <boost/shared_ptr.hpp>
 
@@ -19,29 +20,36 @@
 
 using namespace std;
 
-// TODO create IStreamReaderSink factory
+// TODO create IStreamSource factory
 // TODO create IStreamFilter factory
 
 class IStreamReaderSink
 {
+public:
     virtual void OnRead(Buffer* inBuf) = 0;
     virtual ~IStreamReaderSink() {};
 };
 
 // Gives I/O interface to the stream mostly used by Player instances.
-class IStreamReader
+class IStreamSource
 {
 public:
-    virtual Buffer* DoRead() = 0;
-    virtual void Seek(long unsigned int byteOffset) = 0;
-    virtual void AddListener(IStreamReaderSink* sink) = 0;
-    virtual ~IStreamReader() {};
+    static  IStreamSource* CreateItem() { return NULL; }
+    virtual void GetSize(unsigned long& outSize) = 0;
+    virtual void Open(const string& location) = 0;
+    virtual void DoRead(Buffer& outBuf, unsigned long& bytesRead) {};
+    virtual void Seek(long unsigned int byteOffset) {};
+    // For live streams
+    virtual void AddListener(IStreamReaderSink* sink) {};
+    virtual ~IStreamSource() {};
 };
 
 class IStreamFilter
 {
+public:
     // TODO return PlayerAVFrame or NULL if no complete PlayerAVFrame can be extracted from inBuf.
     virtual Buffer* Process(Buffer* inBuf) = 0;
+    virtual void Init(PropertyTree::Iterator& inOptions) = 0;
     virtual ~IStreamFilter() {};
 };
 
@@ -49,18 +57,22 @@ class IStreamFilter
 class Stream
 {
 public:
+    typedef RegFactory<IStreamSource> SourceFactory;
+    typedef RegFactory<IStreamFilter> FilterFactory;
+
     Stream( PropertyTree::Iterator conf );
     virtual ~Stream();
 
     // TODO add a method for notification on stream configuration change.
     // Get XML configuration tree iterator
-    /*const*/ PropertyTree::Iterator& GetConfig() /*const*/ { return fStreamConfig; }
+    /*const*/ PropertyTree::Iterator& GetConfig() /*const*/ { return fConfig; }
 
-    IStreamReader* GetReader();
+    IStreamSource* GetSource();
     IStreamFilter* GetFilter();
 
 private:
-    PropertyTree::Iterator fStreamConfig;  // stream configuration
+    IStreamSource* fLiveSource;
+    PropertyTree::Iterator fConfig;  // stream configuration
 };
 
 class Player
@@ -95,14 +107,10 @@ private:
     // pop (remove) data from player's queue.
     Buffer* PopQueueBuffer();
 
-    // TODO create default IStreamReader object
-    ifstream             fFileReader;
     ThreadID             fThreadId;         // player's owner thread id
     deque<Buffer*>       fPacketQueue;      // packet queue
     Stream*              fStream;           // the stream we are playing
-    unsigned long        fSize;
-
-
+    IStreamSource*       fSource;
 };
 
 #endif /* STREAM_H_ */

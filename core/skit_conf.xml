@@ -42,8 +42,9 @@
     <stream> <!-- live stream from mumuDVB -->
         <name>FoxLiveTV</name>      <!-- mandatory -->
         <location>http://127.0.0.1:8099/</location>  <!-- mandatory -->
-	<source>DVBStreamHTTP</source>
-	<filter>MPEG2TsMP4H264</filter>
+        <live>yes</live> <!-- if stream is live always specify this flag -->	    
+        <source>DVBStreamHTTP</source>
+	    <filter>MPEG2TsMP4H264</filter>
    </stream>
 
    <stream> <!-- VOD stream movie  -->
