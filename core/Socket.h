@@ -128,7 +128,7 @@ private:
     Listener*        			   m_listener;       // event listener
     bool                           m_isListening;    // is socket in listening state
     ErrorCode                      m_error;          // error code of accept operation
-    boost::asio::ip::tcp::acceptor m_acceptorImpl;   // boost acceptor
+    boost::asio::ip::tcp::acceptor _acceptorImpl;   // boost acceptor
 
     // Accepts incoming connections.
     void Accept();

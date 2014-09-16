@@ -8,6 +8,8 @@
 
 #include "HttpServer.h"
 #include "Socket.h"
+#include "Buffer.h"
+#include "Stream.h"
 
 #include <string>
 
@@ -15,7 +17,7 @@ class JSON_RequestHandler : public HttpServer::Listener,
                             public HttpSession::Listener
 {
 public:
-	JSON_RequestHandler() {}
+	JSON_RequestHandler() : fOutBuf(NULL), fPlayer(NULL), fStream(NULL) {}
 	virtual ~JSON_RequestHandler() {}
 
 	static HttpServer::Listener* CreateListener() { return new JSON_RequestHandler; }
@@ -29,13 +31,19 @@ public:
 	bool OnHttpSession( HttpSessionPtr session, Skit::HTTP::Request& request );
 
 private:
+
+	void HandleRequest(HttpSessionPtr session, Skit::HTTP::Request& request);
+
 	// socket callback
 	void OnSendHandler( HttpSessionPtr session,
 	                    const SysError& error,
 	                    size_t bytesWriten );
 
 	void SendResponse(HttpSessionPtr session);
-	string _data;
+	Buffer* fOutBuf;
+	string  fResponseHeaders;
+	Player* fPlayer;
+	Stream* fStream;
 };
 
 #endif //JSON_REQUEST_HANDLER_

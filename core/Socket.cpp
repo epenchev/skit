@@ -163,13 +163,13 @@ bool TcpSocket::IsOpen() const
 // 
 
 SocketAcceptor::SocketAcceptor(unsigned short port, Listener* listener, boost::asio::io_service& io_service)
- : m_listenPort(port), m_listener(listener), m_isListening(false), m_acceptorImpl(io_service)
+ : m_listenPort(port), m_listener(listener), m_isListening(false), _acceptorImpl(io_service)
 {}
 
 SocketAcceptor::SocketAcceptor(std::string localAdress, unsigned short port,
                    Listener* listener, boost::asio::io_service& io_service)
  : m_listenPort(port), m_listenAddress(localAdress), m_listener(listener),
-    m_isListening(false), m_acceptorImpl(io_service)
+    m_isListening(false), _acceptorImpl(io_service)
 {}
 
 SocketAcceptor::~SocketAcceptor()
@@ -185,19 +185,19 @@ void SocketAcceptor::Listen()
         {
             return; // already in state listen.
         }
-        m_acceptorImpl.open(boost::asio::ip::tcp::v4());
+        _acceptorImpl.open(boost::asio::ip::tcp::v4());
         if (!m_listenAddress.empty())
         {
             boost::asio::ip::address bindAdress;
             bindAdress.from_string(m_listenAddress);
-            m_acceptorImpl.bind(tcp::endpoint(bindAdress, m_listenPort));
+            _acceptorImpl.bind(tcp::endpoint(bindAdress, m_listenPort));
         }
         else
         {
-            m_acceptorImpl.bind(tcp::endpoint(tcp::v4(), m_listenPort));
+            _acceptorImpl.bind(tcp::endpoint(tcp::v4(), m_listenPort));
         }
-        m_acceptorImpl.set_option(tcp::acceptor::reuse_address(true));
-        m_acceptorImpl.listen();
+        _acceptorImpl.set_option(tcp::acceptor::reuse_address(true));
+        _acceptorImpl.listen();
     }
     catch(boost::system::system_error& ex)
     {
@@ -215,7 +215,7 @@ void SocketAcceptor::Stop()
     if (m_isListening)
     {
         boost::system::error_code error; // no error handling here just disable exceptions
-        m_acceptorImpl.close(error);
+        _acceptorImpl.close(error);
         m_isListening = false;
     }
 }
@@ -223,16 +223,22 @@ void SocketAcceptor::Stop()
 void SocketAcceptor::Accept()
 {
     TaskScheduler& scheduler = TaskScheduler::Instance();
-    ThreadID id = scheduler.GetNextThread();
 
     try
     {
-        TcpSocket* sock = new TcpSocket(scheduler.GetThreadIOService(id), id);
-        m_acceptorImpl.async_accept(*sock, boost::bind(&SocketAcceptor::HandleAccept, this, sock, boost::asio::placeholders::error));
+        ThreadID tid = scheduler.GetNextThread();
+        TcpSocket* sock = new TcpSocket( scheduler.GetThreadIOService(tid), tid );
+        _acceptorImpl.async_accept(*sock,
+                                    boost::bind(&SocketAcceptor::HandleAccept, this, sock, boost::asio::placeholders::error)
+                                   );
     }
     catch ( TaskSchedulerException& ex )
     {
-        LOG(logERROR) << "exception caught: " << ex.what();
+        LOG(logERROR) << "TaskScheduler exception caught : " << ex.what();
+    }
+    catch( std::bad_alloc &ex )
+    {
+        LOG(logERROR) << "Error allocating memory : " << ex.what();
     }
 }
 
@@ -242,7 +248,7 @@ unsigned short SocketAcceptor::GetListeningPort() const
     if (m_isListening)
     {
         SysError err;
-        tcp::endpoint epoint = m_acceptorImpl.local_endpoint(err);
+        tcp::endpoint epoint = _acceptorImpl.local_endpoint(err);
         if (!err)
         {
             socketPort = epoint.port();
@@ -261,17 +267,18 @@ void SocketAcceptor::HandleAccept(TcpSocket* socket, const boost::system::error_
         if (boost::asio::error::operation_aborted == error)
         {
             LOG(logDEBUG) << "Aborting";
-            return; // operation aborted, don't signal
+            /* operation aborted, don't signal */
+            return;
         }
     }
 
-    // warning, error is set socket is invalid object
+    /* warning, error is set socket is invalid object */
     if (m_listener)
     {
         m_listener->OnAccept(socket, m_error);
     }
 
-    // continue accepting new connections.
+    /* Continue accepting new connections automatically. */
     Accept();
 }
 

@@ -9,7 +9,9 @@
 #include <iostream>
 #include <cstring>
 
-// register HttpServer to the ServerController::ServerHandlerFactory
+/*
+ * register HttpServer to the ServerController::ServerHandlerFactory
+ */
 ServerController::HandlerFactory::Registrator<HttpServer> reg("http");
 
 HttpServer::HttpServer()
@@ -18,20 +20,20 @@ HttpServer::HttpServer()
 	      it != HttpServer::GetRegistry().end(); it++ )
 	{
 		HttpServer::Listener* listener = (*it)();
-		_listeners.insert( listener );
+		fListeners.insert( listener );
 	}
 
    /*
 	* Build the response for the default session handler.
 	*/
 	Skit::HTTP::Response response404;
-	_defaultResponse = response404.BuildResponse("404", "Not Found");
+	fDefaultResponse = response404.BuildResponse("404", "Not Found");
 }
 
 void HttpServer::AcceptConnection(TcpSocket* socket)
 {
 	HttpSessionPtr session( new HttpSession( socket ) );
-	session->SetListener( *this );
+	session->SetListener(this);
 	session->AcceptRequest();
 }
 
@@ -43,29 +45,28 @@ void HttpServer::OnHttpRequest( HttpSessionPtr session,
 
     if (error)
     {
-        LOG(logERROR) << error.message();
         /*
          * Session will be disconnected and destroyed automatically
          * if no async I/O has been scheduled.
          */
+        LOG(logERROR) << error.message();
         return;
     }
     else
     {
-        for ( set<HttpServer::Listener*>::iterator it = _listeners.begin();
-              it != _listeners.end(); it++ )
+        for ( set<HttpServer::Listener*>::iterator it = fListeners.begin();
+              it != fListeners.end(); it++ )
         {
             handled = (*it)->OnHttpSession( session, request );
-            if ( handled )
+            if (handled)
             {
                 /*
-                * maybe handler has already attached as listener,
-                * just to make sure we attached ourself ;)
-                */
+                 * We are done here, let the listener take care for this session.
+                 */
                 HttpSession::Listener* sessListener = dynamic_cast<HttpSession::Listener*>(*it);
                 if (sessListener)
                 {
-                    session->SetListener( *sessListener );
+                    session->SetListener(sessListener);
                     break;
                 }
             }
@@ -74,8 +75,7 @@ void HttpServer::OnHttpRequest( HttpSessionPtr session,
 
     if (!handled)
     {
-        static Buffer responseBuff( (void*)_defaultResponse.data(), _defaultResponse.size() );
-
+        static Buffer responseBuff( (void*)fDefaultResponse.data(), fDefaultResponse.size() );
         TcpSocket* sock = session->GetSocket();
         sock->Send( CreateBufferSequence(responseBuff),
                     BIND_HANDLER(&HttpServer::OnSend) );
@@ -85,25 +85,21 @@ void HttpServer::OnHttpRequest( HttpSessionPtr session,
 void HttpServer::OnSend( const SysError& error, size_t bytesWriten )
 {
     if (error)
-    {
         LOG(logERROR) << error.message();
-    }
     else
-    {
         LOG(logDEBUG) << "Session handled by the HttpServer default handler with response 404,"
                          "  bytes sent = " << bytesWriten;
-    }
 }
 
 HttpSession::HttpSession( TcpSocket* socket )
- : _socketObj(socket), _bufferObj(1024), _listener(NULL)
+ : fSocketObj(socket), fBufferObj(1024), fListener(NULL)
 {
-    _reqdata.clear();
+    fReqdata.clear();
 }
 
 HttpSession::~HttpSession()
 {
-    _socketObj->Close();
+    fSocketObj->Close();
 }
 
 /*
@@ -114,73 +110,54 @@ void HttpSession::OnReceive( const SysError& error, size_t bytesRead )
     if (error)
     {
     	LOG(logERROR) << error.message();
-    	_error = error;
-
-    	// TODO replace with smart pointer
-    	if (_listener)
-    	{
-    	    _listener->OnHttpRequest( shared_from_this(), _requestObj, _error );
-    	}
+    	fError = error;
+    	if (fListener)
+    	    fListener->OnHttpRequest( shared_from_this(), fRequestObj, fError );
 
     	return;
     }
 
     if ( bytesRead &&
-         bytesRead <= _bufferObj.Size() )
+         bytesRead <= fBufferObj.Size() )
     {
-        _reqdata += _bufferObj.Get<const char*>();
-        if ( string::npos ==  _reqdata.find("\r\n\r\n") )
+        fReqdata += fBufferObj.Get<const char*>();
+        if ( string::npos ==  fReqdata.find("\r\n\r\n") )
         {
-        	if ( bytesRead < _bufferObj.Size() )
+        	if ( bytesRead < fBufferObj.Size() )
             {
         		LOG(logWARNING) << "Buffer not full no end marker, disconnecting";
-
-        		// TODO replace with smart pointer
-        		if (_listener)
-        		{
-        		    _listener->OnHttpRequest( shared_from_this(), _requestObj, _error );
-        		}
+        		if (fListener)
+        		    fListener->OnHttpRequest( shared_from_this(), fRequestObj, fError );
             }
             else
-            {
-            	AcceptRequest();  // collect the rest of the headers
-            }
+                AcceptRequest();  // collect the rest of the headers
         }
         else
         {
-            _requestObj.Init(_reqdata);
-
-            // TODO replace with smart pointer
-            if (_listener)
-            {
-                _listener->OnHttpRequest( shared_from_this(), _requestObj, _error );
-            }
-
-            _reqdata.clear();
+            fRequestObj.Init(fReqdata);
+            if (fListener)
+                fListener->OnHttpRequest( shared_from_this(), fRequestObj, fError );
+            fReqdata.clear();
         }
     }
     else
     {
     	LOG(logWARNING) << "nothing to read must disconnect";
-
-    	// TODO replace with smart pointer
-    	if (_listener)
-    	{
-    	    _listener->OnHttpRequest( shared_from_this(), _requestObj, _error );
-    	}
+    	if (fListener)
+    	    fListener->OnHttpRequest( shared_from_this(), fRequestObj, fError );
     }
 }
 
 void HttpSession::AcceptRequest()
 {
-	memset( _bufferObj.Get<char*>(), 0, _bufferObj.Size() );
-
-	_socketObj->ReceiveSome( CreateBufferSequence(_bufferObj),
+	memset( fBufferObj.Get<char*>(), 0, fBufferObj.Size() );
+	fSocketObj->ReceiveSome( CreateBufferSequence(fBufferObj),
 	                         BIND_SHARED_HANDLER(&HttpSession::OnReceive) );
 }
 
-void HttpSession::SetListener(HttpSession::Listener& listener)
+void HttpSession::SetListener(HttpSession::Listener* listener)
 {
-    _listener = &listener;
+    if (listener)
+        fListener = listener;
 }
 

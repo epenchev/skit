@@ -1,7 +1,7 @@
 <logfile>skit.log</logfile> <!-- global parameters mandatory-->
 <pidfile>skit.pid</pidfile>
 <daemon>yes</daemon>
-<threads>2</threads>
+<threads>1</threads>
 
 <!-- JSON managment API authentication -->
 <admin>
@@ -23,7 +23,6 @@
         <listen>1935</listen>
         <publish>allow</publish>
         <chunkSize>4000</chunkSize>
-        <onplay>http://some.some</onplay>
         <options>
             <opt1>someopt1</opt1>
             <opt2>someopt2</opt2>
@@ -35,30 +34,26 @@
     
 <streams>
 
-    <stream> <!-- live stream from DVB -->
-        <name>FoxLiveTV</name>
-		<source>DVBStream</source>
-		<filter>MPEG2TsMP4H264</filter>
-		<cashing>no</cashing>
-		<seekable>no</seekable>
-	</stream>
+    <stream>
+        <name>bunny</name>
+        <location>/media/emo/20A7503C234281D8/bbb_sunflower.mp4</location>
+    </stream>
 
-	<stream> <!-- VOD stream movie collection on HDD -->
-	    <name>Movies</name>
-		<source>SimpleFileSource</source>
-		<filepath>/home/emo/Downloads/</filepath>
-		<cashing>no</cashing>
-		<seekable>yes</seekable>
-	</stream>
+    <stream> <!-- live stream from mumuDVB -->
+        <name>FoxLiveTV</name>      <!-- mandatory -->
+        <location>http://127.0.0.1:8099/</location>  <!-- mandatory -->
+	<source>DVBStreamHTTP</source>
+	<filter>MPEG2TsMP4H264</filter>
+   </stream>
+
+   <stream> <!-- VOD stream movie  -->
+        <name>Movie</name>
+	<location>/home/emo/Downloads/sample.mp4</location>
+	<source></source>
+	<filter></filter>
+	<cashing>no</cashing>    <!-- additional parameter -->
+	<seekable>yes</seekable> <!-- additional parameter -->
+   </stream>
 
 </streams>
 
-<!-- additional sections can be added -->
-<dvr>
-    <record_interval>120</record_interval> <!-- minutes -->
-    <storageDir>/data/movies</storageDir>
-    <!-- notify event
-    <on_record_done>http://localhost:8080/record_done</on_record_done>
-    -->
-</dvr>
-	

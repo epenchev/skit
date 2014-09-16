@@ -10,7 +10,7 @@
 #include <boost/lexical_cast.hpp>
 #include <string>
 
-namespace Skit {
+using namespace std;
 
 // Boost property_tree and property_tree::iterator wrappers
 class PropertyTree
@@ -24,111 +24,144 @@ public:
         Iterator() {}
         Iterator(boost::property_tree::ptree& tree)
         { 
-            m_iterImpl = tree.begin();
+            _iterImpl = tree.begin();
         }
         
         // Return a subtree from the given key
-        PropertyTree GetTree(const std::string& path = "")
+        PropertyTree GetTree(const string& path = "")
         {
             PropertyTree tree;
             if (path.empty())
-                tree.m_treeImpl = m_iterImpl->second;
-            else tree.m_treeImpl = m_iterImpl->second.get_child(path);
+                tree._treeImpl = _iterImpl->second;
+            else
+                tree._treeImpl = _iterImpl->second.get_child(path);
 
             return tree;
         }
         
+        // throws exception if key is not found
         template <class T>
-        T GetData(const std::string& key = "")
+        T inline GetData(const string& key = "")
         {
             if (key.empty())
-                return boost::lexical_cast<T>( m_iterImpl->second.data() );
-            else return m_iterImpl->second.get<T>(key);
+                return boost::lexical_cast<T>( _iterImpl->second.data() );
+
+            return _iterImpl->second.get<T>(key);
         }
         
-        std::string GetData(const std::string& key = "")
-        { 
-            return GetData<std::string>(key);
+        // return default value if path is not found
+        template <class T>
+        T inline GetData(const string& key, T defaultVal)
+        {
+            return _iterImpl->second.get<T>(key, defaultVal);
         }
- 
-        std::string GetName()
+
+        /*
+        string GetData(const string& key = "")
         { 
-            return m_iterImpl->first;
+            return GetData<string>(key);
+        }*/
+ 
+        // return default value if path is not found
+        string GetData(const string& key, const string defaultVal = "")
+        {
+            return GetData<string>(key, defaultVal);
+        }
+
+        string GetName()
+        { 
+            return _iterImpl->first;
         }
                 
         Iterator& operator= (boost::property_tree::ptree::iterator it)
         {
-            m_iterImpl = it; return *this; 
+            _iterImpl = it;
+            return *this;
         }
         
         void operator++ ()
         { 
-            m_iterImpl++;
+            _iterImpl++;
         }
         
         friend bool operator == (const PropertyTree::Iterator& ita, const PropertyTree::Iterator& itb)
         { 
-            return ita.m_iterImpl == itb.m_iterImpl;
+            return ita._iterImpl == itb._iterImpl;
         }
         
         friend bool operator != (const PropertyTree::Iterator& ita, const PropertyTree::Iterator& itb)
         { 
-            return ita.m_iterImpl != itb.m_iterImpl; 
+            return ita._iterImpl != itb._iterImpl;
         }
         
     private: 
-        boost::property_tree::ptree::iterator m_iterImpl;
+        boost::property_tree::ptree::iterator _iterImpl;
     };
     
-    void Init(const std::string& fileName)
+    void Init(const string& fileName)
     {
-        read_xml(fileName, m_treeImpl);
+        read_xml(fileName, _treeImpl);
     }
     
-    Iterator Begin(const std::string& path = "")
+    // throws exception if path is not found
+    Iterator Begin(const string& path = "")
     {
         Iterator it;
         if (path.empty())
-            return it = m_treeImpl.begin();
-        else return it = m_treeImpl.get_child(path).begin();
+            return it = _treeImpl.begin();
+
+        return it = _treeImpl.get_child(path).begin();
     }
     
-    Iterator End(const std::string& path = "")
+    // throws exception if path is not found
+    Iterator End(const string& path = "")
     {
         Iterator it;
         if (path.empty())
-            return it = m_treeImpl.end();
-        else return it = m_treeImpl.get_child(path).end();
+            return it = _treeImpl.end();
+
+        return it = _treeImpl.get_child(path).end();
     }
     
-    Iterator Find(const std::string& key)
+    Iterator Find(const string& key)
     {
         Iterator it;
-        return it = m_treeImpl.to_iterator( m_treeImpl.find(key) );
+        return it = _treeImpl.to_iterator( _treeImpl.find(key) );
     }
     
     // throws exception if path is not found
     template <class T>
-    T GetData(const std::string& path)
+    T inline GetData(const string& path)
     {
-        return m_treeImpl.get<T>(path);
+        //return _treeImpl.get_v
+        return _treeImpl.get<T>(path);
+    }
+    
+    // throws exception if path is not found
+    string GetData(const string& path)
+    {
+        return GetData<string>(path);
+    }
+
+    // return default value if path is not found
+    template <class T>
+    T inline GetData(const string& path, T defaultVal)
+    {
+        return _treeImpl.get(path, defaultVal);
     }
     
     // return default value if path is not found
-    template <class T>
-    T GetData(const std::string& path, T defaultVal)
+    string GetData(const string& path, const string defaultVal = "")
     {
-        return m_treeImpl.get(path, defaultVal);
+        return GetData<string>(path, defaultVal);
     }
-    
+
 private:
     friend class Iterator;
-    PropertyTree(boost::property_tree::ptree tree) : m_treeImpl(tree) {}
+    PropertyTree(boost::property_tree::ptree tree) : _treeImpl(tree) {}
 
-    boost::property_tree::ptree m_treeImpl;
+    boost::property_tree::ptree _treeImpl;
 };
-
-} // end Skit
 
 #endif // PROPERTY_TREE_H_
 

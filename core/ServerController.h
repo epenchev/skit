@@ -1,10 +1,11 @@
 //
-// Server.h
+// ServerController.h
 // Copyright (C) 2014  Emil Penchev, Bulgaria
 
 #ifndef SERVER_CONTROLLER_H_
 #define SERVER_CONTROLLER_H_
 
+#include "Stream.h"
 #include "Task.h"
 #include "Socket.h"
 #include "PropertyTree.h"
@@ -26,13 +27,13 @@ public:
     virtual void AcceptConnection(TcpSocket* socket) = 0;
 
     // Get thread ID associated with this handler.
-    ThreadID GetThreadId() const { return m_threadID; }
+    ThreadID GetThreadId() const { return _threadID; }
 
     // Set handler thread ID.
-    void SetThread(ThreadID id) { m_threadID = id; }
+    void SetThread(ThreadID id) { _threadID = id; }
 
 protected:
-    ThreadID m_threadID; // associated thread ID
+    ThreadID _threadID; // associated thread ID
 };
 
 // main server/stream controller
@@ -54,15 +55,20 @@ public:
     // From SocketAcceptorListener
     void OnAccept(TcpSocket* socket, ErrorCode& inError);
 
+    Stream* GetStream(string name);
+
 private:
 
-    ServerController() {}
+    ServerController();
     ~ServerController() {}
 
-    Skit::PropertyTree m_globalConfig;                          // xml global configuration
-    boost::asio::io_service m_io_service;                       // parent (main) process io_service
-    map<ThreadID, map<unsigned int, ServerHandler*> >m_servers; // server handlers
-    list<SocketAcceptor*> m_acceptors;                          // socket acceptors listening for incoming connections
+    void LoadStreams();
+
+    PropertyTree                                       fGlobalConfigTree;    // xml global configuration
+    boost::asio::io_service                            fIOService;           // main process io_service, used to accept incoming connections
+    list<SocketAcceptor*>                              fAcceptors;           // socket acceptors listening for incoming connections
+    map<string, Stream*>                               fStreams;             // all media streams
+    map<ThreadID, map<unsigned int, ServerHandler*> >  fServerHandlers;      // server handlers
 };
 
 

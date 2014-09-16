@@ -42,25 +42,25 @@ public:
     template <class Func, class T1, class T2>
     static inline Task Connect(Func f, T1 p1, T2 p2)
     {
-        return Task( boost::bind(f, p1, p2, PriorityNormal) );
+        return Task( boost::bind(f, p1, p2), PriorityNormal );
     }
 
     template <class Func, class T1, class T2, class T3>
     static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3)
     {
-        return Task( boost::bind(f, p1, p2, p3, PriorityNormal) );
+        return Task( boost::bind(f, p1, p2, p3), PriorityNormal );
     }
 
     template <class Func, class T1, class T2, class T3, class T4>
     static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4)
     {
-        return Task( boost::bind(f, p1, p2, p3, p4, PriorityNormal) );
+        return Task( boost::bind(f, p1, p2, p3, p4), PriorityNormal );
     }
     
     template <class Func, class T1, class T2, class T3, class T4, class T5>
     static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4, T5 p5)
     {
-        return Task( boost::bind(f, p1, p2, p3, p4, p5) );
+        return Task( boost::bind(f, p1, p2, p3, p4, p5), PriorityNormal );
     }
 
     // Run the task

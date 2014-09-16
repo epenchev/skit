@@ -190,6 +190,7 @@ ThreadID TaskScheduler::GetNextThread()
     {
 		lastUsedThread = 0;
     }
+
 	tid = m_threads[lastUsedThread]->get_id();
 	lastUsedThread++;
 

@@ -1,5 +1,5 @@
 CPPFLAGS = -O0 -g3 -Wall
-LDLIBS = -lpthread -lboost_system -lboost_thread
+LDLIBS = -lpthread -lboost_system -lboost_thread #-lboost_iostreams
 
 all: Skit
 
@@ -9,6 +9,6 @@ object_modules = $(wildcard ../modules/*/*.o)
 clean:
 	rm -f $(objects) Skit *~
 
-Skit: $(objects) Skit.cpp
+Skit: $(objects) $(object_modules) Skit.cpp
 	g++ -O0 -g3 -Wall Skit.cpp $(objects) $(object_modules) -o $@ $(LDLIBS)
 

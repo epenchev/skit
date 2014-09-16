@@ -33,7 +33,7 @@ public:
     void AcceptRequest();
 
     // used for writing or custom handling of the incoming data
-    TcpSocket* GetSocket() { return _socketObj; }
+    TcpSocket* GetSocket() { return fSocketObj; }
 
     // listener/observer to be notified for a HTTP request event
     class Listener
@@ -45,18 +45,18 @@ public:
     };
 
     // Attach a listener/observer object to the session
-    void SetListener( HttpSession::Listener& listener );
+    void SetListener( HttpSession::Listener* listener );
 
 private:
     // socket callback
     void OnReceive( const SysError& error, size_t bytesRead );
 
-    SysError               _error;
-    TcpSocket*             _socketObj;
-    Buffer                 _bufferObj;
-    string                 _reqdata;
-    Skit::HTTP::Request    _requestObj;
-    HttpSession::Listener* _listener;
+    SysError               fError;
+    TcpSocket*             fSocketObj;
+    Buffer                 fBufferObj;
+    string                 fReqdata;
+    Skit::HTTP::Request    fRequestObj;
+    HttpSession::Listener* fListener;
 };
 
 // default HTTP server
@@ -75,16 +75,19 @@ public:
     {
     public:
     	static HttpServer::Listener* CreateListener() { return NULL; }
+
     	// true if session is to be handled false otherwise
         virtual bool OnHttpSession( HttpSessionPtr session, Skit::HTTP::Request& request ) = 0;
     };
 
     typedef HttpServer::Listener* (*CreateListenerFunc)();
+
     // register listeners to the server
     static void Register( CreateListenerFunc func ) { GetRegistry().insert(func); }
 
     // from ServerHandler
     void AcceptConnection( TcpSocket* socket );
+
     // from HttpSession::Listener
     void OnHttpRequest( HttpSessionPtr session,
                         Skit::HTTP::Request& request,
@@ -94,8 +97,8 @@ private:
     // socket callback
     void OnSend( const SysError& error, size_t bytesWriten );
 
-    string _defaultResponse;
-    set<HttpServer::Listener*> _listeners;
+    string fDefaultResponse;
+    set<HttpServer::Listener*> fListeners;
 
     static inline set<CreateListenerFunc>& GetRegistry()
     {

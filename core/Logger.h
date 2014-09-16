@@ -27,7 +27,7 @@
 
 inline std::string NowTime();
 
-enum TLogLevel {logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4};
+enum TLogLevel {logERROR, logWARNING, logINFO, logDEBUG, logDEBUG1, logDEBUG2, logDEBUG3, logDEBUG4, logDISABLE};
 
 class Log
 {
@@ -55,17 +55,11 @@ inline Log::Log()
 inline std::ostringstream& Log::Get(TLogLevel level,
                              const char* func, const char* file, const int line)
 {
-
-#ifdef LOG_DISABLE
-#else
-
 	os << "- " << NowTime();
     os << " " << ToString(level) << ": ";
     //if (level >= logDEBUG)
     os << "[ " << file << ":" << line << " " << func << "()" << " ] ";
     os << std::string(level > logDEBUG ? level - logDEBUG : 0, ' ');
-
-#endif
 
     return os;
 }
@@ -125,10 +119,15 @@ inline void Log::Output(const std::string& msg)
     fflush(pStream);
 }
 
-
+#ifdef LOG_DISABLE
+#define LOG(level) \
+    if (logDISABLE >= Log::ReportingLevel() || !Log::Stream()) ; \
+    else Log().Get(level, __FUNCTION__, __FILE__, __LINE__)
+#else
 #define LOG(level) \
     if (level > Log::ReportingLevel() || !Log::Stream()) ; \
     else Log().Get(level, __FUNCTION__, __FILE__, __LINE__)
+#endif
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
 
