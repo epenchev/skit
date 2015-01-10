@@ -13,20 +13,18 @@ class Buffer : public boost::asio::mutable_buffer
 {
 public:
     Buffer()
-     : boost::asio::mutable_buffer(), m_allocated(false) {}
+     : boost::asio::mutable_buffer(), _allocated(false) {}
     
     Buffer(void* data, std::size_t size) 
-     : boost::asio::mutable_buffer(data, size), m_allocated(false) {}
+     : boost::asio::mutable_buffer(data, size), _allocated(false) {}
     
     Buffer(std::size_t size)
-     : boost::asio::mutable_buffer( new unsigned char[size], size ), m_allocated(true) {}
+     : boost::asio::mutable_buffer( new unsigned char[size], size ), _allocated(true) {}
     
     virtual ~Buffer()
     {
-        if (m_allocated)
-        {
-            delete boost::asio::buffer_cast<unsigned char*>(*this);
-        }
+        if (_allocated)
+        	delete boost::asio::buffer_cast<unsigned char*>(*this);
     }
     
     std::size_t Size() const
@@ -74,10 +72,12 @@ public:
     }
     
 protected:
-    bool m_allocated;
+    bool _allocated;
 };
 
 typedef std::vector<Buffer> BufferSequence;
+
+#define BUFFER_SEQ(buf) boost::asio::buffer(buf)
 
 #define CreateBufferSequence(buf) boost::asio::buffer(buf)
 

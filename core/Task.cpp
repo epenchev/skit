@@ -2,6 +2,8 @@
 #include "Logger.h"
 #include "IDGenerator.h"
 
+namespace smkit
+{
 void TaskScheduler::TaskQueue::Load()
 {
     boost::asio::io_service::work work(m_io_service);
@@ -203,36 +205,31 @@ boost::asio::io_service& TaskScheduler::GetThreadIOService(ThreadID id)
     return queue->GetIOService();
 }
 
-TimerTask::TimerTask(const Task& task, int id)
- : Task(task), m_timerID(id)
+timer_task::timer_task(const task& t, int id)
+ : task(t), m_timerID(id)
 {}
 
-void TimerTask::operator()( const boost::system::error_code& error )
+void timer_task::operator()(const boost::system::error_code& error)
 {
 	if (!error)
-    {
-    	_runObject();
-    }
-    else if ( boost::asio::error::operation_aborted == error )
-    {
-        LOG(logWARNING) << "timer canceled";
-    }
+		m_functor();
+
     TaskScheduler::Instance().ClearTimer(m_timerID);
 }
 
-Task::Task(Runnable func, TaskPriority prio)
- : _runObject(func), _priority(prio)
+task::task(boost::function<void()> func, task_priority prio)
+ : m_functor(func), m_priority(prio)
 {}
 
-Task::Task(const Task& task)
+task::task(const task& t)
 {
-	this->_runObject = task._runObject;
-	this->_priority = task._priority;
+	this->m_functor = t.m_functor;
+	this->m_priority = t.m_priority;
 }
 
-void Task::Execute()
+void task::execute()
 {
-	_runObject();
+	m_functor();
 }
-
+} // end of namespace smkit
 

@@ -11,8 +11,9 @@
 
 #include "PropertyTree.h"
 #include "Buffer.h"
-#include "Task.h"
-#include "RegFactory.h"
+//#include "Task.h"
+//#include "RegFactory.h"
+#include "reg_factory.h"
 
 #include <boost/shared_ptr.hpp>
 

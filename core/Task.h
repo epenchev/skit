@@ -1,5 +1,5 @@
 //
-// Task.h
+// task.h
 // Copyright (C) 2014  Emil Penchev, Bulgaria
 
 #ifndef TASK_H_
@@ -15,71 +15,70 @@
 #include <map>
 #include <vector>
 
-#define REF(obj) boost::ref(obj)    // reference
-#define CONST_REF(obj) boost::cref(obj)  // const reference
-
+namespace smkit
+{
 typedef boost::function<void()> Runnable;
 
-enum TaskPriority { PriorityNormal = 0, PriorityHigh };
+enum task_priority { Normal = 0, High };
 
-class Task
+class task
 {
 public:
-	Task(const Task& task);
+	task(const task& t);
 
 	template <class Func>
-	static inline Task Connect(Func f)
+	static inline task connect(Func f)
 	{
-		return Task( boost::bind(f), PriorityNormal );
+		return task( boost::bind(f), Normal );
 	}
 
     template <class Func, class T1>
-    static inline Task Connect(Func f, T1 p1)
+    static inline task connect(Func f, T1 p1)
     {
-        return Task( boost::bind(f, p1), PriorityNormal );
+        return task( boost::bind(f, p1), Normal );
     }
 
     template <class Func, class T1, class T2>
-    static inline Task Connect(Func f, T1 p1, T2 p2)
+    static inline task connect(Func f, T1 p1, T2 p2)
     {
-        return Task( boost::bind(f, p1, p2), PriorityNormal );
+        return task( boost::bind(f, p1, p2), Normal );
     }
 
     template <class Func, class T1, class T2, class T3>
-    static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3)
+    static inline task connect(Func f, T1 p1, T2 p2, T3 p3)
     {
-        return Task( boost::bind(f, p1, p2, p3), PriorityNormal );
+        return task( boost::bind(f, p1, p2, p3), Normal );
     }
 
     template <class Func, class T1, class T2, class T3, class T4>
-    static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4)
+    static inline task connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4)
     {
-        return Task( boost::bind(f, p1, p2, p3, p4), PriorityNormal );
+        return task( boost::bind(f, p1, p2, p3, p4), Normal );
     }
     
     template <class Func, class T1, class T2, class T3, class T4, class T5>
-    static inline Task Connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4, T5 p5)
+    static inline task connect(Func f, T1 p1, T2 p2, T3 p3, T4 p4, T5 p5)
     {
-        return Task( boost::bind(f, p1, p2, p3, p4, p5), PriorityNormal );
+        return task( boost::bind(f, p1, p2, p3, p4, p5), Normal );
     }
 
     // Run the task
-    void Execute();
+    void execute();
 
     // std::priority_queue compare
-    friend bool operator < (const Task& a, const Task& b) { return a._priority < b._priority; }
+    friend bool operator < (const task& a, const task& b) { return a._priority < b._priority; }
     
 protected:
-    Runnable     _runObject;     /**< boost functor object */
-    TaskPriority _priority;  /**< task priority */
+    boost::function<void()>   m_functor;     /**< boost functor object */
+    task_priority             m_priority;  /**< task priority */
 
-    Task(Runnable func, TaskPriority prio);
+    task(boost::function<void()> func, task_priority prio);
 };
 
-class TimerTask : public Task
+class timer_task : public task
 {
 public:
-	TimerTask(const Task& task, int id);
+	timer_task(const task& task, int id);
 	void operator()( const boost::system::error_code& error ); // timer handler
 private:
 	int m_timerID;
@@ -97,8 +96,8 @@ public:
 
     // public API
     void Run(unsigned threads);
-    void QueueTask(Task task, ThreadID id = boost::this_thread::get_id());
-    int  QueueTimer(Task task, int milisec, ThreadID tid = boost::this_thread::get_id());
+    void QueueTask(task task, ThreadID id = boost::this_thread::get_id());
+    int  QueueTimer(task task, int milisec, ThreadID tid = boost::this_thread::get_id());
     // cancel/stop the timer
     void ClearTimer(int id);
     static TaskScheduler& Instance();
@@ -115,13 +114,13 @@ private:
         
         struct QueueWrapper
         {
-            std::priority_queue<Task> priorityQueue;
+            std::priority_queue<task> priorityQueue;
             boost::mutex lock;
         }; 
 
         // io_service post handler
         void RunTasks();
-        void Push(Task task);
+        void Push(task task);
         void Load();
         void RunQueue(QueueWrapper& q);
         boost::asio::io_service& GetIOService() { return m_io_service; }

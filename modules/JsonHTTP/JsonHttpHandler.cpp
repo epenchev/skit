@@ -1,6 +1,7 @@
 #include "HTTP.h"
 #include "JsonHttpHandler.h"
-#include "ServerController.h"
+//#include "ServerController.h"
+#include "server_controller.h"
 
 #undef LOG_DISABLE
 #include "Logger.h"
@@ -11,7 +12,7 @@ extern "C" {
 #include <ctype.h>
 }
 
-ListenerRegistrator<JSON_RequestHandler, HttpServer> regJsonListener;
+ListenerRegistrator<JSON_RequestHandler, HTTP_Server> regJsonListener;
 
 static void inline TrimString(string& inString)
 {
@@ -30,28 +31,27 @@ static void inline TrimString(string& inString)
         inString.erase(theIter, inString.end());
 }
 
-void JSON_RequestHandler::OnSendHandler( HttpSessionPtr inSession,
+void JSON_RequestHandler::OnSendHandler( HTTP_SessionPtr inSession,
                                          const SysError& error,
                                          size_t bytesWriten )
 {
     if (error)
     {
         LOG(logERROR) << "Error sending data :" << error.message();
-        inSession->GetSocket()->Close();
-        //fPlayer->Pause();
+        inSession->getSocket()->Close();
+        //player_->Pause();
     }
     else
     {
-        delete fOutBuf; // free memory
+        delete outBuf_; // free memory
         //LOG(logDEBUG) << "Send " << bytesWriten <<  " bytes";
 #if 1
-        if (fPlayer)
-            fOutBuf = fPlayer->Get();
-        if (fOutBuf)
+        if (player_)
+            outBuf_ = player_->Get();
+        if (outBuf_)
         {
-            Buffer* b = new Buffer(fOutBuf->Get<char*>(), fOutBuf->Size());
-
-            TcpSocket* theSocket = inSession->GetSocket();
+            Buffer* b = new Buffer(outBuf_->Get<char*>(), outBuf_->Size());
+            TcpSocket* theSocket = inSession->getSocket();
             theSocket->Send(CreateBufferSequence(*b),
                             BIND_HANDLER(&JSON_RequestHandler::OnSendHandler,
                             inSession) );
@@ -59,13 +59,13 @@ void JSON_RequestHandler::OnSendHandler( HttpSessionPtr inSession,
         else
         {
             LOG(logWARNING) << "Buffer is empty";
-            inSession->GetSocket()->Close();
+            inSession->getSocket()->Close();
         }
 #endif
     }
 }
 
-bool JSON_RequestHandler::OnHttpSession( HttpSessionPtr inSession, Skit::HTTP::Request& request )
+bool JSON_RequestHandler::onAcceptSession( HTTP_SessionPtr inSession, Skit::HTTP::Request& request )
 {
     string theStreamName = request.GetURL();
     TrimString(theStreamName);
@@ -73,26 +73,26 @@ bool JSON_RequestHandler::OnHttpSession( HttpSessionPtr inSession, Skit::HTTP::R
     LOG(logDEBUG) << "Got session, requesting: " << '[' << theStreamName << ']';
 
     ServerController& theController = ServerController::Instance();
-    fStream = theController.GetStream(theStreamName);
-    if (!fStream)
+    stream_ = theController.GetStream(theStreamName);
+    if (!stream_)
         return false;
-    inSession->SetListener(this);
-    fPlayer = new Player(inSession->GetSocket()->GetThreadID());
-    fPlayer->Play(fStream);
-    HandleRequest(inSession, request);
+    inSession->setListener(this);
+    player_ = new Player(inSession->getSocket()->GetThreadID());
+    player_->Play(stream_);
+    handleRequest(inSession, request);
     return true;
 }
 
-void JSON_RequestHandler::OnHttpRequest( HttpSessionPtr session,
+void JSON_RequestHandler::onRequest( HTTP_SessionPtr session,
                                          Skit::HTTP::Request& request,
                                          const SysError& error )
 {
 	LOG(logDEBUG) << "Got request here";
     LOG(logDEBUG) << request.GetURL();
-    HandleRequest(session, request);
+    handleRequest(session, request);
 }
 
-void JSON_RequestHandler::HandleRequest(HttpSessionPtr inSession, Skit::HTTP::Request& inRequest)
+void JSON_RequestHandler::handleRequest(HTTP_SessionPtr inSession, Skit::HTTP::Request& inRequest)
 {
 
     Skit::HTTP::Response response;
@@ -103,7 +103,7 @@ void JSON_RequestHandler::HandleRequest(HttpSessionPtr inSession, Skit::HTTP::Re
     response.SetHeader("Keep-Alive", "timeout=5, max=100");
     response.SetHeader("Connection", "Keep-Alive");
 
-    int theSize = fPlayer->GetSize();
+    int theSize = player_->GetSize();
     int theLength = theSize;   // Content length header value
     int theStart = 0;          // Start byte
     int theEnd = theSize - 1;  // End byte
@@ -156,7 +156,7 @@ void JSON_RequestHandler::HandleRequest(HttpSessionPtr inSession, Skit::HTTP::Re
     }
     LOG(logERROR) << "seek to :" << theStart;
     if (theStart > 0)
-        fPlayer->SeekTo(theStart);
+        player_->SeekTo(theStart);
 
     stringstream ssrange;
     ssrange << "bytes " << theStart << '-' << theEnd << '/' << theSize;
@@ -166,13 +166,13 @@ void JSON_RequestHandler::HandleRequest(HttpSessionPtr inSession, Skit::HTTP::Re
     response.SetHeader("Content-Range", ssrange.str());
 
     if (theRange.empty())
-        fResponseHeaders = response.BuildResponse("200", "ОК");
+        responseHeaders_ = response.BuildResponse("200", "ОК");
     else
-        fResponseHeaders = response.BuildResponse("206", "Partial Content");
-    LOG(logDEBUG) << fResponseHeaders;
+        responseHeaders_ = response.BuildResponse("206", "Partial Content");
+    LOG(logDEBUG) << responseHeaders_;
 
-    Buffer theBuf((void*)fResponseHeaders.c_str(), fResponseHeaders.size());
-    inSession->GetSocket()->Send(CreateBufferSequence(theBuf),
+    Buffer theBuf((void*)responseHeaders_.c_str(), responseHeaders_.size());
+    inSession->getSocket()->Send(CreateBufferSequence(theBuf),
                                  BIND_HANDLER(&JSON_RequestHandler::OnSendHandler,
                                  inSession) );
 }

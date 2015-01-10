@@ -1,4 +1,4 @@
-#include <Task.h>
+#include <task.h>
 #include <Logger.h>
 
 // forward
@@ -6,19 +6,19 @@ static void handle_timer();
 
 static void sample_handler()
 {
-	static int timerid = 0;
-	TaskScheduler* scheduler = &TaskScheduler::Instance();
+	static int timer_id = 0;
+	smkit::task_scheduler* scheduler = &smkit::task_scheduler::instance();
 
-	bool cancelTimer = ((timerid % 2) == 0);
+	bool cancelTimer = ((timer_id % 2) == 0);
 	if (cancelTimer)
 	{
-	    LOG(logINFO) << "Will cancel timer with id: " << timerid;
-		scheduler->ClearTimer(timerid);
+	    LOG(logINFO) << "Will cancel timer with id: " << timer_id;
+		scheduler->clear_timer(timer_id);
 	}
 
 	LOG(logINFO) <<  "sample_handler";
-	timerid = scheduler->QueueTimer( Task::Connect(handle_timer), 5000 );
-	if (!timerid)
+	timer_id = scheduler->queue_timer(smkit::task::connect(handle_timer), 5000);
+	if (!timer_id)
 	{
 		LOG(logWARNING) << "Invalid timer ID";
 	}
@@ -27,92 +27,90 @@ static void sample_handler()
 static void handle_timer()
 {
 	LOG(logINFO) << "handle_timer";
-	TaskScheduler* scheduler = &TaskScheduler::Instance();
-	scheduler->QueueTask( Task::Connect(sample_handler) );
+	smkit::task_scheduler* scheduler = &smkit::task_scheduler::instance();
+	scheduler->queue_task(smkit::task::connect(sample_handler));
 }
 
-class Sample
+class sample
 {
 public:
-	void Func() { LOG(logINFO) << "Sample::Func() executed"; }
+	void func() { LOG(logINFO) << "sample::func() executed"; }
 };
 
 int main()
 {
-    Sample sampleObj;
-	TaskScheduler* scheduler = &TaskScheduler::Instance();
-
+    sample sample_obj;
+    smkit::task_scheduler* scheduler = &smkit::task_scheduler::instance();
 	try
 	{
-		scheduler->Run(10);
+		scheduler->run(10);
 	}
-	catch ( TaskSchedulerException& ex )
+	catch (smkit::task_scheduler_error& err)
 	{
-		LOG(logERROR) << "Exception caught in scheduler->Run() :" << ex.what();
+		LOG(logERROR) << "Exception caught in scheduler->run() :" << err.what();
 		return 0;
 	}
 
 	try
 	{
-	    ThreadID id = scheduler->GetNextThread();
-	    LOG(logINFO) << "QueueTask on thread: " << id;
+	    smkit::task_scheduler::thread_id_t id = scheduler->next_thread();
+	    LOG(logINFO) << "queue_task() on thread: " << id;
 
-		scheduler->QueueTask( Task::Connect( &Sample::Func, REF(sampleObj) ), id );
-		scheduler->QueueTask( Task::Connect( &Sample::Func, REF(sampleObj) ), id );
-		
-		int timerid = scheduler->QueueTimer( Task::Connect(handle_timer), 5000, scheduler->GetNextThread() );
-		if (!timerid)
+		scheduler->queue_task(smkit::task::connect(&sample::func, boost::ref(sample_obj)), id);
+		scheduler->queue_task(smkit::task::connect(&sample::func, boost::ref(sample_obj)), id);
+		int timer_id = scheduler->queue_timer(smkit::task::connect(handle_timer), 5000, scheduler->next_thread() );
+		if (!timer_id)
 		{
-			LOG(logERROR) << "Invalid timer ID from scheduler->QueueTimer() ";
+			LOG(logERROR) << "Invalid timer ID from scheduler->queue_timer ";
 		}
 
-		id = scheduler->GetNextThread();
+		id = scheduler->next_thread();
 		LOG(logINFO) << "QueueTask on thread: " << id;
-		scheduler->QueueTask( Task::Connect(sample_handler), id );
+		scheduler->queue_task(smkit::task::connect(sample_handler), id);
 	}
-	catch ( TaskSchedulerException& ex )
+	catch (smkit::task_scheduler_error& ex)
 	{
-		LOG(logERROR) << "Exception caught from scheduler->GetNextThread() :" << ex.what();
+		LOG(logERROR) << "Exception caught from scheduler->next_thread() :" << ex.what();
 	}
 
 	while (1)
     {
-		int timerid = 0;
+		int timer_id = 0;
     	boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
         try
         {
         	LOG(logINFO) << "QueueTimer";
-        	timerid = scheduler->QueueTimer( Task::Connect(handle_timer), 5000, scheduler->GetNextThread() );
-        	if (!timerid)
+        	timer_id = scheduler->queue_timer(smkit::task::connect(handle_timer), 5000, scheduler->next_thread() );
+        	if (!timer_id)
         	{
-        		LOG(logERROR) << "Invalid timer ID from scheduler->QueueTimer() ";
+        		LOG(logERROR) << "Invalid timer ID from scheduler->queue_timer() ";
         	}
         }
-        catch( TaskSchedulerException& ex )
+        catch(smkit::task_scheduler_error& ex)
         {
-        	LOG(logERROR) << "Exception caught from scheduler->GetNextThread() :" << ex.what();
+        	LOG(logERROR) << "Exception caught from scheduler->next_thread() :" << ex.what();
         }
         boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
 
-        bool cancelTimer = ((timerid % 2) == 0);
+        bool cancelTimer = ((timer_id % 2) == 0);
         if (cancelTimer)
         {
-            LOG(logINFO) << "Will cancel timer with id: " << timerid;
-        	scheduler->ClearTimer(timerid);
+            LOG(logINFO) << "Will cancel timer with id: " << timer_id;
+        	scheduler->clear_timer(timer_id);
         }
 
         try
         {
-        	ThreadID id = scheduler->GetNextThread();
- 	        LOG(logINFO) << "QueueTask on thread: " << id;
-        	scheduler->QueueTask( Task::Connect(sample_handler), id );
+            smkit::task_scheduler::thread_id_t tid = scheduler->next_thread();
+ 	        LOG(logINFO) << "QueueTask on thread: " << tid;
+        	scheduler->queue_task(smkit::task::connect(sample_handler), tid);
         	        	
-        	id = scheduler->GetNextThread();
-        	LOG(logINFO) << "QueueTask on thread: " << id;
-        	scheduler->QueueTask( Task::Connect( &Sample::Func, REF(sampleObj) ), id );
+        	tid = scheduler->next_thread();
+        	LOG(logINFO) << "QueueTask on thread: " << tid;
+        	scheduler->queue_task(smkit::task::connect(&sample::func, boost::ref(sample_obj)), tid);
         	
         }
-        catch( TaskSchedulerException& ex )
+        catch(smkit::task_scheduler_error& ex)
         {
         	LOG(logERROR) << "Exception caught from scheduler->GetNextThread() :" << ex.what();
         }
