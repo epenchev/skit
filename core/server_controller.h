@@ -66,7 +66,7 @@ private:
 
     void load_streams();
 
-    boost::property_tree::ptree                        m_config_tree;    // XML global configuration object
+    boost::property_tree::ptree                        m_config_tree;      // XML global configuration object
     boost::asio::io_service                            m_io_service;       // main process io_service, all socket acceptors are attached on.
     std::list<inet::socket_acceptor*>                  m_socket_acceptors; // socket acceptors listening for incoming connections and notifying the server controller.
     std::map<std::string, Stream*>                     m_streams;          // all media streams associated by names.
